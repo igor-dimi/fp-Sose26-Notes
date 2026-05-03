@@ -1,0 +1,148 @@
+---
+title: "Project Summary"
+---
+
+## Abstract
+
+- implement three-precision vaiant of **iterative refinement for linear systems** 
+- study it's accuracy
+
+### Problem
+
+- A linear system $Ax = b$. **iterative refinement** improves an approximate solution by repeatedly computing
+  the residual and solving a  correction equation.
+  - $LU$ factorization in low precision: $u_f$
+  - **working arithmetic** in 'middle' precision: $u$
+  - residual computation in high precision: $u_r$
+
+
+::: {.callout-note}
+Review the definition of **accuracy** of an algorithm
+:::
+
+- precision triples $(u_r, u, u_f)$ with $u_r \succ u \succ u_f$:
+  - i.e. $u_f$ low precisions like: `fp8`, `fp16`, `bfloat16`, come from CPFloat:
+    - `FP8`: `CPFloat<4, 4>`
+    - `bfloat16`: `CPFloat<8, 8>`
+    - `FP16`: `CPFloat<11, 5>`
+  - $u$ is probably the native `FP64` i.e. `double` precision
+
+::: {.callout-note}
+Study the `FP8`, `FP16` and `bfloat16` formats and how they relate to template parameters in `CPfloat<>`
+:::
+
+### Algorithm
+
+**Algorithm: Three-precision iterative refinement**
+
+```text
+1. Compute the LU factorization PA = LU in precision uf.
+2. Solve LU x0 = P b in precision uf; cast x0 to precision u.
+3. While not converged:
+   4. Compute ri = b - A xi in precision ur.
+   5. Cast ri to precision u.
+   6. Solve LU di = P ri in precision uf; cast di to precision u.
+   7. Update xi+1 = xi + di in precision u.
+```
+
+* convergence condition: $\frac{\norm{d_i}}{\norm{x_i}} < u$ where $u$ is the unit roundoff of the working precision, 
+* or stop after a max number of iterations. 
+
+
+::: {.callout-note}
+why is  $\frac{\norm{d_i}}{\norm{x_i}} < u$ the convergence condition? 
+:::
+
+
+
+### HDNUM & Own Implementation
+
+relevant parts:
+
+matrix and vector classes:
+
+- `src/densematrix.hh`: `DenseMatrix<T>` with:
+  -  `mv`: matrix vector product
+  -  `mm`: matrix matrix product
+  -  `transpose()` etc
+-  `src/vector.hh`: `Vector<T>` with vector arithmetic operations (multiplication with scalar, addition) and norms
+
+- LU decomposition in `src/lr.hh`:
+  - `lr_fullpivot(A, p, q)`
+  - `lr_partialpivot(A, p)`
+  - triangular solves: `solveL(A, x, b)`, `solveR(A, x, b)`
+  - `permute_forward` and `permute_backward`
+
+### Mixing Types 
+
+In a mixed precision algorithm different parts of the algorithm are instantiated / computed with different
+precisions, i.e. different types:
+
+- LU factorization is done in lower precision $u_f$: E.g. `DenseMatrix<FP16>`
+- Residual computation in higher precision $u_r$: E.g. `DenseMatrix<FP128>`
+
+Therefore we must be able to convert from one type (class) like `DenseMatrix<FP16` to another type (class) like
+`DenseMatrix<FP128`. This conversion requires explicit construction or element-wise copying.
+
+Managing type conversions between precisions is they key challenge. It is suggested to do this with a explicit 
+template functions for matrices and vectors:
+
+```{.cpp}
+template<class T_out, class T_in>
+void convert(Vector<T_out>& out, const Vector<T_in>& in)
+
+template<class T_out, class T_in>
+void convert(DenseMatrix<T_out>& out, const Vector<T_in>& in)
+```
+
+### Methodology
+
+* **reference solutions**: run a standard solver for $A\cdot x = b$ in `FP256` and treat the result $x_{ex}$ as exact.
+* **error metrics**: 
+  * report errors using norms appropriate to your algorithm
+  * compute **all error measures** in *a precision higher than the working precision of your algorithm*, i.e. $u$
+  * otherwise you are measuring the precision of your measurement.
+
+::: {.callout-note}
+* What does **error** mean in this context? $\normsub{x^* - x_{ex}}{2}$ ? 
+* What is a norm that is **apropriate** to LU, simply $\normsub{\bullet}{2}$ ?
+* Does Compute error measures in a precision higher than $u$ simply mean that we compute $\norm{\cdot}$ in something like `FP128`
+  * what does "otherwise you are measuring the precision of your measurement" mean? 
+:::
+
+* experiments should be scripted so that re-running them with various precision, condition number and matrix type 
+  is convenient.
+
+
+### What Should be Studied
+
+* **Convergence Histories**: for each precision combination $(u_f, u, u_r)$ and several test matrices $A_i$ with
+  different condition numbers $k(A_i)$:
+  * plot **forward error** as a function of i
+  * plot **backward error** as a function of i
+
+
+::: {.callout-note}
+review the definitions of **forward error** and **backward error**
+:::
+
+* **Summary Across Condition Numbers**: for a wide range of $k(A)$ for each precision combinations 
+  * record:
+    * the final achieved **forward error**
+    * number of iterations
+  * plot these as a function of $k(A)$: theory predicts convergence requires roughly $k(A) \cdot u_f < 1$. 
+* **The Role $u_r$**: Fix $(u_f, u)$ and vary $u_r$. When does $u_r > u$ make a measurable difference
+
+
+::: {.callout-note}
+
+* Normally $u_r < u$, i.e. the residual computation is done in a precision lower than the working precision. 
+* What happens when we increase it, when does it make a difference? 
+
+:::
+
+
+
+
+
+  

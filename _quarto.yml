@@ -2,14 +2,22 @@ project:
   type: book
 
 book:
+  downloads: pdf
   title: "Advanced Praktika SoSe 26 Notes"
   author: "Igor Dimitrov"
   date: "4/21/2026"
   chapters:
     - index.qmd
-    - intro.qmd
-    - summary.qmd
-    - references.qmd
+    - part: "Notes"
+      chapters:
+      - project_overview.qmd
+    - report.qmd
+
+    # - intro.qmd
+    # - summary.qmd
+    # - references.qmd
+
+
 
 bibliography: references.bib
 
@@ -18,8 +26,11 @@ format:
     theme:
       - cosmo
       - brand
+    include-in-header: 
+      - mathjax-macros.html
   pdf:
     documentclass: scrreprt
+    include-in-header: preamble.tex
 
 
 
