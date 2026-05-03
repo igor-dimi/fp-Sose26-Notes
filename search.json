@@ -10,33 +10,68 @@
     ]
   },
   {
-    "objectID": "intro.html",
-    "href": "intro.html",
-    "title": "1  Introduction",
+    "objectID": "project_overview.html",
+    "href": "project_overview.html",
+    "title": "1  Project Summary",
     "section": "",
-    "text": "This is a book created from markdown and executable code.\nSee Knuth (1984) for additional discussion of literate programming.\n\n\n\n\nKnuth, Donald E. 1984. “Literate Programming.” Comput. J. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97.",
+    "text": "1.1 Abstract\nThis Fortgeschrittenenpraktikum project investigates mixed precision iterative refinement for solving linear systems\n\\[\nAx=b.\n\\]\nThe goal is to implement a three-precision LU-based method: the LU factorization and correction solves use low precision \\(u_f\\), the solution updates use working precision \\(u\\), and the residuals are computed in higher precision \\(u_r\\). Starting from a low-precision LU solve, the algorithm repeatedly computes \\(r_i=b-Ax_i\\), solves for a correction \\(d_i\\), and updates \\(x_i\\) until \\(|d_i|/|x_i|&lt;u\\) or a maximum iteration count is reached.\nThe focus is empirical accuracy, not runtime, since low precisions such as fp8, fp16, and bfloat16 are simulated via CPFloat. The experiments will study convergence, forward/backward error, condition-number dependence, precision triples \\((u_f,u,u_r)\\) residual precision, and comparison with a direct working-precision solve.\nSummary:",
     "crumbs": [
-      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Introduction</span>"
+      "Notes",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Project Summary</span>"
     ]
   },
   {
-    "objectID": "summary.html",
-    "href": "summary.html",
-    "title": "2  Summary",
+    "objectID": "project_overview.html#abstract",
+    "href": "project_overview.html#abstract",
+    "title": "1  Project Summary",
     "section": "",
-    "text": "In summary, this book has no content whatsoever.",
+    "text": "implement three-precision vaiant of iterative refinement for linear systems\nstudy it’s accuracy\n\n\n1.1.1 Problem\n\nA linear system \\(Ax = b\\). iterative refinement improves an approximate solution by repeatedly computing the residual and solving a correction equation.\n\n\\(LU\\) factorization in low precision: \\(u_f\\)\nworking arithmetic in ‘middle’ precision: \\(u\\)\nresidual computation in high precision: \\(u_r\\)\n\n\n\n\n\n\n\n\nNote\n\n\n\nReview the definition of accuracy of an algorithm\n\n\n\nprecision triples \\((u_r, u, u_f)\\) with \\(u_r \\succ u \\succ u_f\\):\n\ni.e. \\(u_f\\) low precisions like: fp8, fp16, bfloat16, come from CPFloat:\n\nFP8: CPFloat&lt;4, 4&gt;\nbfloat16: CPFloat&lt;8, 8&gt;\nFP16: CPFloat&lt;11, 5&gt;\n\n\\(u\\) is probably the native FP64 i.e. double precision\n\n\n\n\n\n\n\n\nNote\n\n\n\nStudy the FP8, FP16 and bfloat16 formats and how they relate to template parameters in CPfloat&lt;&gt;\n\n\n\n\n1.1.2 Algorithm\nAlgorithm: Three-precision iterative refinement\n1. Compute the LU factorization PA = LU in precision uf.\n2. Solve LU x0 = P b in precision uf; cast x0 to precision u.\n3. While not converged:\n   4. Compute ri = b - A xi in precision ur.\n   5. Cast ri to precision u.\n   6. Solve LU di = P ri in precision uf; cast di to precision u.\n   7. Update xi+1 = xi + di in precision u.\n\nconvergence condition: \\(\\frac{\\norm{d_i}}{\\norm{x_i}} &lt; u\\) where \\(u\\) is the unit roundoff of the working precision,\nor stop after a max number of iterations.\n\n\n\n\n\n\n\nNote\n\n\n\nwhy is \\(\\frac{\\norm{d_i}}{\\norm{x_i}} &lt; u\\) the convergence condition?\n\n\n\n\n1.1.3 HDNUM & Own Implementation\nrelevant parts:\nmatrix and vector classes:\n\nsrc/densematrix.hh: DenseMatrix&lt;T&gt; with:\n\nmv: matrix vector product\nmm: matrix matrix product\ntranspose() etc\n\nsrc/vector.hh: Vector&lt;T&gt; with vector arithmetic operations (multiplication with scalar, addition) and norms\nLU decomposition in src/lr.hh:\n\nlr_fullpivot(A, p, q)\nlr_partialpivot(A, p)\ntriangular solves: solveL(A, x, b), solveR(A, x, b)\npermute_forward and permute_backward\n\n\n\n\n1.1.4 Mixing Types\nIn a mixed precision algorithm different parts of the algorithm are instantiated / computed with different precisions, i.e. different types:\n\nLU factorization is done in lower precision \\(u_f\\): E.g. DenseMatrix&lt;FP16&gt;\nResidual computation in higher precision \\(u_r\\): E.g. DenseMatrix&lt;FP128&gt;\n\nTherefore we must be able to convert from one type (class) like DenseMatrix&lt;FP16 to another type (class) like DenseMatrix&lt;FP128. This conversion requires explicit construction or element-wise copying.\nManaging type conversions between precisions is they key challenge. It is suggested to do this with a explicit template functions for matrices and vectors:\ntemplate&lt;class T_out, class T_in&gt;\nvoid convert(Vector&lt;T_out&gt;& out, const Vector&lt;T_in&gt;& in)\n\ntemplate&lt;class T_out, class T_in&gt;\nvoid convert(DenseMatrix&lt;T_out&gt;& out, const Vector&lt;T_in&gt;& in)\n\n\n1.1.5 Methodology\n\nreference solutions: run a standard solver for \\(A\\cdot x = b\\) in FP256 and treat the result \\(x_{ex}\\) as exact.\nerror metrics:\n\nreport errors using norms appropriate to your algorithm\ncompute all error measures in a precision higher than the working precision of your algorithm, i.e. \\(u\\)\notherwise you are measuring the precision of your measurement.\n\n\n\n\n\n\n\n\nNote\n\n\n\n\nWhat does error mean in this context? \\(\\normsub{x^* - x_{ex}}{2}\\) ?\nWhat is a norm that is apropriate to LU, simply \\(\\normsub{\\bullet}{2}\\) ?\nDoes Compute error measures in a precision higher than \\(u\\) simply mean that we compute \\(\\norm{\\cdot}\\) in something like FP128\n\nwhat does “otherwise you are measuring the precision of your measurement” mean?\n\n\n\n\n\nexperiments should be scripted so that re-running them with various precision, condition number and matrix type is convenient.\n\n\n\n1.1.6 What Should be Studied\n\nConvergence Histories: for each precision combination \\((u_f, u, u_r)\\) and several test matrices \\(A_i\\) with different condition numbers \\(k(A_i)\\):\n\nplot forward error as a function of i\nplot backward error as a function of i\n\n\n\n\n\n\n\n\nNote\n\n\n\nreview the definitions of forward error and backward error\n\n\n\nSummary Across Condition Numbers: for a wide range of \\(k(A)\\) for each precision combinations\n\nrecord:\n\nthe final achieved forward error\nnumber of iterations\n\nplot these as a function of \\(k(A)\\): theory predicts convergence requires roughly \\(k(A) \\cdot u_f &lt; 1\\).\n\nThe Role \\(u_r\\): Fix \\((u_f, u)\\) and vary \\(u_r\\). When does \\(u_r &gt; u\\) make a measurable difference\n\n\n\n\n\n\n\nNote\n\n\n\n\nNormally \\(u_r &lt; u\\), i.e. the residual computation is done in a precision lower than the working precision.\nWhat happens when we increase it, when does it make a difference?",
     "crumbs": [
-      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Summary</span>"
+      "Notes",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Project Summary</span>"
     ]
   },
   {
-    "objectID": "references.html",
-    "href": "references.html",
-    "title": "References",
+    "objectID": "project_setup.html",
+    "href": "project_setup.html",
+    "title": "2  Project Setup",
     "section": "",
-    "text": "Knuth, Donald E. 1984. “Literate Programming.” Comput.\nJ. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97.",
+    "text": "2.1 General repository structure\nThe whole project is managed inside a Quarto book repository. The Quarto project contains notes, theory summaries, the final report, and the implementation code.\nThe planned directory structure is:\nPurpose of the main sub-directories:",
     "crumbs": [
-      "References"
+      "Notes",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Project Setup</span>"
+    ]
+  },
+  {
+    "objectID": "project_setup.html#general-repository-structure",
+    "href": "project_setup.html#general-repository-structure",
+    "title": "2  Project Setup",
+    "section": "",
+    "text": "project-root/\n├── index.qmd\n├── report/\n├── notes/\n└── code/\n    ├── CMakeLists.txt\n    ├── external/\n    │   └── hdnum/                 # git submodule\n    │       └── cpfloat/           # cloned inside hdnum\n    ├── include/\n    │   ├── mixed_ir.hpp           # algorithm\n    │   ├── hdnum_conversions.hpp  # convert()\n    │   └── error_metrics.hpp      # forward/backward error helpers, later\n    ├── experiments/\n    │   ├── exp_convergence.cc\n    │   ├── exp_condition_sweep.cc\n    │   └── exp_residual_precision.cc\n    ├── examples/\n    │   └── hdnum_sandbox.cc\n    ├── tests/\n    │   ├── test_conversion.cc\n    │   └── test_mixed_ir_sanity.cc\n    ├── scripts/\n    │   ├── run_all_experiments.py\n    │   └── plot_results.py\n    └── results/\n        ├── raw/\n        └── plots/\n\nexternal/      external dependencies, especially HDNUM\ninclude/       own header-only algorithm and helper code\nsrc/           optional implementation files, if needed later\nexamples/      small sandbox/demo programs for learning and testing\nexperiments/   reproducible experimental drivers for report data\ntests/         correctness and sanity checks\nscripts/       automation and plotting scripts\nresults/raw/   generated CSV or data files\nresults/plots/ generated figures for the report\n\n2.1.1 Experimental Drivers\nThe will go in:\ncode/\n├── experiments/\n│   ├── exp_convergence.cc\n│   ├── exp_condition_sweep.cc\n│   └── exp_residual_precision.cc\nThey will be written in c++ because they need to instantiate HDNUM types like FP16, bfloat16, FP64, FP128, FP256, run LU, perform refinement, and compute errors.\nBut the overall experiment workflow will be split:\nC++ drivers:\n    run numerical experiments\n    write CSV files\n\nPython / shell scripts:\n    run many driver configurations\n    collect results\n    make plots\nlike:\ncode/\n├── experiments/\n│   ├── exp_convergence.cc\n│   ├── exp_condition_sweep.cc\n│   └── exp_residual_precision.cc\n├── scripts/\n│   ├── run_all_experiments.py\n│   └── plot_results.py\n└── results/\n    ├── raw/\n    └── plots/\nThe cpp experiments can be written so that they can be run like:\n./build/exp_condition_sweep --uf FP16 --u FP64 --ur FP128 --n 100 --matrix random_orthogonal --out results/raw/sweep_fp16_fp64_fp128.csv\n./build/exp_condition_sweep --uf bfloat16 --u FP64 --ur FP128 --n 100 --matrix random_orthogonal --out results/raw/sweep_bf16_fp64_fp128.csv\n./build/exp_condition_sweep --uf FP32 --u FP64 --ur FP128 --n 100 --matrix random_orthogonal --out results/raw/sweep_fp32_fp64_fp128.csv\nThey a python or shell script can run all of those automatically.\nPrecision sweeps should vary precision, condition number, and matrix type, and experiments should be scripted so rerunning them is convenient. In practice, that means your experiment system should let you rerun a whole table of experiments with one command, rather than manually recompiling/editing files.",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Project Setup</span>"
+    ]
+  },
+  {
+    "objectID": "project_setup.html#hdnum-cpfloat-and-gmp",
+    "href": "project_setup.html#hdnum-cpfloat-and-gmp",
+    "title": "2  Project Setup",
+    "section": "2.2 HDNUM, CPFloat and GMP",
+    "text": "2.2 HDNUM, CPFloat and GMP\nHDNUM is included as a git submodule:\ngit submodule add https://parcomp-git.iwr.uni-heidelberg.de/Teaching/hdnum.git code/external/hdnum\ngit submodule update --init --recursive\nCPFloat is cloned and built inside the HDNUM top-level directory, matching HDNUM’s expected layout:\ncd code/external/hdnum\ngit clone https://github.com/north-numerical-computing/cpfloat.git\ncd cpfloat\nmake lib\nGMP is installed system-wide:\nsudo apt install libgmp-dev\nBecause CPFloat sits inside the HDNUM submodule but is not part of HDNUM itself, untracked files are hidden locally only for that submodule:\ncd code/external/hdnum\ngit config status.showUntrackedFiles no\nand the parent repository ignores untracked content specifically inside the HDNUM submodule:\ngit config submodule.code/external/hdnum.ignore untracked",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Project Setup</span>"
+    ]
+  },
+  {
+    "objectID": "report.html",
+    "href": "report.html",
+    "title": "3  Report",
+    "section": "",
+    "text": "3.1 This is some title",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Report</span>"
     ]
   }
 ]
