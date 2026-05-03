@@ -4,6 +4,18 @@ title: "Project Summary"
 
 ## Abstract
 
+This *Fortgeschrittenenpraktikum* project investigates mixed precision iterative refinement for solving linear systems
+
+$$
+Ax=b.
+$$
+
+The goal is to implement a three-precision LU-based method: the LU factorization and correction solves use low precision $u_f$, the solution updates use working precision $u$, and the residuals are computed in higher precision $u_r$. Starting from a low-precision LU solve, the algorithm repeatedly computes $r_i=b-Ax_i$, solves for a correction $d_i$, and updates $x_i$ until $|d_i|/|x_i|<u$ or a maximum iteration count is reached.
+
+The focus is empirical accuracy, not runtime, since low precisions such as fp8, fp16, and bfloat16 are simulated via CPFloat. The experiments will study convergence, forward/backward error, condition-number dependence, precision triples $(u_f,u,u_r)$ residual precision, and comparison with a direct working-precision solve.
+
+Summary: 
+
 - implement three-precision vaiant of **iterative refinement for linear systems** 
 - study it's accuracy
 

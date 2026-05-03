@@ -11,6 +11,7 @@ book:
     - part: "Notes"
       chapters:
       - project_overview.qmd
+      - project_setup.qmd
     - report.qmd
 
     # - intro.qmd

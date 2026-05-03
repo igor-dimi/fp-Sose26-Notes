@@ -1,0 +1,149 @@
+---
+title: Project Setup
+---
+
+
+## General repository structure
+
+The whole project is managed inside a Quarto book repository. The Quarto project contains notes, theory summaries, the final report, and the implementation code.
+
+The planned directory structure is:
+
+```.text
+project-root/
+├── index.qmd
+├── report/
+├── notes/
+└── code/
+    ├── CMakeLists.txt
+    ├── external/
+    │   └── hdnum/                 # git submodule
+    │       └── cpfloat/           # cloned inside hdnum
+    ├── include/
+    │   ├── mixed_ir.hpp           # algorithm
+    │   ├── hdnum_conversions.hpp  # convert()
+    │   └── error_metrics.hpp      # forward/backward error helpers, later
+    ├── experiments/
+    │   ├── exp_convergence.cc
+    │   ├── exp_condition_sweep.cc
+    │   └── exp_residual_precision.cc
+    ├── examples/
+    │   └── hdnum_sandbox.cc
+    ├── tests/
+    │   ├── test_conversion.cc
+    │   └── test_mixed_ir_sanity.cc
+    ├── scripts/
+    │   ├── run_all_experiments.py
+    │   └── plot_results.py
+    └── results/
+        ├── raw/
+        └── plots/
+```
+
+Purpose of the main sub-directories:
+
+```
+external/      external dependencies, especially HDNUM
+include/       own header-only algorithm and helper code
+src/           optional implementation files, if needed later
+examples/      small sandbox/demo programs for learning and testing
+experiments/   reproducible experimental drivers for report data
+tests/         correctness and sanity checks
+scripts/       automation and plotting scripts
+results/raw/   generated CSV or data files
+results/plots/ generated figures for the report
+```
+
+### Experimental Drivers
+
+The will go in:
+
+```{.text}
+code/
+├── experiments/
+│   ├── exp_convergence.cc
+│   ├── exp_condition_sweep.cc
+│   └── exp_residual_precision.cc
+```
+
+They will be written in c++ because they need to instantiate HDNUM types like FP16, bfloat16, FP64, FP128, FP256, run LU, perform refinement, and compute errors.
+
+But the overall experiment workflow will be split:
+
+```{.text}
+C++ drivers:
+    run numerical experiments
+    write CSV files
+
+Python / shell scripts:
+    run many driver configurations
+    collect results
+    make plots
+```
+
+like:
+
+```{.text}
+code/
+├── experiments/
+│   ├── exp_convergence.cc
+│   ├── exp_condition_sweep.cc
+│   └── exp_residual_precision.cc
+├── scripts/
+│   ├── run_all_experiments.py
+│   └── plot_results.py
+└── results/
+    ├── raw/
+    └── plots/
+```
+
+The cpp experiments can be written so that they can be run like:
+
+```{.bash}
+./build/exp_condition_sweep --uf FP16 --u FP64 --ur FP128 --n 100 --matrix random_orthogonal --out results/raw/sweep_fp16_fp64_fp128.csv
+./build/exp_condition_sweep --uf bfloat16 --u FP64 --ur FP128 --n 100 --matrix random_orthogonal --out results/raw/sweep_bf16_fp64_fp128.csv
+./build/exp_condition_sweep --uf FP32 --u FP64 --ur FP128 --n 100 --matrix random_orthogonal --out results/raw/sweep_fp32_fp64_fp128.csv
+```
+
+They a python or shell script can run all of those automatically.
+
+Precision sweeps should vary precision, condition number, and matrix type, and experiments should be scripted so rerunning them is convenient. In practice, that means your experiment system should let you rerun a whole table of experiments with one command, rather than manually recompiling/editing files.
+
+
+## HDNUM, CPFloat and GMP
+
+HDNUM is included as a git submodule:
+
+```{.bash}
+git submodule add https://parcomp-git.iwr.uni-heidelberg.de/Teaching/hdnum.git code/external/hdnum
+git submodule update --init --recursive
+```
+
+CPFloat is cloned and built inside the HDNUM top-level directory, matching HDNUM's expected layout: 
+
+```{.bash}
+cd code/external/hdnum
+git clone https://github.com/north-numerical-computing/cpfloat.git
+cd cpfloat
+make lib
+```
+
+GMP is installed system-wide:
+
+```{.bash}
+sudo apt install libgmp-dev
+```
+
+Because CPFloat sits inside the HDNUM submodule but is not part of HDNUM itself, untracked files are hidden locally only for that submodule:
+
+```{.bash}
+cd code/external/hdnum
+git config status.showUntrackedFiles no
+```
+
+and the parent repository ignores untracked content specifically inside the HDNUM submodule:
+
+```{.bash}
+git config submodule.code/external/hdnum.ignore untracked
+```
+
