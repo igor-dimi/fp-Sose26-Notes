@@ -1,0 +1,3 @@
+[submodule "code/external/hdnum"]
+	path = code/external/hdnum
+	url = https://parcomp-git.iwr.uni-heidelberg.de/Teaching/hdnum.git
