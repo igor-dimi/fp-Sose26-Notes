@@ -10,8 +10,8 @@ book:
     - index.qmd
     - part: "Notes"
       chapters:
-      - project_overview.qmd
       - project_setup.qmd
+      - project_overview.qmd
     - report.qmd
 
     # - intro.qmd
@@ -35,3 +35,4 @@ format:
 
 
 
+number-depth: 2
