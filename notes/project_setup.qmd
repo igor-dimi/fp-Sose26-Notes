@@ -1,0 +1,298 @@
+---
+title: Project Setup
+---
+
+
+## General repository structure
+
+The whole project is managed inside a Quarto book repository. The Quarto project contains notes, theory summaries, the final report, and the implementation code.
+
+The planned directory structure is:
+
+```.text
+project-root/
+├── index.qmd
+├── report/
+├── notes/
+└── code/
+    ├── CMakeLists.txt
+    ├── external/
+    │   └── hdnum/                 # git submodule
+    │       └── cpfloat/           # cloned inside hdnum
+    ├── include/
+    │   ├── mixed_ir.hpp           # algorithm
+    │   ├── hdnum_conversions.hpp  # convert()
+    │   └── error_metrics.hpp      # forward/backward error helpers, later
+    ├── experiments/
+    │   ├── exp_convergence.cc
+    │   ├── exp_condition_sweep.cc
+    │   └── exp_residual_precision.cc
+    ├── examples/
+    │   └── hdnum_sandbox.cc
+    ├── tests/
+    │   ├── test_conversion.cc
+    │   └── test_mixed_ir_sanity.cc
+    ├── scripts/
+    │   ├── run_all_experiments.py
+    │   └── plot_results.py
+    └── results/
+        ├── raw/
+        └── plots/
+```
+
+Purpose of the main sub-directories:
+
+```
+external/      external dependencies, especially HDNUM
+include/       own header-only algorithm and helper code
+src/           optional implementation files, if needed later
+examples/      small sandbox/demo programs for learning and testing
+experiments/   reproducible experimental drivers for report data
+tests/         correctness and sanity checks
+scripts/       automation and plotting scripts
+results/raw/   generated CSV or data files
+results/plots/ generated figures for the report
+```
+
+### Experimental Drivers
+
+The will go in:
+
+```{.text}
+code/
+├── experiments/
+│   ├── exp_convergence.cc
+│   ├── exp_condition_sweep.cc
+│   └── exp_residual_precision.cc
+```
+
+They will be written in c++ because they need to instantiate HDNUM types like FP16, bfloat16, FP64, FP128, FP256, run LU, perform refinement, and compute errors.
+
+But the overall experiment workflow will be split:
+
+```{.text}
+C++ drivers:
+    run numerical experiments
+    write CSV files
+
+Python / shell scripts:
+    run many driver configurations
+    collect results
+    make plots
+```
+
+like:
+
+```{.text}
+code/
+├── experiments/
+│   ├── exp_convergence.cc
+│   ├── exp_condition_sweep.cc
+│   └── exp_residual_precision.cc
+├── scripts/
+│   ├── run_all_experiments.py
+│   └── plot_results.py
+└── results/
+    ├── raw/
+    └── plots/
+```
+
+The cpp experiments can be written so that they can be run like:
+
+```{.bash}
+./build/exp_condition_sweep --uf FP16 --u FP64 --ur FP128 --n 100 --matrix random_orthogonal --out results/raw/sweep_fp16_fp64_fp128.csv
+./build/exp_condition_sweep --uf bfloat16 --u FP64 --ur FP128 --n 100 --matrix random_orthogonal --out results/raw/sweep_bf16_fp64_fp128.csv
+./build/exp_condition_sweep --uf FP32 --u FP64 --ur FP128 --n 100 --matrix random_orthogonal --out results/raw/sweep_fp32_fp64_fp128.csv
+```
+
+They a python or shell script can run all of those automatically.
+
+Precision sweeps should vary precision, condition number, and matrix type, and experiments should be scripted so rerunning them is convenient. In practice, that means your experiment system should let you rerun a whole table of experiments with one command, rather than manually recompiling/editing files.
+
+
+## HDNUM, CPFloat and GMP
+
+HDNUM is included as a git submodule:
+
+```{.bash}
+git submodule add https://parcomp-git.iwr.uni-heidelberg.de/Teaching/hdnum.git code/external/hdnum
+git submodule update --init --recursive
+```
+
+CPFloat is cloned and built inside the HDNUM top-level directory, matching HDNUM's expected layout: 
+
+```{.bash}
+cd code/external/hdnum
+git clone https://github.com/north-numerical-computing/cpfloat.git
+cd cpfloat
+make lib
+```
+
+GMP is installed system-wide:
+
+```{.bash}
+sudo apt install libgmp-dev
+```
+
+Because CPFloat sits inside the HDNUM submodule but is not part of HDNUM itself, untracked files are hidden locally only for that submodule:
+
+```{.bash}
+cd code/external/hdnum
+git config status.showUntrackedFiles no
+```
+
+and the parent repository ignores untracked content specifically inside the HDNUM submodule:
+
+```{.bash}
+git config submodule.code/external/hdnum.ignore untracked
+```
+
+## Changing Top-level `CMakeLists.txt`
+
+Currently the implementations are header-only and are contained in the folder include.
+Later if source files that not only header are added e.g. to a src/ folder it has to be accounted for:
+
+Right now, this part:
+
+```cmake
+add_library(mixed_precision_core INTERFACE)
+```
+
+is only an `INTERFACE` target. That means it does not compile any `.cc` files. It only carries usage requirements:
+
+```text
+include directories
+compile definitions
+linked libraries
+compile features
+```
+
+So it works well for a header-only project, but it does not yet build files from `src/`.
+
+But if later you add:
+
+```text
+src/csv_writer.cc
+src/matrix_generators.cc
+src/experiment_io.cc
+```
+
+then those files will not automatically be compiled unless we update CMake.
+
+### How to integrate `src/` later
+
+The usual clean solution is to change from a purely `INTERFACE` core target to a real library target.
+
+For example:
+
+```cmake
+add_library(mixed_precision_core
+    src/csv_writer.cc
+    src/matrix_generators.cc
+    src/experiment_io.cc
+)
+```
+
+Then keep the same include directories and dependencies:
+
+```cmake
+target_include_directories(mixed_precision_core
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${HDNUM_DIR}"
+        "${CPFLOAT_INCLUDE_DIR}"
+)
+
+target_compile_definitions(mixed_precision_core
+    PUBLIC
+        HDNUM_HAS_GMP=1
+        HDNUM_HAS_CPFLOAT=1
+)
+
+target_link_libraries(mixed_precision_core
+    PUBLIC
+        "${CPFLOAT_LIBRARY}"
+        gmpxx
+        gmp
+)
+
+target_compile_features(mixed_precision_core
+    PUBLIC
+        cxx_std_17
+)
+```
+
+Then all your examples, tests, and experiments can continue doing:
+
+```cmake
+target_link_libraries(my_target
+    PRIVATE
+        mixed_precision_core
+        mixed_precision_warnings
+)
+```
+
+and they will automatically get both:
+
+```text
+the headers from include/
+the compiled implementation files from src/
+```
+
+### A flexible version
+
+If you do not want to manually list every source file, you can use globbing:
+
+```cmake
+file(GLOB project_sources CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+)
+
+add_library(mixed_precision_core
+    ${project_sources}
+)
+```
+
+But there is one small issue: `add_library()` with an empty source list can be awkward in some CMake versions/workflows.
+
+So for now, while `src/` is empty, I would keep the current `INTERFACE` version.
+
+Later, when you add the first real `.cc` file, change:
+
+```cmake
+add_library(mixed_precision_core INTERFACE)
+```
+
+to:
+
+```cmake
+file(GLOB project_sources CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+)
+
+add_library(mixed_precision_core
+    ${project_sources}
+)
+```
+
+and replace `INTERFACE` with `PUBLIC` in the relevant `target_*` commands.
+
+### Rule of thumb
+
+Use this now:
+
+```cmake
+add_library(mixed_precision_core INTERFACE)
+```
+
+while the project is header-only.
+
+Use this later:
+
+```cmake
+add_library(mixed_precision_core ${project_sources})
+```
+
+once `src/` contains real compiled support code.
