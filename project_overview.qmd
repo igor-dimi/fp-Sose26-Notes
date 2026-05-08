@@ -154,7 +154,14 @@ review the definitions of **forward error** and **backward error**
 :::
 
 
+### Plan
 
+1. Implement hdnum_conversions.hpp.
+2. Add conversion tests.
+3. Implement a minimal mixed_ir.hpp.
+4. First test with all precisions set to FP64.
+5. Then test real mixed precision triples.
+6. Add systematic experiments and plotting scripts.
 
 
   
