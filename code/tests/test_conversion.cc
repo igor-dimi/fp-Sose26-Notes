@@ -47,7 +47,7 @@ int main()
 
         std::cout << "A = \n" << A << std::endl;
 
-        hdnum::DenseMatrix<hdnum::FP<128>> B(2, 2);
+        hdnum::DenseMatrix<hdnum::FP128> B(2, 2);
         mpir::convert(B, A);
 
         assert(B.rowsize() == A.rowsize());
