@@ -147,3 +147,152 @@ and the parent repository ignores untracked content specifically inside the HDNU
 git config submodule.code/external/hdnum.ignore untracked
 ```
 
+## Changing Top-level `CMakeLists.txt`
+
+Currently the implementations are header-only and are contained in the folder include.
+Later if source files that not only header are added e.g. to a src/ folder it has to be accounted for:
+
+Right now, this part:
+
+```cmake
+add_library(mixed_precision_core INTERFACE)
+```
+
+is only an `INTERFACE` target. That means it does not compile any `.cc` files. It only carries usage requirements:
+
+```text
+include directories
+compile definitions
+linked libraries
+compile features
+```
+
+So it works well for a header-only project, but it does not yet build files from `src/`.
+
+But if later you add:
+
+```text
+src/csv_writer.cc
+src/matrix_generators.cc
+src/experiment_io.cc
+```
+
+then those files will not automatically be compiled unless we update CMake.
+
+### How to integrate `src/` later
+
+The usual clean solution is to change from a purely `INTERFACE` core target to a real library target.
+
+For example:
+
+```cmake
+add_library(mixed_precision_core
+    src/csv_writer.cc
+    src/matrix_generators.cc
+    src/experiment_io.cc
+)
+```
+
+Then keep the same include directories and dependencies:
+
+```cmake
+target_include_directories(mixed_precision_core
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${HDNUM_DIR}"
+        "${CPFLOAT_INCLUDE_DIR}"
+)
+
+target_compile_definitions(mixed_precision_core
+    PUBLIC
+        HDNUM_HAS_GMP=1
+        HDNUM_HAS_CPFLOAT=1
+)
+
+target_link_libraries(mixed_precision_core
+    PUBLIC
+        "${CPFLOAT_LIBRARY}"
+        gmpxx
+        gmp
+)
+
+target_compile_features(mixed_precision_core
+    PUBLIC
+        cxx_std_17
+)
+```
+
+Then all your examples, tests, and experiments can continue doing:
+
+```cmake
+target_link_libraries(my_target
+    PRIVATE
+        mixed_precision_core
+        mixed_precision_warnings
+)
+```
+
+and they will automatically get both:
+
+```text
+the headers from include/
+the compiled implementation files from src/
+```
+
+### A flexible version
+
+If you do not want to manually list every source file, you can use globbing:
+
+```cmake
+file(GLOB project_sources CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+)
+
+add_library(mixed_precision_core
+    ${project_sources}
+)
+```
+
+But there is one small issue: `add_library()` with an empty source list can be awkward in some CMake versions/workflows.
+
+So for now, while `src/` is empty, I would keep the current `INTERFACE` version.
+
+Later, when you add the first real `.cc` file, change:
+
+```cmake
+add_library(mixed_precision_core INTERFACE)
+```
+
+to:
+
+```cmake
+file(GLOB project_sources CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+)
+
+add_library(mixed_precision_core
+    ${project_sources}
+)
+```
+
+and replace `INTERFACE` with `PUBLIC` in the relevant `target_*` commands.
+
+### Rule of thumb
+
+Use this now:
+
+```cmake
+add_library(mixed_precision_core INTERFACE)
+```
+
+while the project is header-only.
+
+Use this later:
+
+```cmake
+add_library(mixed_precision_core ${project_sources})
+```
+
+once `src/` contains real compiled support code.

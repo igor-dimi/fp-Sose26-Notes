@@ -1,3 +1,20 @@
+# Quarto Output
 /.quarto/
 /_book/
 build/
+
+# CMake/build output
+/build/
+/code/build/
+
+# Generated Experiment Data
+/code/results/raw/
+/code/results/plots/
+
+# keep result folders if you wnt empty directories in git
+!/code/results/raw/.gitkeep
+!/code/results/plots/.gitkeep
+
+# VS Code
+.vscode/&
+!.vscode/settings.json
