@@ -1,0 +1,248 @@
+---
+title: Conversions
+---
+
+In this project there are three groups of number formats:
+
+1. simulated low precision via CPFloat
+2. native C++ hardware types `float` and `double`
+3. high / arbitrary precision via GMP
+
+The low precision `fp8`, `fp16`, `bfloat16` are simulated via CPFloat.
+
+An overview of types defined in HDNUM:
+
+
+| HDNUM / project type |            Provider |                             Parameters | Corresponds to in Higham–Mary                                                 |              Unit roundoff, roughly |
+| -------------------- | ------------------: | -------------------------------------: | ----------------------------------------------------------------------------- | ----------------------------------: |
+| `FP8`                |             CPFloat |                         `CPFloat<4,4>` | custom 8-bit / “quarter precision”-like format                                |   $2^{-4}\approx 6.25\cdot 10^{-2}$ |
+| `bfloat16`           |             CPFloat |                         `CPFloat<8,8>` | Higham–Mary `bfloat16`                                                        |   $2^{-8}\approx 3.91\cdot 10^{-3}$ |
+| `FP16`               |             CPFloat |                        `CPFloat<11,5>` | IEEE half precision, Higham–Mary `fp16`                                       |  $2^{-11}\approx 4.88\cdot 10^{-4}$ |
+| `FP32`               |  native C++ `float` |                   effectively `(24,8)` | IEEE single precision, Higham–Mary `fp32`                                     |  $2^{-24}\approx 5.96\cdot 10^{-8}$ |
+| `FP64`               | native C++ `double` |                  effectively `(53,11)` | IEEE double precision, Higham–Mary `fp64`                                     | $2^{-53}\approx 1.11\cdot 10^{-16}$ |
+| `FP128`              |                 GMP |              approx. 128-bit, `FP<64>` | software high precision / “quadruple-like” role, not necessarily IEEE `fp128` |            depends on HDNUM wrapper |
+| `FP256`              |                 GMP |             approx. 256-bit, `FP<192>` | multiprecision reference precision                                            |     depends on chosen GMP precision |
+| `FP512`, `FP1024`    |                 GMP |                 approx. 512 / 1024-bit | multiprecision, beyond Higham–Mary’s standard table                           |     depends on chosen GMP precision |
+
+As a reminder the three-precision LU-IR algorithm is:
+
+```text
+1. Compute the LU factorization PA = LU in precision uf.
+2. Solve LU x0 = P b in precision uf; cast x0 to precision u.
+3. While not converged:
+   4. Compute ri = b - A xi in precision ur.
+   5. Cast ri to precision u.
+   6. Solve LU di = P ri in precision uf; cast di to precision u.
+   7. Update xi+1 = xi + di in precision u.
+```
+i.e.:
+
+1) Compute LU in $u_f$
+2) Solve the initial system in $u_f$
+3) Compute residuals in $u_r$
+4) Cast residuals to $u$
+5) Solve correction equations using the low-precision LU factors in $u_f$
+6) update in $u$
+
+For the algorithm the intended mapping is:
+
+| Algorithm role | Meaning                                                  | Typical project choices                        |
+| -------------- | -------------------------------------------------------- | ---------------------------------------------- |
+| $u_f$          | factorization precision; low precision used for LU       | `FP8`, `bfloat16`, `FP16`, sometimes `FP32`    |
+| $u$            | working precision; stores $A,b,x_i$ and updates solution | usually `FP32` or `FP64`                       |
+| $u_r$          | residual precision; computes $r_i=b-Ax_i$ accurately     | `FP64`, `FP128`, maybe `FP256` for experiments |
+
+A reasonable set of experiments could be:
+
+| Experiment                       | $u_f$      | $u$    | $u_r$   |
+| -------------------------------- | ---------- | ------ | ------- |
+| baseline sanity check            | `FP64`     | `FP64` | `FP64`  |
+| classical mixed precision        | `FP32`     | `FP64` | `FP64`  |
+| half/double refinement           | `FP16`     | `FP64` | `FP64`  |
+| half/double with higher residual | `FP16`     | `FP64` | `FP128` |
+| bfloat comparison                | `bfloat16` | `FP64` | `FP64`  |
+| very low precision stress test   | `FP8`      | `FP64` | `FP128` |
+
+## Type Conversions
+
+Again, the precisions for the algorithm are:
+
+1) $u_f$: factorization / solve precision (low)
+2) $u$: working precision (medium)
+3) $u_r$: residual precision (high)
+
+LU is computed in $u_f$, the initial solution is cast to $u$, the residual is computed in $u_r$ and cast back to $u$, the correction
+solve uses the low-precision LU factors, and the correction is cast to $u$ before updating. 
+
+So the practically necessary conversions are:
+
+| Conversion                |                 |                                                                                                           |
+| ------------------------- | ---------------------: | ------------------------------------------------------------------------------------------------------------ |
+| $u \to u_f$               |                     |  create low-precision copies of $A$, $b$, or residuals for LU / triangular solves.                         |
+| $u_f \to u$               |                     |  bring $x_0$ and correction $d_i$ back to working precision.                                               |
+| $u \to u_r$               |                     |  compute $r_i = b - Ax_i$ in high precision.                                                               |
+| $u_r \to u$               |                     | The residual is cast back before solving the correction equation.                                            |
+| $u_f \leftrightarrow u_r$ |   not strictly needed  | You normally convert through the working representation, or independently convert from the original $A,b,x$. |
+
+### Implementing Conversions
+
+HDNum implements wrappers `FP` and `CPFloat` for the high-precision GMP  and the low precision CPFloat types in the source files `highprec_gmp.hh` and `lowprec_cpfloat.hh`. 
+
+We are asked not to modify HDNum source files, instead implement explicit conversion functions:
+
+```cpp
+template<class T_out, class T_in>
+void convert(Vector<T_out>& out, const Vector<T_in>& in);
+
+template<class T_out, class T_in>
+void convert(DenseMatrix<T_out>& out, const DenseMatrix<T_in>& in);
+```
+
+The approach is to assign to `out` element-wise in loops, where the values constructed from the corresponding elements of `in`. A naive approach is to do:
+
+```cpp
+#pragma once
+
+#include <cstddef>
+#include "hdnum.hh"
+
+namespace mpir {
+
+// Vector conversion: resizes output if needed.
+template<class T_out, class T_in>
+void convert(hdnum::Vector<T_out>& out,
+             const hdnum::Vector<T_in>& in)
+{
+    if (out.size() != in.size()) {
+        out.resize(in.size());
+    }
+
+    for (std::size_t i = 0; i < in.size(); ++i) {
+        out[i] = T_out(in[i]);
+    }
+}
+
+// Convenience wrapper: allocates a new vector.
+template<class T_out, class T_in>
+hdnum::Vector<T_out> convert_vector(const hdnum::Vector<T_in>& in)
+{
+    hdnum::Vector<T_out> out(in.size());
+    convert(out, in);
+    return out;
+}
+
+
+// Matrix conversion: output matrix must already have correct shape.
+template<class T_out, class T_in>
+void convert(hdnum::DenseMatrix<T_out>& out,
+             const hdnum::DenseMatrix<T_in>& in)
+{
+    if (out.rowsize() != in.rowsize() || out.colsize() != in.colsize()) {
+        throw std::invalid_argument(
+            "mpir::convert(DenseMatrix): output matrix has wrong size"
+        );
+    }
+
+    for (std::size_t i = 0; i < in.rowsize(); ++i) {
+        for (std::size_t j = 0; j < in.colsize(); ++j) {
+            out[i][j] = T_out(in[i][j]);
+        }
+    }
+}
+
+// Convenience wrapper: allocates a new matrix.
+template<class T_out, class T_in>
+hdnum::DenseMatrix<T_out> convert_matrix(const hdnum::DenseMatrix<T_in>& in)
+{
+    hdnum::DenseMatrix<T_out> out(in.rowsize(), in.colsize());
+    convert(out, in);
+    return out;
+}
+```
+
+Where the type conversion is done via the assignment:
+
+```cpp
+out[i] = T_out(in[i])
+```
+
+for each element.
+
+But this doesn't work for all pairs of `T_in, T_out` because not all the necessary constructors
+or conversion operators are implemented in the classes `CPFloat` and `FP`
+
+
+#### Which Conversions Work which Don't ?
+
+`FP` provides the constructors:
+
+* `FP()`
+* `FP(const double &)`
+* `FP(const float &)`
+* `FP(const int &)`
+* `FP(const mpf_class &)`
+* `FP<mm>(const FP<mm>&)`
+
+
+So the conversion:
+
+* `double` => GMP
+
+works
+
+`CPFloat` provides the constructors:
+
+* `CPFloat()`
+* `CPFloat(const double &)`
+* `CPFloat<mm, ee>(const double &)`
+
+So:
+
+* `double` => `CPFloat`
+
+works
+
+CPFloat also provides the conversion operator `operator double() const`. Therefore
+
+* `CPFloat` => `double`
+
+works as well. 
+
+Because `CPFloat` can be converted to `double` and GMP can be constructed from a `double`:
+
+* `CPFloat` => GMP
+
+works too, by the implicit conversion of `CPFloat` to a `double`
+
+But since the `FP` class doesn't provide a `double()` operator the conversion
+
+* GMP => `double`
+
+doesn't work. 
+
+Also `CPFloat` doesn't implemenet a constructor that accepts a GMP type, (or also because `FP`
+doesn't provide a `double()` operator) the conversion:
+
+* `CPFloat` => GMP
+
+doesn't work. 
+
+We summarize this with the following diagram and table:
+
+![conversion triangle](/imgs/conversions/converstions-triangle.png){width="55%"}
+
+| Nr      | Conversion                       | Works ? | Why ?                                         |
+| ------- | -------------------------------- | ------- | --------------------------------------------- |
+| (1)     | `double` $\Rightarrow$ `CPFloat` | Yes     | `CPFloat(const double &)`                     |
+| (2)     | `CPFloat` $\Rightarrow$ `double` | Yes     | `CPFloat::double()`                           |
+| (3)     | `double` $\Rightarrow$ GMP       | Yes     | `FP(const double &)`                          |
+| **(4)** | GMP $\Rightarrow$ `double`       | **No**  | No `FP::double()`                             |
+| (5)     | `CPFloat` $\Rightarrow$ GMP      | Yes     | `CPFloat` is converted to `double` implicitly |
+| **(6)** | GMP $\Rightarrow$ `CPFloat`      | **No**  | No `FP(const CPFloat &)` or no `FP::double()` |
+
+So if the conversion operator `FP::double()` would be implemented both **(4)** and **(6)** would work.
+(6) would work too because GMP type would be implicitly converted to a double and a `CPFloat` would be
+constructed. But more explicitly a constructor `FP(const CPFloat &)` can be implemented too. 
+
+But since we are initially not allowed to modify HDNUM source code we take a different approach. 
+

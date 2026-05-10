@@ -20,7 +20,7 @@ void print_all(const Ts&... values)
 int main()
 {
     
-    hdnum::FP64 d = 4.0; // double
+    hdnum::FP64 d = 3.14159265359; // double
     // hdnum::FP32 f = 4.0; // float
 
 
@@ -84,6 +84,20 @@ int main()
     auto d2 = fp128.getNumber().get_d();
 
     std::cout << d2 << std::endl;
+
+    double x = 1.13315;
+    float x2 = x;
+    auto fp_low = hdnum::FP16(x);
+    auto fp_low2 = hdnum::bfloat16(x);
+
+    SHOW(fp_low);
+    SHOW(fp_low2);
+    SHOW(x2);
+    SHOW(x);
+
+    auto x3 = double(fp_low);
+
+    SHOW(x3);
 
     return 0;
 }

@@ -10,8 +10,9 @@ book:
     - index.qmd
     - part: "Notes"
       chapters:
-      - project_setup.qmd
-      - project_overview.qmd
+      - notes/project_setup.qmd
+      - notes/project_overview.qmd
+      - notes/conversions.qmd
     - report.qmd
 
     # - intro.qmd
