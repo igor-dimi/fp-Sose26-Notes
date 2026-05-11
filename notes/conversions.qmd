@@ -321,22 +321,21 @@ number.
 
 ### Implementing Conversions - Correct Approach
 
-As discussed above, the main issue is that
+The main issue is that
 
 
 ```cpp
 out[i] = T_out(in[i]);
 ```
 
-does not work uniformly for all type pairs. Therefore, we replace this direct construction step with a small
-scalar conversion helper:
+does not work uniformly for all type pairs. We replace this direct construction step with:
 
 
 ```cpp
 out[i] = scalar_convert<T_out>(in[i]);
 ```
 
-This helper selects the appropriate conversion path at compile time, depending on the input and output types using standard library type traits together with `if constexpr`
+This selects the appropriate conversion path at compile time, depending on the input and output types using standard library type traits and `if constexpr`
 
 As summarized in @fig-conversions-triangle and @tbl-conversions, the only conversions that do not work by 
 direct construction are:
@@ -350,8 +349,8 @@ All other relevant cases can be handled by direct construction of the form:
 T_out(x) // where x has type T_in
 ```
 
-In C++, one can check at compile time whether an object of type `T_out` can be constructed from an argument type
-`const T_in&` using the standard library type trait.
+In C++, we can check at compile time whether an object of type `T_out` can be constructed from an argument type
+`const T_in&` using the standard library type trait:
 
 
 ```bash
@@ -359,7 +358,372 @@ std::is_constructible_v<T_out, const T_in&>
 ```
 
 This expression evaluates to `true` if such a construction is valid, and to `false` otherwise. 
-With this, we can write the initial part of 
+
+It can be verified that this indeed evaluates to `false` only for the conversion pairs:
+
+* `T_out == double`, `T_in == FP`
+* `T_out == CPFloat`, `T_in == FP`
+
+Then, the initial part of `scalar_cast` can be written as:
+
+
+```cpp
+template<class T_out, class T_in>
+T_out scalar_cast(const T_in& x)
+{
+    if constexpr (std::is_constructible_v<T_out, const T_in&>) {
+        return T_out(x); // we use the direct construction
+    }
+    else { //remaining cases: FP => double || FP => CPFloat
+        ...
+    }
+}
+```
+
+Logically, we know that the only possible cases in the `else` branch are:
+
+* `T_out == double`, `T_in == FP`
+* `T_out == CPFloat`, `T_in == FP`
+
+In both cases `T_in` is an `FP` type.  as we've seen in @lst-get-d-method the `double` representation of an
+`FP` number `x` can be extracted with:
+
+```cpp
+x.getNumber().get_d()
+```
+
+Since both `CPFloat` and `double` can be constructed from a `double`, we could simply write:
+
+```cpp
+template<class T_out, class T_in>
+T_out scalar_cast(const T_in& x)
+{
+    if constexpr (std::is_constructible_v<T_out, const T_in&>) {
+        return T_out(x); // we use the direct construction
+    }
+    else { //remaining cases: FP => double || FP => CPFloat
+        return T_out(x.getNumber().get_d());
+    }
+}
+```
+
+However, this version is not robust enough because the `else` branch relies on our prior reasoning that only the two exceptional cases can reach it. The code itself does not express this assumption. If `scalar_cast` is later instantiated with another unsupported conversion pair, the compiler will still try to compile
+
+```cpp
+x.getNumber().get_d()
+```
+
+even if `T_in` is not an `FP` type. This should lead to implementation-dependent and potentially confusing error message.
+
+Therefore, it is better to make the remaining cases explicit using another `if constexpr` condition:
+
+
+```cpp
+template<class T_out, class T_in>
+T_out scalar_cast(const T_in& x)
+{
+    if constexpr (std::is_constructible_v<T_out, const T_in&>) {
+        return T_out(x); // direct construction works
+    }
+    else if constexpr (
+        is_hdnum_fp_v<T_in> &&
+        std::is_constructible_v<T_out, double>
+    ) {
+        return T_out(x.getNumber().get_d());
+    }
+    else {
+        static_assert(always_false<T_out, T_in>::value,
+                      "unsupported scalar conversion");
+    }
+}
+```
+
+Here, the helper trait `is_hdnum_fp_v<T>` detects whether a type `T` is one of HDNUM's GMP-based high
+precision numbe types `hdnum::FP<m>`. This is a compile-time Boolean value, and analogous to the standard
+library traits such as `std::is_constructible_v`.
+
+The implementation, given below, follows a common template metaprogramming partial specialization pattern:
+
+
+```cpp
+// Detect HDNUM's GMP wrapper type hdnum::FP<m>
+template<class T>
+struct is_hdnum_fp_impl : std::false_type {};
+
+template<int m>
+struct is_hdnum_fp_impl<hdnum::FP<m>> : std::true_type {};
+
+template<class T>
+inline constexpr bool is_hdnum_fp_v =
+    is_hdnum_fp_impl<
+        std::remove_cv_t<std::remove_reference_t<T>>
+    >::value;
+```
+
+1) The first part
+
+   ```cpp
+   template<class T>
+   struct is_hdnum_fp_impl : std::false_type {};
+   ```
+   
+   is the default case and says:
+   
+   > for an arbitrary type `T`, it is false
+
+   So:
+   
+   ```cpp
+   is_hdnum_fp_impl<double>::value       // false
+   is_hdnum_fp_impl<float>::value        // false
+   is_hdnum_fp_impl<hdnum::FP16>::value  // false, because CPFloat, not GMP FP
+   ```
+
+2) The second part
+   
+   ```cpp
+   template<int m>
+   struct is_hdnum_fp_impl<hdnum::FP<m>> : std::true_type {};
+   ```
+
+   is the specialization case, and says:
+
+   > if the type has the form `hdnum::FP<m>`, it is true.
+
+   So:
+
+   ```cpp
+   is_hdnum_fp_impl<hdnum::FP128>::value  // true
+   is_hdnum_fp_impl<hdnum::FP256>::value  // true
+   ```
+
+3) The last part
+
+   ```cpp
+   template<class T>
+   inline constexpr bool is_hdnum_fp_v =
+    is_hdnum_fp_impl<
+        std::remove_cv_t<std::remove_reference_t<T>>
+    >::value;
+   ``` 
+
+   defines a compile-time boolean variable template. For example:
+
+   ```cpp
+   is_hdnum_fp_v<double>          // false
+   is_hdnum_fp_v<hdnum::FP128>   // true
+   ```
+
+   It is analogous to standard library helpers such as:
+
+   ```cpp
+   std::is_arithmetic_v<T>
+   std::is_constructible_v<T, Args...>
+   std::is_convertible_v<From, To>
+   ```
+
+   and allows to write 
+
+   ```cpp
+   is_hdnum_fp_v<T>
+   ```
+
+   instead of
+
+   ```cpp
+   is_hdnum_fp_impl<T>::value
+   ```
+
+   The keyword `inline` is needed for variable that are defined in header files. 
+
+   The use of:
+
+   ```cpp
+   std::remove_reference_t<T>
+   std::remove_cv_t<T>
+   ```
+
+   makes the trait insensitive to references and `const` / `volatile` qualifiers. For example
+   this way all of the following are treated as the same:
+
+   ```cpp
+   hdnum::FP<64>
+   const hdnum::FP<64>
+   hdnum::FP<64>&
+   const hdnum::FP<64>&
+   ```
+
+   Without removing references and cv-qualifiers, the specialization would not match types such as
+   `hdnum::FP<m>&`
+
+
+#### The final branch of `scalar_cast`
+
+```cpp
+else{
+    static_assert(always_false<T_out, T_in>::value,
+        "unsupported scalar conversion");
+}
+```
+
+This branch is reached only if neither of the previous compile-time conditions applies:
+
+```cpp
+std::is_constructible_v<T_out, const T_in&>
+```
+
+is `false`, so direct construction does not work, and
+
+```cpp
+is_hdnum_fp_v<T_in> && std::is_constructible_v<T_out, double>
+```
+
+is also `false`, so the special `FP => double` / `FP => CPFloat` conversion path doesn't apply either.
+
+Therefore, if the compiler reaches this final 'else' branch, the requested scalar conversion is unsupported. In that case, we want compilation to fail with a clear error message.
+
+The helper trait is defined as:
+
+```cpp
+template<class...>
+struct always_false : std::false_type {};
+```
+
+This defines a type trait that is always `false`, regardless of the template arguments. For example:
+
+
+```cpp
+always_false<int>::value                 // false
+always_false<double, int>::value         // false
+always_false<hdnum::FP<64>, double>::value // false
+```
+
+The `class...` syntax denotes a template parameter pack and means that `always_false` can accept any number
+of template type arguments. In our case we use two arguments:
+
+
+```cpp
+always_false<T_out, T_in>::value 
+```
+
+It is important that `always_false<T_out, T_in>::value` depends on template parameters `T_out` and `T_in`, as it
+lets us create a compile-time `false` value that is evaluated when the templates are instantiated and not when
+the function is parsed. Omitting and writing simply `static_assert(false, ...)` would cause the assertion to be
+checked when the function template is parsed, and not only when the template is instantiated and the final branch
+is actually selected for the concrete instantiation. 
+
+#### `scalar_cast` Final Version
+
+```cpp
+#pragma once
+
+#include <cstddef>
+#include <stdexcept>
+#include <type_traits>
+
+#include "hdnum.hh"
+
+namespace mpir {
+
+// Helper for dependent static_assert(false)
+template<class...>
+struct always_false : std::false_type {};
+
+
+// Detect HDNUM's GMP wrapper type hdnum::FP<m>
+template<class T>
+struct is_hdnum_fp_impl : std::false_type {};
+
+template<int m>
+struct is_hdnum_fp_impl<hdnum::FP<m>> : std::true_type {};
+
+template<class T>
+inline constexpr bool is_hdnum_fp_v =
+    is_hdnum_fp_impl<
+        std::remove_cv_t<std::remove_reference_t<T>>
+    >::value;
+
+
+// Scalar conversion
+template<class T_out, class T_in>
+T_out scalar_cast(const T_in& x)
+{
+    if constexpr (std::is_constructible_v<T_out, const T_in&>) {
+        return T_out(x);
+    }
+    else if constexpr (
+        is_hdnum_fp_v<T_in> &&
+        std::is_constructible_v<T_out, double>
+    ) {
+        return T_out(x.getNumber().get_d());
+    }
+    else {
+        static_assert(always_false<T_out, T_in>::value,
+                      "mpir::scalar_cast: unsupported scalar conversion");
+    }
+}
+
+
+// Vector conversion
+template<class T_out, class T_in>
+void convert(hdnum::Vector<T_out>& out,
+             const hdnum::Vector<T_in>& in)
+{
+    if (out.size() != in.size()) {
+        out.resize(in.size());
+    }
+
+    for (std::size_t i = 0; i < in.size(); ++i) {
+        out[i] = scalar_cast<T_out>(in[i]);
+    }
+}
+
+
+
+
+// DenseMatrix conversion
+template<class T_out, class T_in>
+void convert(hdnum::DenseMatrix<T_out>& out,
+             const hdnum::DenseMatrix<T_in>& in)
+{
+    if (out.rowsize() != in.rowsize() || out.colsize() != in.colsize()) {
+        throw std::invalid_argument(
+            "mpir::convert(DenseMatrix): output matrix has wrong size"
+        );
+    }
+
+    for (std::size_t i = 0; i < in.rowsize(); ++i) {
+        for (std::size_t j = 0; j < in.colsize(); ++j) {
+            out[i][j] = scalar_cast<T_out>(in[i][j]);
+        }
+    }
+}
+
+
+// convenience function
+template<class T_out, class T_in>
+hdnum::DenseMatrix<T_out> convert_matrix(const hdnum::DenseMatrix<T_in>& in)
+{
+    hdnum::DenseMatrix<T_out> out(in.rowsize(), in.colsize());
+    convert(out, in);
+    return out;
+}
+
+// convenience function
+template<class T_out, class T_in>
+hdnum::Vector<T_out> convert_vector(const hdnum::Vector<T_in>& in)
+{
+    hdnum::Vector<T_out> out(in.size());
+    convert(out, in);
+    return out;
+}
+
+} // namespace mpir
+```
+
+
+
+
 
 
 
