@@ -30,9 +30,11 @@ format:
       - brand
     include-in-header: 
       - mathjax-macros.html
+    mermaid-format: js
   pdf:
     documentclass: scrreprt
     include-in-header: preamble.tex
+    mermaid-format: png
 
 
 

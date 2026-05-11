@@ -2,6 +2,8 @@
 title: Conversions
 ---
 
+## Floating Point Types
+
 In this project there are three groups of number formats:
 
 1. simulated low precision via CPFloat
@@ -84,7 +86,7 @@ So the practically necessary conversions are:
 | $u_r \to u$               |                     | The residual is cast back before solving the correction equation.                                            |
 | $u_f \leftrightarrow u_r$ |   not strictly needed  | You normally convert through the working representation, or independently convert from the original $A,b,x$. |
 
-### Implementing Conversions
+### Implementing Conversions - Naive Approach
 
 HDNum implements wrappers `FP` and `CPFloat` for the high-precision GMP  and the low precision CPFloat types in the source files `highprec_gmp.hh` and `lowprec_cpfloat.hh`. 
 
@@ -223,13 +225,13 @@ doesn't work.
 Also `CPFloat` doesn't implemenet a constructor that accepts a GMP type, (or also because `FP`
 doesn't provide a `double()` operator) the conversion:
 
-* `CPFloat` => GMP
+* GMP => `CPFloat`
 
 doesn't work. 
 
 We summarize this with the following diagram and table:
 
-![conversion triangle](/imgs/conversions/converstions-triangle.png){width="55%"}
+![conversion triangle](/imgs/conversions/converstions-triangle.png){width="55%" #fig-conversions-triangle}
 
 | Nr      | Conversion                       | Works ? | Why ?                                         |
 | ------- | -------------------------------- | ------- | --------------------------------------------- |
@@ -240,9 +242,125 @@ We summarize this with the following diagram and table:
 | (5)     | `CPFloat` $\Rightarrow$ GMP      | Yes     | `CPFloat` is converted to `double` implicitly |
 | **(6)** | GMP $\Rightarrow$ `CPFloat`      | **No**  | No `FP(const CPFloat &)` or no `FP::double()` |
 
+: conversion table {#tbl-conversions}
+
 So if the conversion operator `FP::double()` would be implemented both **(4)** and **(6)** would work.
 (6) would work too because GMP type would be implicitly converted to a double and a `CPFloat` would be
 constructed. But more explicitly a constructor `FP(const CPFloat &)` can be implemented too. 
 
 But since we are initially not allowed to modify HDNUM source code we take a different approach. 
+
+### Structure of `FP` and `CPFloat` Classes
+
+```{mermaid}
+classDiagram
+   class FP {
+      -mpf_class number 
+      +FP()
+      +FP(const double &) 
+      +FP(const mpf_class &) 
+      +FP(...) 
+      +getNumber() mpf_class
+   }
+   
+   class CPFloat {
+      -double number
+      +CPFloat()
+      +CPFloat(const double &)
+      +CPFLoat(...) 
+      +operator double() 
+      +getNumber() double
+   }
+```
+
+* **`FP`**:
+   * `FP` has a single private member variable `number` that is an GMP type, i.e. `mpf_class`.
+   * it can be accessed with the public getter `const getNumber() : mpf_class`
+* **`CPFloat`**:
+  * `CPFloat` has a single private member variable `number` of type `double`.
+  * it can be accessed with the public getter `const getNumber() : double` 
+
+
+::: {.callout-note}
+
+There's a mistake in HDNUM `highprec_gmp.hh` source file. The member variable `number` is documented as:
+
+```{.cpp filename="highprec_gmp.hh"}
+private:
+    // stores a double to represent the low precision number
+    mpf_class number;
+```
+The comment `// stores a double to represent the low precision number` is wrong, and is probably copied over
+by mistake from `lowprec_cpfloat.hh`:
+
+
+```{.cpp filename="lowprec_cpfloat.hh"}
+private:
+    // stores a double to represent the low precision number
+    double number;
+```
+
+Instead it should be something like:
+
+```cpp
+// stores an mpf_class to represent the high precision GMP number
+```
+
+:::
+
+With the above interface, given a GMP number, the double representation of the number can be obtained with:
+
+
+```{#lst-get-d-method .cpp lst-cap="get_d() method"}
+hdnum::FP128 fp128_number(1.2345);
+auto d = fp128_number.getNumber().get_d(); //d is double
+```
+
+Where we use the `.get_d()` method of `mpf_class` to get the `double` representation of the GMP
+number.
+
+### Implementing Conversions - Correct Approach
+
+As discussed above, the main issue is that
+
+
+```cpp
+out[i] = T_out(in[i]);
+```
+
+does not work uniformly for all type pairs. Therefore, we replace this direct construction step with a small
+scalar conversion helper:
+
+
+```cpp
+out[i] = scalar_convert<T_out>(in[i]);
+```
+
+This helper selects the appropriate conversion path at compile time, depending on the input and output types using standard library type traits together with `if constexpr`
+
+As summarized in @fig-conversions-triangle and @tbl-conversions, the only conversions that do not work by 
+direct construction are:
+
+1. `FP` $\Rightarrow$ `double`,
+2. `FP` $\Rightarrow$ `CPFloat`
+
+All other relevant cases can be handled by direct construction of the form:
+
+```cpp
+T_out(x) // where x has type T_in
+```
+
+In C++, one can check at compile time whether an object of type `T_out` can be constructed from an argument type
+`const T_in&` using the standard library type trait.
+
+
+```bash
+std::is_constructible_v<T_out, const T_in&>
+```
+
+This expression evaluates to `true` if such a construction is valid, and to `false` otherwise. 
+With this, we can write the initial part of 
+
+
+
 
