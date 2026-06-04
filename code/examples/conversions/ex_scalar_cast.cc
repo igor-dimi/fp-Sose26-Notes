@@ -5,16 +5,16 @@
 #include "hdnum.hh"
 #include "hdnum_conversions.hpp"
 
-template<class T>
-double approx_as_double(const T& x)
-{
-    if constexpr (mpir::is_hdnum_fp_v<T>) {
-        return x.getNumber().get_d();
-    }
-    else {
-        return static_cast<double>(x);
-    }
-}
+// template<class T>
+// double approx_as_double(const T& x)
+// {
+//     if constexpr (mpir::is_hdnum_fp_v<T>) {
+//         return x.getNumber().get_d();
+//     }
+//     else {
+//         return static_cast<double>(x);
+//     }
+// }
 
 template<class T_out, class T_in>
 void test_scalar_cast(std::string_view out_name,
@@ -26,9 +26,9 @@ void test_scalar_cast(std::string_view out_name,
     std::cout
         << " - scalar_cast<" << out_name << ">(" << in_name << "): "
         << std::setprecision(17)
-        << approx_as_double(x)
+        << x
         << " -> "
-        << approx_as_double(y)
+        << y
         << '\n';
 }
 
