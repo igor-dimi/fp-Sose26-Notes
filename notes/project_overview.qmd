@@ -32,7 +32,7 @@ Summary:
 Review the definition of **accuracy** of an algorithm
 :::
 
-- precision triples $(u_r, u, u_f)$ with $u_r \succ u \succ u_f$:
+- precision triples $(u_r, u, u_f)$ with $u_f \succ u \succ u_r$:
   - i.e. $u_f$ low precisions like: `fp8`, `fp16`, `bfloat16`, come from CPFloat:
     - `FP8`: `CPFloat<4, 4>`
     - `bfloat16`: `CPFloat<8, 8>`
@@ -148,8 +148,8 @@ review the definitions of **forward error** and **backward error**
 
 ::: {.callout-note}
 
-* Normally $u_r < u$, i.e. the residual computation is done in a precision lower than the working precision. 
-* What happens when we increase it, when does it make a difference? 
+* Normally $u_r < u$, i.e. the residual computation is done in a precision higher than the working precision. 
+* What happens when we lower the precision, when does it make a difference? 
 
 :::
 
