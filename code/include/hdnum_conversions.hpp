@@ -53,7 +53,9 @@ void convert(hdnum::Vector<T_out>& out,
              const hdnum::Vector<T_in>& in)
 {
     if (out.size() != in.size()) {
-        out.resize(in.size());
+        throw std::invalid_argument(
+            "mpir::convert(Vector): output vector has wrong size"
+        );
     }
 
     for (std::size_t i = 0; i < in.size(); ++i) {
