@@ -246,9 +246,10 @@ We summarize this with the following diagram and table:
 
 So if the conversion operator `FP::double()` would be implemented both **(4)** and **(6)** would work.
 (6) would work too because GMP type would be implicitly converted to a double and a `CPFloat` would be
-constructed. But more explicitly a constructor `FP(const CPFloat &)` can be implemented too. 
+constructed. But more explicitly a constructor `CPFloat(const FP &)` can be implemented too. 
 
 But since we are initially not allowed to modify HDNUM source code we take a different approach. 
+
 
 ### Structure of `FP` and `CPFloat` Classes
 

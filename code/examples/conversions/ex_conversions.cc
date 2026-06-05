@@ -144,5 +144,20 @@ int main()
     SHOW(y128);
     std::cout << "size of y128: " << sizeof(y128) << std::endl;
 
+    {
+        std::cout << "something new " << std::endl;
+        double x = hdnum::FP16(1.0);
+        SHOW(x);
+    }
+
+    {
+        std::cout << "the double represenation of an FP number: " << std::endl;
+        hdnum::FP512 x(1.30234);
+        auto y = x.getNumber().get_d();
+        SHOW(x);
+        SHOW(y);
+    }
+
+
     return 0;
 }
