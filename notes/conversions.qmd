@@ -722,11 +722,3 @@ hdnum::Vector<T_out> convert_vector(const hdnum::Vector<T_in>& in)
 
 } // namespace mpir
 ```
-
-
-
-
-
-
-
-
