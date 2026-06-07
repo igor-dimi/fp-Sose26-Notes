@@ -774,4 +774,90 @@ using a value such as `1.23456789012345`.
 
 This is only a useful sanity check that the conversion is really taking place.
 
+### Lossless Conversion Tests
+
+It is also verified that conversion from a lower precision to a higher precision
+do not indeed loose information.
+
+### Vector Conversion Tests
+
+Vector tests check the function
+
+```cpp
+mpir::convert(hdnum::Vector<T_out>& out,
+    const hdnum::Vector<T_in>& in)
+```
+
+for a representative vector of length 5 and checks that each component of the output
+agrees with applying `scalar_cast<T_out>` to the corresponding input component.
+
+The comparison is performed approximately by conveting both values to `double` and using
+a small relative tolerance with the function
+
+```cpp
+inline bool close(double a, double b, double atol = 0.0, double rtol = 1e-12)
+{
+    const double scale = std::max(std::abs(a), std::abs(b));
+    return std::abs(a - b) <= atol + rtol * scale;
+}
+```
+
+This function says whether the two double values are close enough to be considered equal. The tolerance is scaled by the max value of the inputs.
+
+The test also includes the edge cases:
+
+* vector size 0
+* vector size 1
+
+Additionaly wrong-sized output vector is checked to verify whether an exception is thrown.
+
+Finally the convenience function
+
+```cpp
+mpir::convert_vector<T_out>(in)
+```
+
+is tested, by verifying the resulting type and converted values.
+
+### Matrix Conversion Tests
+
+The matrix tests check the function
+
+```cpp
+mpir::convert(hdnum::DenseMatrix<T_out>& out,
+    const hdnum::DenseMatrix<T_in>& in)
+```
+
+on a representative `5 x 5` matrix, by looping over the output values and comparing them against the result of applying `scalar_cast` to corresponding input entries.
+
+The test includes the edge case of 1 x 1 matrix and a wrong-sized test.
+
+The convenience fucntion `mpir::convert_matrix<T_out>(in)` is also tested.
+
+### Representative Pair Types
+
+1. Native $\leftrightarrow$ Native: 
+   * `FP32 <-> FP64`
+2. Working precision $u \rightarrow$ low precision $u_f$: 
+   * `FP64 -> FP16 / bfloat16 / FP8`
+3. Low Precision $u_f \rightarrow$ working precision $u$:
+   * `FP16 / bfloat16 / FP8 -> FP64`
+4. Working precision $u \rightarrow$ residual precision $u_r$
+   * `FP64 -> FP128 / FP256`
+5. Residual precision $u_r \rightarrow$ working precision $u$
+   * `FP128 / FP256 - > FP64 `
+6. Low precision $u_f \leftrightarrow$ high residual/reference precision $u_r$
+   * `FP128 / FP256 <-> FP16 / bfloat16 / FP8`
+7. High precision $\leftrightarrow$ high precision
+   * `FP128 <-> FP256`
+  
+Covering the main conversion direction required later by the algorithm:
+
+* $u \rightarrow u_f$
+* $u_f \rightarrow u$
+* $u \rightarrow u_r$
+* $u_r \rightarrow u$
+
+The tests also include low to high-precision conversions not required directly
+by the algorithm but useful nevertheless.
 
