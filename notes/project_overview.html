@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.32">
+<meta name="generator" content="quarto-1.7.31">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -73,10 +73,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-e1a5c8363afafaef2c763b6775fbf3ca.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-bf132de45b538d253cd2e2da5fec6016.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-d558773541b75318fdba2db46f940219.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -307,7 +307,7 @@ Note
 </div>
 </div>
 <ul>
-<li>precision triples <span class="math inline">\((u_r, u, u_f)\)</span> with <span class="math inline">\(u_r \succ u \succ u_f\)</span>:
+<li>precision triples <span class="math inline">\((u_r, u, u_f)\)</span> with <span class="math inline">\(u_f \succ u \succ u_r\)</span>:
 <ul>
 <li>i.e.&nbsp;<span class="math inline">\(u_f\)</span> low precisions like: <code>fp8</code>, <code>fp16</code>, <code>bfloat16</code>, come from CPFloat:
 <ul>
@@ -476,8 +476,8 @@ Note
 </div>
 <div class="callout-body-container callout-body">
 <ul>
-<li>Normally <span class="math inline">\(u_r &lt; u\)</span>, i.e.&nbsp;the residual computation is done in a precision lower than the working precision.</li>
-<li>What happens when we increase it, when does it make a difference?</li>
+<li>Normally <span class="math inline">\(u_r &lt; u\)</span>, i.e.&nbsp;the residual computation is done in a precision higher than the working precision.</li>
+<li>What happens when we lower the precision, when does it make a difference?</li>
 </ul>
 </div>
 </div>

@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.32">
+<meta name="generator" content="quarto-1.7.31">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -73,10 +73,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-e1a5c8363afafaef2c763b6775fbf3ca.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-bf132de45b538d253cd2e2da5fec6016.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-d558773541b75318fdba2db46f940219.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -244,6 +244,15 @@ window.Quarto = {
   <li><a href="#implementing-conversions---naive-approach" id="toc-implementing-conversions---naive-approach" class="nav-link" data-scroll-target="#implementing-conversions---naive-approach">Implementing Conversions - Naive Approach</a></li>
   <li><a href="#structure-of-fp-and-cpfloat-classes" id="toc-structure-of-fp-and-cpfloat-classes" class="nav-link" data-scroll-target="#structure-of-fp-and-cpfloat-classes">Structure of <code>FP</code> and <code>CPFloat</code> Classes</a></li>
   <li><a href="#implementing-conversions---correct-approach" id="toc-implementing-conversions---correct-approach" class="nav-link" data-scroll-target="#implementing-conversions---correct-approach">Implementing Conversions - Correct Approach</a></li>
+  </ul></li>
+  <li><a href="#testing-hdnum_conversions.hpp" id="toc-testing-hdnum_conversions.hpp" class="nav-link" data-scroll-target="#testing-hdnum_conversions.hpp"><span class="header-section-number">3.3</span> Testing <code>hdnum_conversions.hpp</code></a>
+  <ul class="collapse">
+  <li><a href="#scalar-conversion-tests" id="toc-scalar-conversion-tests" class="nav-link" data-scroll-target="#scalar-conversion-tests">Scalar Conversion Tests</a></li>
+  <li><a href="#lossy-conversion-tests" id="toc-lossy-conversion-tests" class="nav-link" data-scroll-target="#lossy-conversion-tests">Lossy Conversion Tests</a></li>
+  <li><a href="#lossless-conversion-tests" id="toc-lossless-conversion-tests" class="nav-link" data-scroll-target="#lossless-conversion-tests">Lossless Conversion Tests</a></li>
+  <li><a href="#vector-conversion-tests" id="toc-vector-conversion-tests" class="nav-link" data-scroll-target="#vector-conversion-tests">Vector Conversion Tests</a></li>
+  <li><a href="#matrix-conversion-tests" id="toc-matrix-conversion-tests" class="nav-link" data-scroll-target="#matrix-conversion-tests">Matrix Conversion Tests</a></li>
+  <li><a href="#representative-pair-types" id="toc-representative-pair-types" class="nav-link" data-scroll-target="#representative-pair-types">Representative Pair Types</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -698,7 +707,7 @@ Table&nbsp;3.1: conversion table
 </div>
 </figure>
 </div>
-<p>So if the conversion operator <code>FP::double()</code> would be implemented both <strong>(4)</strong> and <strong>(6)</strong> would work. (6) would work too because GMP type would be implicitly converted to a double and a <code>CPFloat</code> would be constructed. But more explicitly a constructor <code>FP(const CPFloat &amp;)</code> can be implemented too.</p>
+<p>So if the conversion operator <code>FP::double()</code> would be implemented both <strong>(4)</strong> and <strong>(6)</strong> would work. (6) would work too because GMP type would be implicitly converted to a double and a <code>CPFloat</code> would be constructed. But more explicitly a constructor <code>CPFloat(const FP &amp;)</code> can be implemented too.</p>
 <p>But since we are initially not allowed to modify HDNUM source code we take a different approach.</p>
 </section>
 </section>
@@ -1006,59 +1015,172 @@ Listing&nbsp;3.1: get_d() method
 <span id="cb36-52"><a href="#cb36-52" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> convert<span class="op">(</span>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span></span>
 <span id="cb36-53"><a href="#cb36-53" aria-hidden="true" tabindex="-1"></a>             <span class="at">const</span> hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span>
 <span id="cb36-54"><a href="#cb36-54" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
-<span id="cb36-55"><a href="#cb36-55" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>out<span class="op">.</span>size<span class="op">()</span> <span class="op">!=</span> in<span class="op">.</span>size<span class="op">())</span> <span class="op">{</span></span>
-<span id="cb36-56"><a href="#cb36-56" aria-hidden="true" tabindex="-1"></a>        out<span class="op">.</span>resize<span class="op">(</span>in<span class="op">.</span>size<span class="op">());</span></span>
-<span id="cb36-57"><a href="#cb36-57" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
-<span id="cb36-58"><a href="#cb36-58" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-59"><a href="#cb36-59" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="bu">std::</span>size_t i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> in<span class="op">.</span>size<span class="op">();</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb36-60"><a href="#cb36-60" aria-hidden="true" tabindex="-1"></a>        out<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> scalar_cast<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>in<span class="op">[</span>i<span class="op">]);</span></span>
-<span id="cb36-61"><a href="#cb36-61" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
-<span id="cb36-62"><a href="#cb36-62" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
-<span id="cb36-63"><a href="#cb36-63" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-64"><a href="#cb36-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-55"><a href="#cb36-55" aria-hidden="true" tabindex="-1"></a>     <span class="cf">if</span> <span class="op">(</span>out<span class="op">.</span>size<span class="op">()</span> <span class="op">!=</span> in<span class="op">.</span>size<span class="op">())</span> <span class="op">{</span></span>
+<span id="cb36-56"><a href="#cb36-56" aria-hidden="true" tabindex="-1"></a>        <span class="cf">throw</span> <span class="bu">std::</span>invalid_argument<span class="op">(</span></span>
+<span id="cb36-57"><a href="#cb36-57" aria-hidden="true" tabindex="-1"></a>            <span class="st">"mpir::convert(Vector): output vector has wrong size"</span></span>
+<span id="cb36-58"><a href="#cb36-58" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb36-59"><a href="#cb36-59" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb36-60"><a href="#cb36-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-61"><a href="#cb36-61" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="bu">std::</span>size_t i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> in<span class="op">.</span>size<span class="op">();</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb36-62"><a href="#cb36-62" aria-hidden="true" tabindex="-1"></a>        out<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> scalar_cast<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>in<span class="op">[</span>i<span class="op">]);</span></span>
+<span id="cb36-63"><a href="#cb36-63" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb36-64"><a href="#cb36-64" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
 <span id="cb36-65"><a href="#cb36-65" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb36-66"><a href="#cb36-66" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-67"><a href="#cb36-67" aria-hidden="true" tabindex="-1"></a><span class="co">// DenseMatrix conversion</span></span>
-<span id="cb36-68"><a href="#cb36-68" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
-<span id="cb36-69"><a href="#cb36-69" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> convert<span class="op">(</span>hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span></span>
-<span id="cb36-70"><a href="#cb36-70" aria-hidden="true" tabindex="-1"></a>             <span class="at">const</span> hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span>
-<span id="cb36-71"><a href="#cb36-71" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
-<span id="cb36-72"><a href="#cb36-72" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>out<span class="op">.</span>rowsize<span class="op">()</span> <span class="op">!=</span> in<span class="op">.</span>rowsize<span class="op">()</span> <span class="op">||</span> out<span class="op">.</span>colsize<span class="op">()</span> <span class="op">!=</span> in<span class="op">.</span>colsize<span class="op">())</span> <span class="op">{</span></span>
-<span id="cb36-73"><a href="#cb36-73" aria-hidden="true" tabindex="-1"></a>        <span class="cf">throw</span> <span class="bu">std::</span>invalid_argument<span class="op">(</span></span>
-<span id="cb36-74"><a href="#cb36-74" aria-hidden="true" tabindex="-1"></a>            <span class="st">"mpir::convert(DenseMatrix): output matrix has wrong size"</span></span>
-<span id="cb36-75"><a href="#cb36-75" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
-<span id="cb36-76"><a href="#cb36-76" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
-<span id="cb36-77"><a href="#cb36-77" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-78"><a href="#cb36-78" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="bu">std::</span>size_t i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> in<span class="op">.</span>rowsize<span class="op">();</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb36-79"><a href="#cb36-79" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span><span class="bu">std::</span>size_t j <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j <span class="op">&lt;</span> in<span class="op">.</span>colsize<span class="op">();</span> <span class="op">++</span>j<span class="op">)</span> <span class="op">{</span></span>
-<span id="cb36-80"><a href="#cb36-80" aria-hidden="true" tabindex="-1"></a>            out<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> scalar_cast<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>in<span class="op">[</span>i<span class="op">][</span>j<span class="op">]);</span></span>
-<span id="cb36-81"><a href="#cb36-81" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
-<span id="cb36-82"><a href="#cb36-82" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
-<span id="cb36-83"><a href="#cb36-83" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
-<span id="cb36-84"><a href="#cb36-84" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-85"><a href="#cb36-85" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-86"><a href="#cb36-86" aria-hidden="true" tabindex="-1"></a><span class="co">// convenience function</span></span>
-<span id="cb36-87"><a href="#cb36-87" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
-<span id="cb36-88"><a href="#cb36-88" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;</span> convert_matrix<span class="op">(</span><span class="at">const</span> hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span>
-<span id="cb36-89"><a href="#cb36-89" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
-<span id="cb36-90"><a href="#cb36-90" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;</span> out<span class="op">(</span>in<span class="op">.</span>rowsize<span class="op">(),</span> in<span class="op">.</span>colsize<span class="op">());</span></span>
-<span id="cb36-91"><a href="#cb36-91" aria-hidden="true" tabindex="-1"></a>    convert<span class="op">(</span>out<span class="op">,</span> in<span class="op">);</span></span>
-<span id="cb36-92"><a href="#cb36-92" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> out<span class="op">;</span></span>
-<span id="cb36-93"><a href="#cb36-93" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
-<span id="cb36-94"><a href="#cb36-94" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-95"><a href="#cb36-95" aria-hidden="true" tabindex="-1"></a><span class="co">// convenience function</span></span>
-<span id="cb36-96"><a href="#cb36-96" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
-<span id="cb36-97"><a href="#cb36-97" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_out<span class="op">&gt;</span> convert_vector<span class="op">(</span><span class="at">const</span> hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span>
-<span id="cb36-98"><a href="#cb36-98" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
-<span id="cb36-99"><a href="#cb36-99" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_out<span class="op">&gt;</span> out<span class="op">(</span>in<span class="op">.</span>size<span class="op">());</span></span>
-<span id="cb36-100"><a href="#cb36-100" aria-hidden="true" tabindex="-1"></a>    convert<span class="op">(</span>out<span class="op">,</span> in<span class="op">);</span></span>
-<span id="cb36-101"><a href="#cb36-101" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> out<span class="op">;</span></span>
-<span id="cb36-102"><a href="#cb36-102" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
-<span id="cb36-103"><a href="#cb36-103" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-104"><a href="#cb36-104" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="co">// namespace mpir</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-
-
+<span id="cb36-67"><a href="#cb36-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-68"><a href="#cb36-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-69"><a href="#cb36-69" aria-hidden="true" tabindex="-1"></a><span class="co">// DenseMatrix conversion</span></span>
+<span id="cb36-70"><a href="#cb36-70" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
+<span id="cb36-71"><a href="#cb36-71" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> convert<span class="op">(</span>hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span></span>
+<span id="cb36-72"><a href="#cb36-72" aria-hidden="true" tabindex="-1"></a>             <span class="at">const</span> hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span>
+<span id="cb36-73"><a href="#cb36-73" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb36-74"><a href="#cb36-74" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="op">(</span>out<span class="op">.</span>rowsize<span class="op">()</span> <span class="op">!=</span> in<span class="op">.</span>rowsize<span class="op">()</span> <span class="op">||</span> out<span class="op">.</span>colsize<span class="op">()</span> <span class="op">!=</span> in<span class="op">.</span>colsize<span class="op">())</span> <span class="op">{</span></span>
+<span id="cb36-75"><a href="#cb36-75" aria-hidden="true" tabindex="-1"></a>        <span class="cf">throw</span> <span class="bu">std::</span>invalid_argument<span class="op">(</span></span>
+<span id="cb36-76"><a href="#cb36-76" aria-hidden="true" tabindex="-1"></a>            <span class="st">"mpir::convert(DenseMatrix): output matrix has wrong size"</span></span>
+<span id="cb36-77"><a href="#cb36-77" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb36-78"><a href="#cb36-78" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb36-79"><a href="#cb36-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-80"><a href="#cb36-80" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="bu">std::</span>size_t i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> in<span class="op">.</span>rowsize<span class="op">();</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb36-81"><a href="#cb36-81" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span><span class="bu">std::</span>size_t j <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> j <span class="op">&lt;</span> in<span class="op">.</span>colsize<span class="op">();</span> <span class="op">++</span>j<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb36-82"><a href="#cb36-82" aria-hidden="true" tabindex="-1"></a>            out<span class="op">[</span>i<span class="op">][</span>j<span class="op">]</span> <span class="op">=</span> scalar_cast<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>in<span class="op">[</span>i<span class="op">][</span>j<span class="op">]);</span></span>
+<span id="cb36-83"><a href="#cb36-83" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb36-84"><a href="#cb36-84" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb36-85"><a href="#cb36-85" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb36-86"><a href="#cb36-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-87"><a href="#cb36-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-88"><a href="#cb36-88" aria-hidden="true" tabindex="-1"></a><span class="co">// convenience function</span></span>
+<span id="cb36-89"><a href="#cb36-89" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
+<span id="cb36-90"><a href="#cb36-90" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;</span> convert_matrix<span class="op">(</span><span class="at">const</span> hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span>
+<span id="cb36-91"><a href="#cb36-91" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb36-92"><a href="#cb36-92" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;</span> out<span class="op">(</span>in<span class="op">.</span>rowsize<span class="op">(),</span> in<span class="op">.</span>colsize<span class="op">());</span></span>
+<span id="cb36-93"><a href="#cb36-93" aria-hidden="true" tabindex="-1"></a>    convert<span class="op">(</span>out<span class="op">,</span> in<span class="op">);</span></span>
+<span id="cb36-94"><a href="#cb36-94" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> out<span class="op">;</span></span>
+<span id="cb36-95"><a href="#cb36-95" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb36-96"><a href="#cb36-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-97"><a href="#cb36-97" aria-hidden="true" tabindex="-1"></a><span class="co">// convenience function</span></span>
+<span id="cb36-98"><a href="#cb36-98" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
+<span id="cb36-99"><a href="#cb36-99" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_out<span class="op">&gt;</span> convert_vector<span class="op">(</span><span class="at">const</span> hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span>
+<span id="cb36-100"><a href="#cb36-100" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb36-101"><a href="#cb36-101" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_out<span class="op">&gt;</span> out<span class="op">(</span>in<span class="op">.</span>size<span class="op">());</span></span>
+<span id="cb36-102"><a href="#cb36-102" aria-hidden="true" tabindex="-1"></a>    convert<span class="op">(</span>out<span class="op">,</span> in<span class="op">);</span></span>
+<span id="cb36-103"><a href="#cb36-103" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> out<span class="op">;</span></span>
+<span id="cb36-104"><a href="#cb36-104" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb36-105"><a href="#cb36-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-106"><a href="#cb36-106" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="co">// namespace mpir</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
+</section>
+</section>
+<section id="testing-hdnum_conversions.hpp" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="testing-hdnum_conversions.hpp"><span class="header-section-number">3.3</span> Testing <code>hdnum_conversions.hpp</code></h2>
+<p>The file <code>test_conversion.cc</code> tets the conversion infrastructure implemented in <code>hdnum_conversions.hpp</code>. It’s goals are to test that:</p>
+<ol type="1">
+<li><code>scalar_cast&lt;T_out&gt;(x)</code> compiles for representative type.</li>
+<li><code>scalar_cast&lt;T_out&gt;(x)</code> returns the requested output type.</li>
+<li>lossy low-precision conversions visibly loose information.</li>
+<li><code>convert(Vector)</code> applies <code>scalar_cast</code> element-wise correctly.</li>
+<li><code>convert(DenseMatrix)</code> applies <code>scalar_cast</code> elementwise correctly.</li>
+<li>Vector and Matrix sizes are handled correctly.</li>
+<li>Wrong-sized output contaniers throw exceptions</li>
+<li>The convenience functions<code>convert_vector</code> and <code>convert_matrix</code> allocate correctly.</li>
+</ol>
+<section id="scalar-conversion-tests" class="level3">
+<h3 class="anchored" data-anchor-id="scalar-conversion-tests">Scalar Conversion Tests</h3>
+<p>The scalar tests check that</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>scalar_cast<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>x<span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>can be instantiated for representative input/output type paairs. For each pair, several sample values are tested:</p>
+<pre><code>0.0
+1.0
+-2.5
+1.0 / 3.0
+1.23456789012345</code></pre>
+<p>The result is checked at compile time with</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="kw">static_assert</span><span class="op">(</span><span class="bu">std::</span>is_same_v<span class="op">&lt;</span><span class="kw">decltype</span><span class="op">(</span>y<span class="op">),</span> T_out<span class="op">&gt;);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>To verify that <code>scalar_cast&lt;T_out&gt;(x)</code> returns the requested output type <code>T_out</code>.</p>
+<p>Both the input and the converted value are transofrmed to their approximate <code>double</code> representation with <code>approx_as_double</code> in order to compare the values with various <code>assert</code> and insepct the outputs.</p>
+</section>
+<section id="lossy-conversion-tests" class="level3">
+<h3 class="anchored" data-anchor-id="lossy-conversion-tests">Lossy Conversion Tests</h3>
+<p>It is verified that conversion from <code>double</code> to <code>CPFloat</code> indeed looses precision using a value such as <code>1.23456789012345</code>.</p>
+<p>This is only a useful sanity check that the conversion is really taking place.</p>
+</section>
+<section id="lossless-conversion-tests" class="level3">
+<h3 class="anchored" data-anchor-id="lossless-conversion-tests">Lossless Conversion Tests</h3>
+<p>It is also verified that conversion from a lower precision to a higher precision do not indeed loose information.</p>
+</section>
+<section id="vector-conversion-tests" class="level3">
+<h3 class="anchored" data-anchor-id="vector-conversion-tests">Vector Conversion Tests</h3>
+<p>Vector tests check the function</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>convert<span class="op">(</span>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>for a representative vector of length 5 and checks that each component of the output agrees with applying <code>scalar_cast&lt;T_out&gt;</code> to the corresponding input component.</p>
+<p>The comparison is performed approximately by conveting both values to <code>double</code> and using a small relative tolerance with the function</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="kw">inline</span> <span class="dt">bool</span> close<span class="op">(</span><span class="dt">double</span> a<span class="op">,</span> <span class="dt">double</span> b<span class="op">,</span> <span class="dt">double</span> atol <span class="op">=</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">double</span> rtol <span class="op">=</span> <span class="fl">1e-12</span><span class="op">)</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> <span class="dt">double</span> scale <span class="op">=</span> <span class="bu">std::</span>max<span class="op">(</span><span class="bu">std::</span>abs<span class="op">(</span>a<span class="op">),</span> <span class="bu">std::</span>abs<span class="op">(</span>b<span class="op">));</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">std::</span>abs<span class="op">(</span>a <span class="op">-</span> b<span class="op">)</span> <span class="op">&lt;=</span> atol <span class="op">+</span> rtol <span class="op">*</span> scale<span class="op">;</span></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This function says whether the two double values are close enough to be considered equal. The tolerance is scaled by the max value of the inputs.</p>
+<p>The test also includes the edge cases:</p>
+<ul>
+<li>vector size 0</li>
+<li>vector size 1</li>
+</ul>
+<p>Additionaly wrong-sized output vector is checked to verify whether an exception is thrown.</p>
+<p>Finally the convenience function</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>convert_vector<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>in<span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>is tested, by verifying the resulting type and converted values.</p>
+</section>
+<section id="matrix-conversion-tests" class="level3">
+<h3 class="anchored" data-anchor-id="matrix-conversion-tests">Matrix Conversion Tests</h3>
+<p>The matrix tests check the function</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>convert<span class="op">(</span>hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>on a representative <code>5 x 5</code> matrix, by looping over the output values and comparing them against the result of applying <code>scalar_cast</code> to corresponding input entries.</p>
+<p>The test includes the edge case of 1 x 1 matrix and a wrong-sized test.</p>
+<p>The convenience fucntion <code>mpir::convert_matrix&lt;T_out&gt;(in)</code> is also tested.</p>
+</section>
+<section id="representative-pair-types" class="level3">
+<h3 class="anchored" data-anchor-id="representative-pair-types">Representative Pair Types</h3>
+<ol type="1">
+<li>Native <span class="math inline">\(\leftrightarrow\)</span> Native:
+<ul>
+<li><code>FP32 &lt;-&gt; FP64</code></li>
+</ul></li>
+<li>Working precision <span class="math inline">\(u \rightarrow\)</span> low precision <span class="math inline">\(u_f\)</span>:
+<ul>
+<li><code>FP64 -&gt; FP16 / bfloat16 / FP8</code></li>
+</ul></li>
+<li>Low Precision <span class="math inline">\(u_f \rightarrow\)</span> working precision <span class="math inline">\(u\)</span>:
+<ul>
+<li><code>FP16 / bfloat16 / FP8 -&gt; FP64</code></li>
+</ul></li>
+<li>Working precision <span class="math inline">\(u \rightarrow\)</span> residual precision <span class="math inline">\(u_r\)</span>
+<ul>
+<li><code>FP64 -&gt; FP128 / FP256</code></li>
+</ul></li>
+<li>Residual precision <span class="math inline">\(u_r \rightarrow\)</span> working precision <span class="math inline">\(u\)</span>
+<ul>
+<li><code>FP128 / FP256 - &gt; FP64</code></li>
+</ul></li>
+<li>Low precision <span class="math inline">\(u_f \leftrightarrow\)</span> high residual/reference precision <span class="math inline">\(u_r\)</span>
+<ul>
+<li><code>FP128 / FP256 &lt;-&gt; FP16 / bfloat16 / FP8</code></li>
+</ul></li>
+<li>High precision <span class="math inline">\(\leftrightarrow\)</span> high precision
+<ul>
+<li><code>FP128 &lt;-&gt; FP256</code></li>
+</ul></li>
+</ol>
+<p>Covering the main conversion direction required later by the algorithm:</p>
+<ul>
+<li><span class="math inline">\(u \rightarrow u_f\)</span></li>
+<li><span class="math inline">\(u_f \rightarrow u\)</span></li>
+<li><span class="math inline">\(u \rightarrow u_r\)</span></li>
+<li><span class="math inline">\(u_r \rightarrow u\)</span></li>
+</ul>
+<p>The tests also include low to high-precision conversions not required directly by the algorithm but useful nevertheless.</p>
+
+
 </section>
 </section>
 
