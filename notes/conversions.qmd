@@ -723,3 +723,55 @@ hdnum::Vector<T_out> convert_vector(const hdnum::Vector<T_in>& in)
 
 } // namespace mpir
 ```
+
+## Testing `hdnum_conversions.hpp`
+
+The file `test_conversion.cc` tets the conversion infrastructure implemented in
+`hdnum_conversions.hpp`. It's goals are to test that:
+
+1. `scalar_cast<T_out>(x)` compiles for representative type.
+2. `scalar_cast<T_out>(x)` returns the requested output type.
+3. lossy low-precision conversions visibly loose information.
+4. `convert(Vector)` applies `scalar_cast` element-wise correctly.
+5. `convert(DenseMatrix)` applies `scalar_cast` elementwise correctly.
+6. Vector and Matrix sizes are handled correctly.
+7. Wrong-sized output contaniers throw exceptions
+8. The convenience functions`convert_vector` and `convert_matrix` allocate correctly.
+
+### Scalar Conversion Tests
+
+The scalar tests check that
+
+```cpp
+mpir::scalar_cast<T_out>(x)
+```
+
+can be instantiated for representative input/output type paairs. For each pair,
+several sample values are tested:
+
+```
+0.0
+1.0
+-2.5
+1.0 / 3.0
+1.23456789012345
+```
+
+The result is checked at compile time with
+
+```cpp
+static_assert(std::is_same_v<decltype(y), T_out>);
+```
+
+To verify that `scalar_cast<T_out>(x)` returns the requested output type `T_out`.
+
+Both the input and the converted value are transofrmed to their approximate `double` representation with `approx_as_double` in order to compare the values with various `assert` and insepct the outputs.
+
+### Lossy Conversion Tests
+
+It is verified that conversion from `double` to `CPFloat` indeed looses precision
+using a value such as `1.23456789012345`.
+
+This is only a useful sanity check that the conversion is really taking place.
+
+

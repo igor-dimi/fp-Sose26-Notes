@@ -82,6 +82,26 @@ void test_fp64_to_low_is_lossy(std::string_view low_name)
     assert(xd != yd);
 }
 
+// lossless conversion tets
+template<class T_high, class T_low>
+void test_low_to_high_is_lossless(
+    std::string_view high_name, 
+    std::string_view low_name
+)
+{
+    std::cout << "\n[non-lossy conversion] " << low_name << " -> "  << high_name << '\n';
+    const T_low x = T_low(1.2345678);
+    auto y = mpir::scalar_cast<T_high>(x);
+    
+    auto xd = approx_as_double(x);
+    auto yd = approx_as_double(y);
+
+    std::cout << "low original: " << xd << '\n';
+    std::cout << "conversion to high: " << yd << '\n';
+
+    assert(close(xd, yd));
+
+}
 
 // vector tests
 
@@ -375,6 +395,15 @@ int main()
     test::test_scalar_cast_one_value<hdnum::FP128, double>(1.23456789012345, "hdnum::FP128", "double");
     test::test_scalar_cast<hdnum::bfloat16, hdnum::FP128>("bfloat16", "hdnum::FP128");
     test::test_fp64_to_low_is_lossy<hdnum::FP16>("hdnum::FP16");
+    test::test_low_to_high_is_lossless<hdnum::FP128, hdnum::FP16>(
+        "hdnum::FP128", "hdnum::FP16"
+    );
+    test::test_low_to_high_is_lossless<hdnum::FP128, hdnum::bfloat16>(
+        "hdnum::FP128", "hdnum::bfloat16"
+    );
+    test::test_low_to_high_is_lossless<hdnum::FP256, hdnum::FP16>(
+        "hdnum::FP256", "hdnum::FP16"
+    );
 
     // vector tests
     test::test_vector_convert<hdnum::FP16, hdnum::FP128>("hdnum::FP16", "hdnum::FP128");
@@ -437,11 +466,19 @@ int main()
     test::test_fp64_to_low_is_lossy<hdnum::bfloat16>("hdnum::bfloat16");
     test::test_fp64_to_low_is_lossy<hdnum::FP8>("hdnum::FP8");
 
+    // Explicity lossess conversion
+    test::test_low_to_high_is_lossless<hdnum::FP128, hdnum::FP16>(
+        "hdnum::FP128", "hdnum::FP16"
+    );
+    test::test_low_to_high_is_lossless<hdnum::FP128, hdnum::bfloat16>(
+        "hdnum::FP128", "hdnum::bfloat16"
+    );
+    test::test_low_to_high_is_lossless<hdnum::FP256, hdnum::FP16>(
+        "hdnum::FP256", "hdnum::FP16"
+    );
+
 
     std::cout << "\nAll conversion tests passed.\n";
-    std::cout << "\n another message \n";
-
-    
 
     return 0;
 
