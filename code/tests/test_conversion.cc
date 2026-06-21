@@ -466,7 +466,7 @@ int main()
     test::test_fp64_to_low_is_lossy<hdnum::bfloat16>("hdnum::bfloat16");
     test::test_fp64_to_low_is_lossy<hdnum::FP8>("hdnum::FP8");
 
-    // Explicity lossess conversion
+    // Explicitly lossless conversion
     test::test_low_to_high_is_lossless<hdnum::FP128, hdnum::FP16>(
         "hdnum::FP128", "hdnum::FP16"
     );
@@ -481,5 +481,7 @@ int main()
     std::cout << "\nAll conversion tests passed.\n";
 
     return 0;
+
+    // comment
 
 }
