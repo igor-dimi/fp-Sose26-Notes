@@ -88,7 +88,7 @@ int main()
         mpir::mixed_ir<double, double, double>(A, b, options);
 
     auto result_mixed =
-        mpir::mixed_ir<hdnum::FP16, double, hdnum::FP128>(A, b, options);
+        mpir::mixed_ir<hdnum::FP8, double, hdnum::FP128>(A, b, options);
 
     print_result("All-double version", result_double, A, b);
 
