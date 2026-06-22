@@ -1,3 +1,4 @@
 add_mixed_precision_examples(mp)
 add_subdirectory(lu_decomposition)
 add_subdirectory(conversions)
+add_subdirectory(mixed_ir)
