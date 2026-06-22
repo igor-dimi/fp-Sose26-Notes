@@ -189,7 +189,7 @@ MixedIRResult<T_work> mixed_ir(
 
         result.iterations = k + 1;
 
-        if (rel_corr < tol) {
+        if (norm_d <= tol * norm_x) {
             result.converged = true;
             break;
         }
