@@ -13,6 +13,7 @@ book:
       - notes/project_setup.qmd
       - notes/project_overview.qmd
       - notes/conversions.qmd
+      - notes/mixed_ir.qmd
     - report.qmd
 
     # - intro.qmd
