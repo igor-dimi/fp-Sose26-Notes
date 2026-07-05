@@ -1,5 +1,14 @@
+#pragma once
+
+#include <cstddef>
+#include <cmath>
+#include <stdexcept>
+#include <vector>
+
 #include "hdnum.hh"
 #include "hdnum_conversions.hpp"
+#include "unit_roundoff.hpp"
+
 
 namespace mpir {
 
@@ -29,18 +38,6 @@ struct MixedIRResult {
     // Useful for convergence diagnostics and later plotting.
     std::vector<double> rel_corrections;
 };
-
-
-
-template<class T>
-double default_unit_roundoff()
-{
-    static_assert(std::numeric_limits<T>::is_specialized,
-        "default_unit_roundoff: no numeric_limits specialization for this type;"
-         "please set_rel_correction_tol_explicitly");
-    
-    return 0.5 * static_cast<double>(std::numeric_limits<T>::epsilon());
-}
 
 
 template<class T>
