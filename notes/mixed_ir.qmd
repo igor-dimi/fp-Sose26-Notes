@@ -385,3 +385,141 @@ MixedIRResult<T_work> mixed_ir(
     return result;
 }
 ```
+
+## Unit Roundoff $u$ 
+
+For a floating point format with $t$ significand bits the unit
+round off is defined as 
+
+$$
+\begin{aligned}
+u &= \frac{1}{2}\beta^{1-t} \\
+  &= 2^{-t} &&(\beta = 2)
+\end{aligned}
+$$
+
+hdnum's cpfloat wrapper's are:
+
+
+```cpp
+using FP16 = hdnum::CPFloat<11,5>;
+using bfloat16 = hdnum::CPFloat<8,8>;
+using FP8 = hdnum::CPFloat<4,4>;
+```
+
+Where the first template parameters are the significand (or the 
+mantisse) bits. 
+
+and the FP wrappers:
+
+```cpp
+using FP128  = FP<64>;
+using FP256  = FP<192>;
+using FP512  = FP<448>;
+using FP1024 = FP<960>;
+```
+
+where the template parameters are the mantisse bits. 
+
+From here we can construct the following table summarizing the unit roundoff $u$ for the various precisions:
+
+| HDNUM type | Actual HDNUM alias | Significand precision (t) |              Unit roundoff $u = 2^{-t}$ |
+| ---------- | -----------------: | ------------------------: | --------------------------------------: |
+| `FP8`      |     `CPFloat<4,4>` |                         4 |     $2^{-4} \approx 6.25 \cdot 10^{-2}$ |
+| `bfloat16` |     `CPFloat<8,8>` |                         8 |     $2^{-8} \approx 3.91 \cdot 10^{-3}$ |
+| `FP16`     |    `CPFloat<11,5>` |                        11 |    $2^{-11} \approx 4.88 \cdot 10^{-4}$ |
+| `FP32`     |            `float` |                        24 |    $2^{-24} \approx 5.96 \cdot 10^{-8}$ |
+| `FP64`     |           `double` |                        53 |   $2^{-53} \approx 1.11 \cdot 10^{-16}$ |
+| `FP128`    |           `FP<64>` |                        64 |   $2^{-64} \approx 5.42 \cdot 10^{-20}$ |
+| `FP256`    |          `FP<192>` |                       192 |  $2^{-192} \approx 1.59 \cdot 10^{-58}$ |
+| `FP512`    |          `FP<448>` |                       448 | $2^{-448} \approx 1.38 \cdot 10^{-135}$ |
+| `FP1024`   |          `FP<960>` |                       960 | $2^{-960} \approx 1.03 \cdot 10^{-289}$ |
+
+
+### unit roundoff traits
+
+Orignially we had the function
+
+```cpp
+template<class T>
+double default_unit_roundoff()
+{
+    static_assert(std::numeric_limits<T>::is_specialized,
+        "default_unit_roundoff: no numeric_limits specialization for this type;"
+         "please set_rel_correction_tol_explicitly");
+    
+    return 0.5 * static_cast<double>(std::numeric_limits<T>::epsilon());
+}
+```
+
+This works only for data types `float` and `double`. We improve this using type traits, s.t. unit roundoffs are returned for other floating point formats at compile time:
+
+```cpp
+#pragma once
+
+#include <limits>
+#include <type_traits>
+
+#include "hdnum.hh"
+
+namespace mpir {
+
+constexpr double pow2_neg(int p)
+{
+    double x = 1.0;
+    for (int i = 0; i < p; ++i) {
+        x *= 0.5;
+    }
+    return x;
+}
+
+namespace detail {
+
+template<class>
+struct unit_roundoff_always_false : std::false_type {};
+
+} // namespace detail
+
+template<class T>
+struct unit_roundoff_traits {
+    static_assert(detail::unit_roundoff_always_false<T>::value,
+        "unit_roundoff_traits: unsupported scalar type");
+};
+
+template<>
+struct unit_roundoff_traits<hdnum::FP32> {
+    static constexpr double value =
+        0.5 * static_cast<double>(std::numeric_limits<hdnum::FP32>::epsilon());
+};
+
+template<>
+struct unit_roundoff_traits<hdnum::FP64> {
+    static constexpr double value =
+        0.5 * static_cast<double>(std::numeric_limits<hdnum::FP64>::epsilon());
+};
+
+#ifdef HDNUM_HAS_CPFLOAT
+template<int m, int e>
+struct unit_roundoff_traits<hdnum::CPFloat<m,e>> {
+    static constexpr double value = pow2_neg(m);
+};
+#endif
+
+#ifdef HDNUM_HAS_GMP
+template<int m>
+struct unit_roundoff_traits<hdnum::FP<m>> {
+    static constexpr double value = pow2_neg(m);
+};
+#endif
+
+template<class T>
+constexpr double default_unit_roundoff()
+{
+    return unit_roundoff_traits<T>::value;
+}
+
+} // namespace mpir
+```
+
+Now mixed ir algorithm will work for all fp formats without having to specify tol
+manually in the options struct.
