@@ -81,7 +81,7 @@ int main()
     b[1] = 2.0;
 
     mpir::MixedIROptions options;
-    options.max_iterations = 10;
+    options.max_iterations = 15;
     options.rel_correction_tol = 1e-14;
 
     auto result_double =
