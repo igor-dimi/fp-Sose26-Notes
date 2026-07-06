@@ -15,6 +15,10 @@ namespace mpir {
 struct MixedIROptions {
     std::size_t max_iterations = 10;
     double rel_correction_tol = 0.0;
+
+    // Store x0, x1, x2, ... for convergence-history experiments.
+    // Keep false for large condition sweeps if memory becomes annoying.
+    bool store_iterates = false;
 };
 
 template<class T_work>
@@ -37,6 +41,11 @@ struct MixedIRResult {
     // History of relative correction norms, one entry per refinement iteration.
     // Useful for convergence diagnostics and later plotting.
     std::vector<double> rel_corrections;
+
+    // Optional history of iterates.
+    // iterates[0] is x0 after the initial low-precision solve.
+    // iterates[k] is the solution after k refinement steps.
+    std::vector<hdnum::Vector<T_work>> iterates;
 };
 
 
@@ -149,6 +158,11 @@ MixedIRResult<T_work> mixed_ir(
     result.x = hdnum::Vector<T_work>(n);
     convert(result.x, x0_f);
 
+    // append the initial solution to the iterates vector
+    if (options.store_iterates) {
+        result.iterates.push_back(result.x);
+    }
+
     // 5. refinement loop
     for (std::size_t k = 0; k < options.max_iterations; k++) {
         // Compute residual r = b - A * x in residual precision.
@@ -182,6 +196,11 @@ MixedIRResult<T_work> mixed_ir(
         // update in working precision
         for (std::size_t i = 0; i < n; i++) {
             result.x[i] += d_w[i];
+        }
+
+        // append the current solution to the iterates vector
+        if (options.store_iterates) {
+            result.iterates.push_back(result.x);
         }
 
         result.iterations = k + 1;

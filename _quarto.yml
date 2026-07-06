@@ -14,6 +14,7 @@ book:
       - notes/project_overview.qmd
       - notes/conversions.qmd
       - notes/mixed_ir.qmd
+      - notes/experiments.qmd
     - report.qmd
 
     # - intro.qmd

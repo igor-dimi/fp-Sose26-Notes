@@ -23,6 +23,15 @@ set(CPFLOAT_DIR "${HDNUM_DIR}/cpfloat")
 set(CPFLOAT_INCLUDE_DIR "${CPFLOAT_DIR}/build/include")
 set(CPFLOAT_LIBRARY "${CPFLOAT_DIR}/build/lib/libcpfloat.a")
 
+
+# results and plots paths
+set(MPIR_RESULTS_RAW_DIR "${CMAKE_CURRENT_SOURCE_DIR}/results/raw")
+set(MPIR_RESULTS_PLOTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/results/plots")
+
+file(MAKE_DIRECTORY "${MPIR_RESULTS_RAW_DIR}")
+file(MAKE_DIRECTORY "${MPIR_RESULTS_PLOTS_DIR}")
+
+
 # --------------------------------------------------------------------
 # Shared project target
 # --------------------------------------------------------------------
@@ -42,6 +51,8 @@ target_compile_definitions(mixed_precision_core
     INTERFACE
         HDNUM_HAS_GMP=1
         HDNUM_HAS_CPFLOAT=1
+        MPIR_RESULTS_RAW_DIR="${MPIR_RESULTS_RAW_DIR}"
+        MPIR_RESULTS_PLOTS_DIR="${MPIR_RESULTS_PLOTS_DIR}"
 )
 
 target_link_libraries(mixed_precision_core

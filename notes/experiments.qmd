@@ -1,0 +1,175 @@
+---
+title: Implementing the Experiments
+---
+
+We want to plot the **forward error** and the **backward error** as  function of the refinement step $i$.
+
+
+forward error: 
+
+$$
+\text{forward error}_i = \frac{\norm{x_i} - \norm{x_{\text{true}}}}{\norm{x_{\text{true}}}}
+$$
+
+Backward error:
+
+$$
+\eta_{i} = \frac{\norm{b - Ax_i}}{\norm{A}\norm{x_i} + \norm{b}}
+$$
+
+in `mixed_ir.hpp` the result struct currently only stores `rel_correction` vector, that records
+
+$$
+\frac{\norm{d_i}}{\norm{x_i}}
+$$
+
+We have to modify `mixed_ir` to store the iterates $x_i$, so that we can compute forward and backward errors.
+We add the following member variable to the `MixedIRResult` struct:
+
+
+```cpp
+std::vector<hdnum::Vector<T_work>> iterates;
+```
+
+We append the solutions to the iterates vector before the loop and after each loop iteration with the line:
+
+
+```cpp
+if (options.store_iterates) {
+    result.iterates.push_back(result.x);
+}
+```
+
+## Temporary Matrix Generator
+
+We start with a simple controlled family, a rotated SPD matrix:
+
+$$
+A = QDQ^T
+$$
+
+where $D$ has eigenvalues $1/\sqrt{\kappa} \dots \sqrt{\kappa}$. Then
+
+$$
+\kappa_2(A) = \kappa
+$$
+
+This family of matrices give a known true (exact) solution:
+
+$$
+x_{\text{true}} = (1, \dots, 1)^T
+$$
+
+So it can be used temporarily to test the pipeline.
+
+The implementation is in
+
+```
+code/include/test_matrices.hpp
+```
+
+
+## Error Metrics Helper
+
+We implement functions to compute 
+* $\normsub{\cdot}{\infty}$ for matrices and vectors,
+* relative forward error with the infinity norm
+* relative backward error with the inifinity norm
+
+contained in the file 
+
+```
+code/include/error_metrics.hpp
+```
+
+## First Convergence Test 
+
+We test our pipeline with a first test that uses the precision tripple:
+
+* $u_f$ : FP16
+* $u$: FP64
+* $u_r$: FP128
+
+For matrices of size $100 \times 100$ with $\kappa$ values: $1, 10, 100, 1000, 10000$. 
+
+The test writes for each matrix the convergence history to csv file. Specifically 
+it writes the values:
+
+* kappa, 
+* iteration,
+* relative forward error
+* relative backward error
+* relative correction
+
+in a single lines for each iteration step, for each matrix. This gives us the 
+convergence histories.
+
+It is implemented in the file 
+
+```
+code/experiments/exp_convergence.cc
+```
+
+Following was the result of the experiment:
+
+```csv
+kappa,iteration,forward_error_inf,backward_error_inf,rel_correction
+1,0,0,0,0
+1,1,0,0,0
+10,0,0.000976562,0.000441793,0
+10,1,9.53674e-07,4.31651e-07,0.00047591
+10,2,5.96046e-08,5.1214e-09,3.1641e-07
+10,3,5.96046e-08,5.1214e-09,1.68587e-08
+10,4,5.96046e-08,5.1214e-09,1.68587e-08
+10,5,5.96046e-08,5.1214e-09,1.68587e-08
+10,6,5.96046e-08,5.1214e-09,1.68587e-08
+10,7,5.96046e-08,5.1214e-09,1.68587e-08
+10,8,5.96046e-08,5.1214e-09,1.68587e-08
+10,9,5.96046e-08,5.1214e-09,1.68587e-08
+10,10,5.96046e-08,5.1214e-09,1.68587e-08
+10,11,5.96046e-08,5.1214e-09,1.68587e-08
+10,12,5.96046e-08,5.1214e-09,1.68587e-08
+10,13,5.96046e-08,5.1214e-09,1.68587e-08
+10,14,5.96046e-08,5.1214e-09,1.68587e-08
+10,15,5.96046e-08,5.1214e-09,1.68587e-08
+10,16,5.96046e-08,5.1214e-09,1.68587e-08
+10,17,5.96046e-08,5.1214e-09,1.68587e-08
+10,18,5.96046e-08,5.1214e-09,1.68587e-08
+10,19,5.96046e-08,5.1214e-09,1.68587e-08
+10,20,5.96046e-08,5.1214e-09,1.68587e-08
+100,0,0.000976562,0.000481752,0
+100,1,9.53674e-07,4.70694e-07,0.000444832
+100,2,1.78814e-07,1.42242e-09,2.52178e-07
+100,3,1.78814e-07,1.42242e-09,0
+1000,0,0.000976562,0.000460731,0
+1000,1,9.53674e-07,3.07722e-07,0.000591975
+1000,2,8.9407e-07,6.88472e-10,4.02364e-07
+1000,3,8.9407e-07,5.65293e-10,1.3328e-08
+1000,4,8.9407e-07,5.65293e-10,1.19209e-08
+1000,5,8.9407e-07,5.65293e-10,1.19209e-08
+1000,6,8.9407e-07,5.65293e-10,1.19209e-08
+1000,7,8.9407e-07,5.65293e-10,1.19209e-08
+1000,8,8.9407e-07,5.65293e-10,1.19209e-08
+1000,9,8.9407e-07,5.65293e-10,1.19209e-08
+1000,10,8.9407e-07,5.65293e-10,1.19209e-08
+1000,11,8.9407e-07,5.65293e-10,1.19209e-08
+1000,12,8.9407e-07,5.65293e-10,1.19209e-08
+1000,13,8.9407e-07,5.65293e-10,1.19209e-08
+1000,14,8.9407e-07,5.65293e-10,1.19209e-08
+1000,15,8.9407e-07,5.65293e-10,1.19209e-08
+1000,16,8.9407e-07,5.65293e-10,1.19209e-08
+1000,17,8.9407e-07,5.65293e-10,1.19209e-08
+1000,18,8.9407e-07,5.65293e-10,1.19209e-08
+1000,19,8.9407e-07,5.65293e-10,1.19209e-08
+1000,20,8.9407e-07,5.65293e-10,1.19209e-08
+10000,0,0.000976562,0.000375237,0
+10000,1,3.33786e-06,4.73515e-08,0.000488379
+10000,2,9.53674e-07,3.8223e-10,5.28939e-07
+10000,3,9.53674e-07,1.29324e-10,1.03238e-08
+10000,4,9.53674e-07,1.29324e-10,0
+```
+
+
+
+
+
