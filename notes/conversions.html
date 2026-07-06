@@ -2,13 +2,16 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.7.32">
+<meta name="generator" content="quarto-1.9.37">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>3&nbsp; Conversions – Advanced Praktika SoSe 26 Notes</title>
 <style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -65,7 +68,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
-<link href="../report.html" rel="next">
+<link href="../notes/mixed_ir.html" rel="next">
 <link href="../notes/project_overview.html" rel="prev">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -73,10 +76,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-bf132de45b538d253cd2e2da5fec6016.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-251915186e5ac48a2a36efd978de2bb8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -119,7 +122,7 @@ window.MathJax = {
 <link href="../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <script type="text/javascript">
 const typesetMath = (el) => {
@@ -132,7 +135,7 @@ const typesetMath = (el) => {
     var macros = [];
     for (var i = 0; i < mathElements.length; i++) {
       var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN") {
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
         window.katex.render(texText.data, mathElements[i], {
           displayMode: mathElements[i].classList.contains('display'),
           throwOnError: false,
@@ -220,12 +223,24 @@ window.Quarto = {
  <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Conversions</span></span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notes/mixed_ir.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Implementation of the Mixed IR Algorithm</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notes/experiments.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments</span></span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../report.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Report</span></span></a>
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Report</span></span></a>
   </div>
 </li>
     </ul>
@@ -519,13 +534,13 @@ window.Quarto = {
 <h3 class="anchored" data-anchor-id="implementing-conversions---naive-approach">Implementing Conversions - Naive Approach</h3>
 <p>HDNum implements wrappers <code>FP</code> and <code>CPFloat</code> for the high-precision GMP and the low precision CPFloat types in the source files <code>highprec_gmp.hh</code> and <code>lowprec_cpfloat.hh</code>.</p>
 <p>We are asked not to modify HDNum source files, instead implement explicit conversion functions:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> convert<span class="op">(</span>Vector<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span> <span class="at">const</span> Vector<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">);</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> convert<span class="op">(</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span> <span class="at">const</span> DenseMatrix<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> convert<span class="op">(</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span> <span class="at">const</span> DenseMatrix<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The approach is to assign to <code>out</code> element-wise in loops, where the values constructed from the corresponding elements of <code>in</code>. A naive approach is to do:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#pragma once</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#pragma once</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;cstddef&gt;</span></span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"hdnum.hh"</span></span>
@@ -581,9 +596,9 @@ window.Quarto = {
 <span id="cb3-54"><a href="#cb3-54" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;</span> out<span class="op">(</span>in<span class="op">.</span>rowsize<span class="op">(),</span> in<span class="op">.</span>colsize<span class="op">());</span></span>
 <span id="cb3-55"><a href="#cb3-55" aria-hidden="true" tabindex="-1"></a>    convert<span class="op">(</span>out<span class="op">,</span> in<span class="op">);</span></span>
 <span id="cb3-56"><a href="#cb3-56" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> out<span class="op">;</span></span>
-<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Where the type conversion is done via the assignment:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>out<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> T_out<span class="op">(</span>in<span class="op">[</span>i<span class="op">])</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>out<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> T_out<span class="op">(</span>in<span class="op">[</span>i<span class="op">])</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>for each element.</p>
 <p>But this doesn’t work for all pairs of <code>T_in, T_out</code> because not all the necessary constructors or conversion operators are implemented in the classes <code>CPFloat</code> and <code>FP</code></p>
 <section id="which-conversions-work-which-dont" class="level4">
@@ -769,21 +784,21 @@ Note
 <div class="code-with-filename-file">
 <pre><strong>highprec_gmp.hh</strong></pre>
 </div>
-<div class="sourceCode" id="cb5" data-filename="highprec_gmp.hh"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span><span class="op">:</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" data-filename="highprec_gmp.hh"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span><span class="op">:</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// stores a double to represent the low precision number</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    mpf_class number<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    mpf_class number<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>The comment <code>// stores a double to represent the low precision number</code> is wrong, and is probably copied over by mistake from <code>lowprec_cpfloat.hh</code>:</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
 <pre><strong>lowprec_cpfloat.hh</strong></pre>
 </div>
-<div class="sourceCode" id="cb6" data-filename="lowprec_cpfloat.hh"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span><span class="op">:</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6" data-filename="lowprec_cpfloat.hh"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">private</span><span class="op">:</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">// stores a double to represent the low precision number</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> number<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> number<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Instead it should be something like:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">// stores an mpf_class to represent the high precision GMP number</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">// stores an mpf_class to represent the high precision GMP number</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </div>
 <p>With the above interface, given a GMP number, the double representation of the number can be obtained with:</p>
@@ -793,8 +808,8 @@ Note
 Listing&nbsp;3.1: get_d() method
 </figcaption>
 <div aria-describedby="lst-get-d-method-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-<div class="sourceCode" id="cb8"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>FP128 fp128_number<span class="op">(</span><span class="fl">1.2345</span><span class="op">);</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> d <span class="op">=</span> fp128_number<span class="op">.</span>getNumber<span class="op">().</span>get_d<span class="op">();</span> <span class="co">//d is double</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>FP128 fp128_number<span class="op">(</span><span class="fl">1.2345</span><span class="op">);</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> d <span class="op">=</span> fp128_number<span class="op">.</span>getNumber<span class="op">().</span>get_d<span class="op">();</span> <span class="co">//d is double</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </figure>
 </div>
@@ -803,9 +818,9 @@ Listing&nbsp;3.1: get_d() method
 <section id="implementing-conversions---correct-approach" class="level3">
 <h3 class="anchored" data-anchor-id="implementing-conversions---correct-approach">Implementing Conversions - Correct Approach</h3>
 <p>The main issue is that</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>out<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> T_out<span class="op">(</span>in<span class="op">[</span>i<span class="op">]);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>out<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> T_out<span class="op">(</span>in<span class="op">[</span>i<span class="op">]);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>does not work uniformly for all type pairs. We replace this direct construction step with:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>out<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> scalar_convert<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>in<span class="op">[</span>i<span class="op">]);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>out<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> scalar_convert<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>in<span class="op">[</span>i<span class="op">]);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>This selects the appropriate conversion path at compile time, depending on the input and output types using standard library type traits and <code>if constexpr</code></p>
 <p>As summarized in <a href="#fig-conversions-triangle" class="quarto-xref">Figure&nbsp;<span>3.1</span></a> and <a href="#tbl-conversions" class="quarto-xref">Table&nbsp;<span>3.1</span></a>, the only conversions that do not work by direct construction are:</p>
 <ol type="1">
@@ -813,9 +828,9 @@ Listing&nbsp;3.1: get_d() method
 <li><code>FP</code> <span class="math inline">\(\Rightarrow\)</span> <code>CPFloat</code></li>
 </ol>
 <p>All other relevant cases can be handled by direct construction of the form:</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>T_out<span class="op">(</span>x<span class="op">)</span> <span class="co">// where x has type T_in</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>T_out<span class="op">(</span>x<span class="op">)</span> <span class="co">// where x has type T_in</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>In C++, we can check at compile time whether an object of type <code>T_out</code> can be constructed from an argument type <code>const T_in&amp;</code> using the standard library type trait:</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">std::is_constructible_v</span><span class="op">&lt;</span>T_out, const T_in<span class="op">&amp;&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">std::is_constructible_v</span><span class="op">&lt;</span>T_out, const T_in<span class="op">&amp;&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>This expression evaluates to <code>true</code> if such a construction is valid, and to <code>false</code> otherwise.</p>
 <p>It can be verified that this indeed evaluates to <code>false</code> only for the conversion pairs:</p>
 <ul>
@@ -823,7 +838,7 @@ Listing&nbsp;3.1: get_d() method
 <li><code>T_out == CPFloat</code>, <code>T_in == FP</code></li>
 </ul>
 <p>Then, the initial part of <code>scalar_cast</code> can be written as:</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>T_out scalar_cast<span class="op">(</span><span class="at">const</span> T_in<span class="op">&amp;</span> x<span class="op">)</span></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
 <span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">constexpr</span> <span class="op">(</span><span class="bu">std::</span>is_constructible_v<span class="op">&lt;</span>T_out<span class="op">,</span> <span class="at">const</span> T_in<span class="op">&amp;&gt;)</span> <span class="op">{</span></span>
@@ -832,16 +847,16 @@ Listing&nbsp;3.1: get_d() method
 <span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span> <span class="op">{</span> <span class="co">//remaining cases: FP =&gt; double || FP =&gt; CPFloat</span></span>
 <span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">...</span></span>
 <span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Logically, we know that the only possible cases in the <code>else</code> branch are:</p>
 <ul>
 <li><code>T_out == double</code>, <code>T_in == FP</code></li>
 <li><code>T_out == CPFloat</code>, <code>T_in == FP</code></li>
 </ul>
 <p>In both cases <code>T_in</code> is an <code>FP</code> type. as we’ve seen in <a href="#lst-get-d-method" class="quarto-xref">Listing&nbsp;<span>3.1</span></a> the <code>double</code> representation of an <code>FP</code> number <code>x</code> can be extracted with:</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>x<span class="op">.</span>getNumber<span class="op">().</span>get_d<span class="op">()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>x<span class="op">.</span>getNumber<span class="op">().</span>get_d<span class="op">()</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Since both <code>CPFloat</code> and <code>double</code> can be constructed from a <code>double</code>, we could simply write:</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>T_out scalar_cast<span class="op">(</span><span class="at">const</span> T_in<span class="op">&amp;</span> x<span class="op">)</span></span>
 <span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
 <span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">constexpr</span> <span class="op">(</span><span class="bu">std::</span>is_constructible_v<span class="op">&lt;</span>T_out<span class="op">,</span> <span class="at">const</span> T_in<span class="op">&amp;&gt;)</span> <span class="op">{</span></span>
@@ -850,12 +865,12 @@ Listing&nbsp;3.1: get_d() method
 <span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span> <span class="op">{</span> <span class="co">//remaining cases: FP =&gt; double || FP =&gt; CPFloat</span></span>
 <span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> T_out<span class="op">(</span>x<span class="op">.</span>getNumber<span class="op">().</span>get_d<span class="op">());</span></span>
 <span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>However, this version is not robust enough because the <code>else</code> branch relies on our prior reasoning that only the two exceptional cases can reach it. The code itself does not express this assumption. If <code>scalar_cast</code> is later instantiated with another unsupported conversion pair, the compiler will still try to compile</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>x<span class="op">.</span>getNumber<span class="op">().</span>get_d<span class="op">()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb16"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>x<span class="op">.</span>getNumber<span class="op">().</span>get_d<span class="op">()</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>even if <code>T_in</code> is not an <code>FP</code> type. This should lead to implementation-dependent and potentially confusing error message.</p>
 <p>Therefore, it is better to make the remaining cases explicit using another <code>if constexpr</code> condition:</p>
-<div class="sourceCode" id="cb17"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb17"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>T_out scalar_cast<span class="op">(</span><span class="at">const</span> T_in<span class="op">&amp;</span> x<span class="op">)</span></span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
 <span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">constexpr</span> <span class="op">(</span><span class="bu">std::</span>is_constructible_v<span class="op">&lt;</span>T_out<span class="op">,</span> <span class="at">const</span> T_in<span class="op">&amp;&gt;)</span> <span class="op">{</span></span>
@@ -871,10 +886,10 @@ Listing&nbsp;3.1: get_d() method
 <span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>        <span class="kw">static_assert</span><span class="op">(</span>always_false<span class="op">&lt;</span>T_out<span class="op">,</span> T_in<span class="op">&gt;::</span>value<span class="op">,</span></span>
 <span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>                      <span class="st">"unsupported scalar conversion"</span><span class="op">);</span></span>
 <span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
-<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Here, the helper trait <code>is_hdnum_fp_v&lt;T&gt;</code> detects whether a type <code>T</code> is one of HDNUM’s GMP-based high precision numbe types <code>hdnum::FP&lt;m&gt;</code>. This is a compile-time Boolean value, and analogous to the standard library traits such as <code>std::is_constructible_v</code>.</p>
 <p>The implementation, given below, follows a common template metaprogramming partial specialization pattern:</p>
-<div class="sourceCode" id="cb18"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Detect HDNUM's GMP wrapper type hdnum::FP&lt;m&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb18"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Detect HDNUM's GMP wrapper type hdnum::FP&lt;m&gt;</span></span>
 <span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T<span class="op">&gt;</span></span>
 <span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> is_hdnum_fp_impl <span class="op">:</span> <span class="bu">std::</span>false_type <span class="op">{};</span></span>
 <span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a></span>
@@ -885,83 +900,83 @@ Listing&nbsp;3.1: get_d() method
 <span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="kw">inline</span> <span class="kw">constexpr</span> <span class="dt">bool</span> is_hdnum_fp_v <span class="op">=</span></span>
 <span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    is_hdnum_fp_impl<span class="op">&lt;</span></span>
 <span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>        <span class="bu">std::</span>remove_cv_t<span class="op">&lt;</span><span class="bu">std::</span>remove_reference_t<span class="op">&lt;</span>T<span class="op">&gt;&gt;</span></span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;::</span>value<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;::</span>value<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <ol type="1">
 <li><p>The first part</p>
-<div class="sourceCode" id="cb19"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T<span class="op">&gt;</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> is_hdnum_fp_impl <span class="op">:</span> <span class="bu">std::</span>false_type <span class="op">{};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb19"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T<span class="op">&gt;</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> is_hdnum_fp_impl <span class="op">:</span> <span class="bu">std::</span>false_type <span class="op">{};</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>is the default case and says:</p>
 <blockquote class="blockquote">
 <p>for an arbitrary type <code>T</code>, it is false</p>
 </blockquote>
 <p>So:</p>
-<div class="sourceCode" id="cb20"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;::</span>value       <span class="co">// false</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb20"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;::</span>value       <span class="co">// false</span></span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span><span class="dt">float</span><span class="op">&gt;::</span>value        <span class="co">// false</span></span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span>hdnum<span class="op">::</span>FP16<span class="op">&gt;::</span>value  <span class="co">// false, because CPFloat, not GMP FP</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div></li>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span>hdnum<span class="op">::</span>FP16<span class="op">&gt;::</span>value  <span class="co">// false, because CPFloat, not GMP FP</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
 <li><p>The second part</p>
-<div class="sourceCode" id="cb21"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="dt">int</span> m<span class="op">&gt;</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> is_hdnum_fp_impl<span class="op">&lt;</span>hdnum<span class="op">::</span>FP<span class="op">&lt;</span>m<span class="op">&gt;&gt;</span> <span class="op">:</span> <span class="bu">std::</span>true_type <span class="op">{};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb21"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="dt">int</span> m<span class="op">&gt;</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> is_hdnum_fp_impl<span class="op">&lt;</span>hdnum<span class="op">::</span>FP<span class="op">&lt;</span>m<span class="op">&gt;&gt;</span> <span class="op">:</span> <span class="bu">std::</span>true_type <span class="op">{};</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>is the specialization case, and says:</p>
 <blockquote class="blockquote">
 <p>if the type has the form <code>hdnum::FP&lt;m&gt;</code>, it is true.</p>
 </blockquote>
 <p>So:</p>
-<div class="sourceCode" id="cb22"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span>hdnum<span class="op">::</span>FP128<span class="op">&gt;::</span>value  <span class="co">// true</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span>hdnum<span class="op">::</span>FP256<span class="op">&gt;::</span>value  <span class="co">// true</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div></li>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span>hdnum<span class="op">::</span>FP128<span class="op">&gt;::</span>value  <span class="co">// true</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span>hdnum<span class="op">::</span>FP256<span class="op">&gt;::</span>value  <span class="co">// true</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
 <li><p>The last part</p>
-<div class="sourceCode" id="cb23"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T<span class="op">&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb23"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T<span class="op">&gt;</span></span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="kw">inline</span> <span class="kw">constexpr</span> <span class="dt">bool</span> is_hdnum_fp_v <span class="op">=</span></span>
 <span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a> is_hdnum_fp_impl<span class="op">&lt;</span></span>
 <span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>     <span class="bu">std::</span>remove_cv_t<span class="op">&lt;</span><span class="bu">std::</span>remove_reference_t<span class="op">&lt;</span>T<span class="op">&gt;&gt;</span></span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a> <span class="op">&gt;::</span>value<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a> <span class="op">&gt;::</span>value<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>defines a compile-time boolean variable template. For example:</p>
-<div class="sourceCode" id="cb24"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_v<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span>          <span class="co">// false</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_v<span class="op">&lt;</span>hdnum<span class="op">::</span>FP128<span class="op">&gt;</span>   <span class="co">// true</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb24"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_v<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span>          <span class="co">// false</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_v<span class="op">&lt;</span>hdnum<span class="op">::</span>FP128<span class="op">&gt;</span>   <span class="co">// true</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>It is analogous to standard library helpers such as:</p>
-<div class="sourceCode" id="cb25"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>is_arithmetic_v<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>is_arithmetic_v<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>is_constructible_v<span class="op">&lt;</span>T<span class="op">,</span> Args<span class="op">...&gt;</span></span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>is_convertible_v<span class="op">&lt;</span>From<span class="op">,</span> To<span class="op">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>is_convertible_v<span class="op">&lt;</span>From<span class="op">,</span> To<span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>and allows to write</p>
-<div class="sourceCode" id="cb26"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_v<span class="op">&lt;</span>T<span class="op">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_v<span class="op">&lt;</span>T<span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>instead of</p>
-<div class="sourceCode" id="cb27"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span>T<span class="op">&gt;::</span>value</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_impl<span class="op">&lt;</span>T<span class="op">&gt;::</span>value</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The keyword <code>inline</code> is needed for variable that are defined in header files.</p>
 <p>The use of:</p>
-<div class="sourceCode" id="cb28"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>remove_reference_t<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>remove_cv_t<span class="op">&lt;</span>T<span class="op">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>remove_reference_t<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>remove_cv_t<span class="op">&lt;</span>T<span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>makes the trait insensitive to references and <code>const</code> / <code>volatile</code> qualifiers. For example this way all of the following are treated as the same:</p>
-<div class="sourceCode" id="cb29"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>FP<span class="op">&lt;</span><span class="dv">64</span><span class="op">&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb29"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>FP<span class="op">&lt;</span><span class="dv">64</span><span class="op">&gt;</span></span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> hdnum<span class="op">::</span>FP<span class="op">&lt;</span><span class="dv">64</span><span class="op">&gt;</span></span>
 <span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>FP<span class="op">&lt;</span><span class="dv">64</span><span class="op">&gt;&amp;</span></span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> hdnum<span class="op">::</span>FP<span class="op">&lt;</span><span class="dv">64</span><span class="op">&gt;&amp;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> hdnum<span class="op">::</span>FP<span class="op">&lt;</span><span class="dv">64</span><span class="op">&gt;&amp;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Without removing references and cv-qualifiers, the specialization would not match types such as <code>hdnum::FP&lt;m&gt;&amp;</code></p></li>
 </ol>
 <section id="the-final-branch-of-scalar_cast" class="level4">
 <h4 class="anchored" data-anchor-id="the-final-branch-of-scalar_cast">The final branch of <code>scalar_cast</code></h4>
-<div class="sourceCode" id="cb30"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span><span class="op">{</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb30"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span><span class="op">{</span></span>
 <span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">static_assert</span><span class="op">(</span>always_false<span class="op">&lt;</span>T_out<span class="op">,</span> T_in<span class="op">&gt;::</span>value<span class="op">,</span></span>
 <span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">"unsupported scalar conversion"</span><span class="op">);</span></span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>This branch is reached only if neither of the previous compile-time conditions applies:</p>
-<div class="sourceCode" id="cb31"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>is_constructible_v<span class="op">&lt;</span>T_out<span class="op">,</span> <span class="at">const</span> T_in<span class="op">&amp;&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>is_constructible_v<span class="op">&lt;</span>T_out<span class="op">,</span> <span class="at">const</span> T_in<span class="op">&amp;&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>is <code>false</code>, so direct construction does not work, and</p>
-<div class="sourceCode" id="cb32"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_v<span class="op">&lt;</span>T_in<span class="op">&gt;</span> <span class="op">&amp;&amp;</span> <span class="bu">std::</span>is_constructible_v<span class="op">&lt;</span>T_out<span class="op">,</span> <span class="dt">double</span><span class="op">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb32"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>is_hdnum_fp_v<span class="op">&lt;</span>T_in<span class="op">&gt;</span> <span class="op">&amp;&amp;</span> <span class="bu">std::</span>is_constructible_v<span class="op">&lt;</span>T_out<span class="op">,</span> <span class="dt">double</span><span class="op">&gt;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>is also <code>false</code>, so the special <code>FP =&gt; double</code> / <code>FP =&gt; CPFloat</code> conversion path doesn’t apply either.</p>
 <p>Therefore, if the compiler reaches this final ‘else’ branch, the requested scalar conversion is unsupported. In that case, we want compilation to fail with a clear error message.</p>
 <p>The helper trait is defined as:</p>
-<div class="sourceCode" id="cb33"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span><span class="op">...&gt;</span></span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> always_false <span class="op">:</span> <span class="bu">std::</span>false_type <span class="op">{};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb33"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span><span class="op">...&gt;</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> always_false <span class="op">:</span> <span class="bu">std::</span>false_type <span class="op">{};</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>This defines a type trait that is always <code>false</code>, regardless of the template arguments. For example:</p>
-<div class="sourceCode" id="cb34"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>always_false<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;::</span>value                 <span class="co">// false</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb34"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>always_false<span class="op">&lt;</span><span class="dt">int</span><span class="op">&gt;::</span>value                 <span class="co">// false</span></span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>always_false<span class="op">&lt;</span><span class="dt">double</span><span class="op">,</span> <span class="dt">int</span><span class="op">&gt;::</span>value         <span class="co">// false</span></span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>always_false<span class="op">&lt;</span>hdnum<span class="op">::</span>FP<span class="op">&lt;</span><span class="dv">64</span><span class="op">&gt;,</span> <span class="dt">double</span><span class="op">&gt;::</span>value <span class="co">// false</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>always_false<span class="op">&lt;</span>hdnum<span class="op">::</span>FP<span class="op">&lt;</span><span class="dv">64</span><span class="op">&gt;,</span> <span class="dt">double</span><span class="op">&gt;::</span>value <span class="co">// false</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>The <code>class...</code> syntax denotes a template parameter pack and means that <code>always_false</code> can accept any number of template type arguments. In our case we use two arguments:</p>
-<div class="sourceCode" id="cb35"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>always_false<span class="op">&lt;</span>T_out<span class="op">,</span> T_in<span class="op">&gt;::</span>value </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb35"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>always_false<span class="op">&lt;</span>T_out<span class="op">,</span> T_in<span class="op">&gt;::</span>value </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>It is important that <code>always_false&lt;T_out, T_in&gt;::value</code> depends on template parameters <code>T_out</code> and <code>T_in</code>, as it lets us create a compile-time <code>false</code> value that is evaluated when the templates are instantiated and not when the function is parsed. Omitting and writing simply <code>static_assert(false, ...)</code> would cause the assertion to be checked when the function template is parsed, and not only when the template is instantiated and the final branch is actually selected for the concrete instantiation.</p>
 </section>
 <section id="scalar_cast-final-version" class="level4">
 <h4 class="anchored" data-anchor-id="scalar_cast-final-version"><code>scalar_cast</code> Final Version</h4>
-<div class="sourceCode" id="cb36"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#pragma once</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb36"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#pragma once</span></span>
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;cstddef&gt;</span></span>
 <span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdexcept&gt;</span></span>
@@ -1066,7 +1081,7 @@ Listing&nbsp;3.1: get_d() method
 <span id="cb36-103"><a href="#cb36-103" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> out<span class="op">;</span></span>
 <span id="cb36-104"><a href="#cb36-104" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
 <span id="cb36-105"><a href="#cb36-105" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-106"><a href="#cb36-106" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="co">// namespace mpir</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb36-106"><a href="#cb36-106" aria-hidden="true" tabindex="-1"></a><span class="op">}</span> <span class="co">// namespace mpir</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
 </section>
 </section>
@@ -1086,7 +1101,7 @@ Listing&nbsp;3.1: get_d() method
 <section id="scalar-conversion-tests" class="level3">
 <h3 class="anchored" data-anchor-id="scalar-conversion-tests">Scalar Conversion Tests</h3>
 <p>The scalar tests check that</p>
-<div class="sourceCode" id="cb37"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>scalar_cast<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>x<span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb37"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>scalar_cast<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>x<span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>can be instantiated for representative input/output type paairs. For each pair, several sample values are tested:</p>
 <pre><code>0.0
 1.0
@@ -1094,7 +1109,7 @@ Listing&nbsp;3.1: get_d() method
 1.0 / 3.0
 1.23456789012345</code></pre>
 <p>The result is checked at compile time with</p>
-<div class="sourceCode" id="cb39"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="kw">static_assert</span><span class="op">(</span><span class="bu">std::</span>is_same_v<span class="op">&lt;</span><span class="kw">decltype</span><span class="op">(</span>y<span class="op">),</span> T_out<span class="op">&gt;);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb39"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="kw">static_assert</span><span class="op">(</span><span class="bu">std::</span>is_same_v<span class="op">&lt;</span><span class="kw">decltype</span><span class="op">(</span>y<span class="op">),</span> T_out<span class="op">&gt;);</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>To verify that <code>scalar_cast&lt;T_out&gt;(x)</code> returns the requested output type <code>T_out</code>.</p>
 <p>Both the input and the converted value are transofrmed to their approximate <code>double</code> representation with <code>approx_as_double</code> in order to compare the values with various <code>assert</code> and insepct the outputs.</p>
 </section>
@@ -1110,15 +1125,15 @@ Listing&nbsp;3.1: get_d() method
 <section id="vector-conversion-tests" class="level3">
 <h3 class="anchored" data-anchor-id="vector-conversion-tests">Vector Conversion Tests</h3>
 <p>Vector tests check the function</p>
-<div class="sourceCode" id="cb40"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>convert<span class="op">(</span>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span></span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb40"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>convert<span class="op">(</span>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>for a representative vector of length 5 and checks that each component of the output agrees with applying <code>scalar_cast&lt;T_out&gt;</code> to the corresponding input component.</p>
 <p>The comparison is performed approximately by conveting both values to <code>double</code> and using a small relative tolerance with the function</p>
-<div class="sourceCode" id="cb41"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="kw">inline</span> <span class="dt">bool</span> close<span class="op">(</span><span class="dt">double</span> a<span class="op">,</span> <span class="dt">double</span> b<span class="op">,</span> <span class="dt">double</span> atol <span class="op">=</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">double</span> rtol <span class="op">=</span> <span class="fl">1e-12</span><span class="op">)</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb41"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="kw">inline</span> <span class="dt">bool</span> close<span class="op">(</span><span class="dt">double</span> a<span class="op">,</span> <span class="dt">double</span> b<span class="op">,</span> <span class="dt">double</span> atol <span class="op">=</span> <span class="fl">0.0</span><span class="op">,</span> <span class="dt">double</span> rtol <span class="op">=</span> <span class="fl">1e-12</span><span class="op">)</span></span>
 <span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
 <span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> <span class="dt">double</span> scale <span class="op">=</span> <span class="bu">std::</span>max<span class="op">(</span><span class="bu">std::</span>abs<span class="op">(</span>a<span class="op">),</span> <span class="bu">std::</span>abs<span class="op">(</span>b<span class="op">));</span></span>
 <span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">std::</span>abs<span class="op">(</span>a <span class="op">-</span> b<span class="op">)</span> <span class="op">&lt;=</span> atol <span class="op">+</span> rtol <span class="op">*</span> scale<span class="op">;</span></span>
-<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>This function says whether the two double values are close enough to be considered equal. The tolerance is scaled by the max value of the inputs.</p>
 <p>The test also includes the edge cases:</p>
 <ul>
@@ -1127,14 +1142,14 @@ Listing&nbsp;3.1: get_d() method
 </ul>
 <p>Additionaly wrong-sized output vector is checked to verify whether an exception is thrown.</p>
 <p>Finally the convenience function</p>
-<div class="sourceCode" id="cb42"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>convert_vector<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>in<span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb42"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>convert_vector<span class="op">&lt;</span>T_out<span class="op">&gt;(</span>in<span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>is tested, by verifying the resulting type and converted values.</p>
 </section>
 <section id="matrix-conversion-tests" class="level3">
 <h3 class="anchored" data-anchor-id="matrix-conversion-tests">Matrix Conversion Tests</h3>
 <p>The matrix tests check the function</p>
-<div class="sourceCode" id="cb43"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>convert<span class="op">(</span>hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span></span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb43"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>convert<span class="op">(</span>hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>on a representative <code>5 x 5</code> matrix, by looping over the output values and comparing them against the result of applying <code>scalar_cast</code> to corresponding input entries.</p>
 <p>The test includes the edge case of 1 x 1 matrix and a wrong-sized test.</p>
 <p>The convenience fucntion <code>mpir::convert_matrix&lt;T_out&gt;(in)</code> is also tested.</p>
@@ -1236,13 +1251,14 @@ Listing&nbsp;3.1: get_d() method
       e.clearSelection();
     }
     const getTextToCopy = function(trigger) {
-        const codeEl = trigger.previousElementSibling.cloneNode(true);
-        for (const childEl of codeEl.children) {
-          if (isCodeAnnotation(childEl)) {
-            childEl.remove();
-          }
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
         }
-        return codeEl.innerText;
+      }
+      return codeEl.innerText;
     }
     const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
       text: getTextToCopy
@@ -1591,8 +1607,8 @@ Listing&nbsp;3.1: get_d() method
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../report.html" class="pagination-link" aria-label="Report">
-        <span class="nav-page-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Report</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../notes/mixed_ir.html" class="pagination-link" aria-label="Implementation of the Mixed IR Algorithm">
+        <span class="nav-page-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Implementation of the Mixed IR Algorithm</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

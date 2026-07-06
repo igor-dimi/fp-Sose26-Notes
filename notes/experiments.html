@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>2&nbsp; Project Summary – Advanced Praktika SoSe 26 Notes</title>
+<title>5&nbsp; Implementing the Experiments – Advanced Praktika SoSe 26 Notes</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -68,8 +68,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
-<link href="../notes/conversions.html" rel="next">
-<link href="../notes/project_setup.html" rel="prev">
+<link href="../report.html" rel="next">
+<link href="../notes/mixed_ir.html" rel="prev">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
@@ -159,7 +159,7 @@ window.Quarto = {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../notes/project_setup.html">Notes</a></li><li class="breadcrumb-item"><a href="../notes/project_overview.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Project Summary</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../notes/project_setup.html">Notes</a></li><li class="breadcrumb-item"><a href="../notes/experiments.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -210,7 +210,7 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../notes/project_overview.html" class="sidebar-item-text sidebar-link active">
+  <a href="../notes/project_overview.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Project Summary</span></span></a>
   </div>
 </li>
@@ -228,7 +228,7 @@ window.Quarto = {
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../notes/experiments.html" class="sidebar-item-text sidebar-link">
+  <a href="../notes/experiments.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments</span></span></a>
   </div>
 </li>
@@ -250,25 +250,18 @@ window.Quarto = {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#abstract" id="toc-abstract" class="nav-link active" data-scroll-target="#abstract"><span class="header-section-number">2.1</span> Abstract</a>
-  <ul class="collapse">
-  <li><a href="#problem" id="toc-problem" class="nav-link" data-scroll-target="#problem">Problem</a></li>
-  <li><a href="#algorithm" id="toc-algorithm" class="nav-link" data-scroll-target="#algorithm">Algorithm</a></li>
-  <li><a href="#hdnum-own-implementation" id="toc-hdnum-own-implementation" class="nav-link" data-scroll-target="#hdnum-own-implementation">HDNUM &amp; Own Implementation</a></li>
-  <li><a href="#mixing-types" id="toc-mixing-types" class="nav-link" data-scroll-target="#mixing-types">Mixing Types</a></li>
-  <li><a href="#methodology" id="toc-methodology" class="nav-link" data-scroll-target="#methodology">Methodology</a></li>
-  <li><a href="#what-should-be-studied" id="toc-what-should-be-studied" class="nav-link" data-scroll-target="#what-should-be-studied">What Should be Studied</a></li>
-  <li><a href="#plan" id="toc-plan" class="nav-link" data-scroll-target="#plan">Plan</a></li>
-  </ul></li>
+  <li><a href="#temporary-matrix-generator" id="toc-temporary-matrix-generator" class="nav-link active" data-scroll-target="#temporary-matrix-generator"><span class="header-section-number">5.1</span> Temporary Matrix Generator</a></li>
+  <li><a href="#error-metrics-helper" id="toc-error-metrics-helper" class="nav-link" data-scroll-target="#error-metrics-helper"><span class="header-section-number">5.2</span> Error Metrics Helper</a></li>
+  <li><a href="#first-convergence-test" id="toc-first-convergence-test" class="nav-link" data-scroll-target="#first-convergence-test"><span class="header-section-number">5.3</span> First Convergence Test</a></li>
   </ul>
 </nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../notes/project_setup.html">Notes</a></li><li class="breadcrumb-item"><a href="../notes/project_overview.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Project Summary</span></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../notes/project_setup.html">Notes</a></li><li class="breadcrumb-item"><a href="../notes/experiments.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments</span></a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Project Summary</span></h1>
+<h1 class="title"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments</span></h1>
 </div>
 
 
@@ -285,231 +278,126 @@ window.Quarto = {
 </header>
 
 
-<section id="abstract" class="level2" data-number="2.1">
-<h2 data-number="2.1" class="anchored" data-anchor-id="abstract"><span class="header-section-number">2.1</span> Abstract</h2>
-<p>This <em>Fortgeschrittenenpraktikum</em> project investigates mixed precision iterative refinement for solving linear systems</p>
+<p>We want to plot the <strong>forward error</strong> and the <strong>backward error</strong> as function of the refinement step <span class="math inline">\(i\)</span>.</p>
+<p>forward error:</p>
 <p><span class="math display">\[
-Ax=b.
+\text{forward error}_i = \frac{\norm{x_i} - \norm{x_{\text{true}}}}{\norm{x_{\text{true}}}}
 \]</span></p>
-<p>The goal is to implement a three-precision LU-based method: the LU factorization and correction solves use low precision <span class="math inline">\(u_f\)</span>, the solution updates use working precision <span class="math inline">\(u\)</span>, and the residuals are computed in higher precision <span class="math inline">\(u_r\)</span>. Starting from a low-precision LU solve, the algorithm repeatedly computes <span class="math inline">\(r_i=b-Ax_i\)</span>, solves for a correction <span class="math inline">\(d_i\)</span>, and updates <span class="math inline">\(x_i\)</span> until <span class="math inline">\(|d_i|/|x_i|&lt;u\)</span> or a maximum iteration count is reached.</p>
-<p>The focus is empirical accuracy, not runtime, since low precisions such as fp8, fp16, and bfloat16 are simulated via CPFloat. The experiments will study convergence, forward/backward error, condition-number dependence, precision triples <span class="math inline">\((u_f,u,u_r)\)</span> residual precision, and comparison with a direct working-precision solve.</p>
-<p>Summary:</p>
-<ul>
-<li>implement three-precision vaiant of <strong>iterative refinement for linear systems</strong></li>
-<li>study it’s accuracy</li>
-</ul>
-<section id="problem" class="level3">
-<h3 class="anchored" data-anchor-id="problem">Problem</h3>
-<ul>
-<li>A linear system <span class="math inline">\(Ax = b\)</span>. <strong>iterative refinement</strong> improves an approximate solution by repeatedly computing the residual and solving a correction equation.
-<ul>
-<li><span class="math inline">\(LU\)</span> factorization in low precision: <span class="math inline">\(u_f\)</span></li>
-<li><strong>working arithmetic</strong> in ‘middle’ precision: <span class="math inline">\(u\)</span></li>
-<li>residual computation in high precision: <span class="math inline">\(u_r\)</span></li>
-</ul></li>
-</ul>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Review the definition of <strong>accuracy</strong> of an algorithm</p>
-</div>
-</div>
-<ul>
-<li>precision triples <span class="math inline">\((u_r, u, u_f)\)</span> with <span class="math inline">\(u_f \succ u \succ u_r\)</span>:
-<ul>
-<li>i.e.&nbsp;<span class="math inline">\(u_f\)</span> low precisions like: <code>fp8</code>, <code>fp16</code>, <code>bfloat16</code>, come from CPFloat:
-<ul>
-<li><code>FP8</code>: <code>CPFloat&lt;4, 4&gt;</code></li>
-<li><code>bfloat16</code>: <code>CPFloat&lt;8, 8&gt;</code></li>
-<li><code>FP16</code>: <code>CPFloat&lt;11, 5&gt;</code></li>
-</ul></li>
-<li><span class="math inline">\(u\)</span> is probably the native <code>FP64</code> i.e.&nbsp;<code>double</code> precision</li>
-</ul></li>
-</ul>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Study the <code>FP8</code>, <code>FP16</code> and <code>bfloat16</code> formats and how they relate to template parameters in <code>CPfloat&lt;&gt;</code></p>
-</div>
-</div>
+<p>Backward error:</p>
+<p><span class="math display">\[
+\eta_{i} = \frac{\norm{b - Ax_i}}{\norm{A}\norm{x_i} + \norm{b}}
+\]</span></p>
+<p>in <code>mixed_ir.hpp</code> the result struct currently only stores <code>rel_correction</code> vector, that records</p>
+<p><span class="math display">\[
+\frac{\norm{d_i}}{\norm{x_i}}
+\]</span></p>
+<p>We have to modify <code>mixed_ir</code> to store the iterates <span class="math inline">\(x_i\)</span>, so that we can compute forward and backward errors. We add the following member variable to the <code>MixedIRResult</code> struct:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>vector<span class="op">&lt;</span>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_work<span class="op">&gt;&gt;</span> iterates<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>We append the solutions to the iterates vector before the loop and after each loop iteration with the line:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>options<span class="op">.</span>store_iterates<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    result<span class="op">.</span>iterates<span class="op">.</span>push_back<span class="op">(</span>result<span class="op">.</span>x<span class="op">);</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<section id="temporary-matrix-generator" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="temporary-matrix-generator"><span class="header-section-number">5.1</span> Temporary Matrix Generator</h2>
+<p>We start with a simple controlled family, a rotated SPD matrix:</p>
+<p><span class="math display">\[
+A = QDQ^T
+\]</span></p>
+<p>where <span class="math inline">\(D\)</span> has eigenvalues <span class="math inline">\(1/\sqrt{\kappa} \dots \sqrt{\kappa}\)</span>. Then</p>
+<p><span class="math display">\[
+\kappa_2(A) = \kappa
+\]</span></p>
+<p>This family of matrices give a known true (exact) solution:</p>
+<p><span class="math display">\[
+x_{\text{true}} = (1, \dots, 1)^T
+\]</span></p>
+<p>So it can be used temporarily to test the pipeline.</p>
+<p>The implementation is in</p>
+<pre><code>code/include/test_matrices.hpp</code></pre>
 </section>
-<section id="algorithm" class="level3">
-<h3 class="anchored" data-anchor-id="algorithm">Algorithm</h3>
-<p><strong>Algorithm: Three-precision iterative refinement</strong></p>
-<pre class="text"><code>1. Compute the LU factorization PA = LU in precision uf.
-2. Solve LU x0 = P b in precision uf; cast x0 to precision u.
-3. While not converged:
-   4. Compute ri = b - A xi in precision ur.
-   5. Cast ri to precision u.
-   6. Solve LU di = P ri in precision uf; cast di to precision u.
-   7. Update xi+1 = xi + di in precision u.</code></pre>
-<ul>
-<li>convergence condition: <span class="math inline">\(\frac{\norm{d_i}}{\norm{x_i}} &lt; u\)</span> where <span class="math inline">\(u\)</span> is the unit roundoff of the working precision,</li>
-<li>or stop after a max number of iterations.</li>
-</ul>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>why is <span class="math inline">\(\frac{\norm{d_i}}{\norm{x_i}} &lt; u\)</span> the convergence condition?</p>
-</div>
-</div>
+<section id="error-metrics-helper" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="error-metrics-helper"><span class="header-section-number">5.2</span> Error Metrics Helper</h2>
+<p>We implement functions to compute * <span class="math inline">\(\normsub{\cdot}{\infty}\)</span> for matrices and vectors, * relative forward error with the infinity norm * relative backward error with the inifinity norm</p>
+<p>contained in the file</p>
+<pre><code>code/include/error_metrics.hpp</code></pre>
 </section>
-<section id="hdnum-own-implementation" class="level3">
-<h3 class="anchored" data-anchor-id="hdnum-own-implementation">HDNUM &amp; Own Implementation</h3>
-<p>relevant parts:</p>
-<p>matrix and vector classes:</p>
+<section id="first-convergence-test" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="first-convergence-test"><span class="header-section-number">5.3</span> First Convergence Test</h2>
+<p>We test our pipeline with a first test that uses the precision tripple:</p>
 <ul>
-<li><p><code>src/densematrix.hh</code>: <code>DenseMatrix&lt;T&gt;</code> with:</p>
-<ul>
-<li><code>mv</code>: matrix vector product</li>
-<li><code>mm</code>: matrix matrix product</li>
-<li><code>transpose()</code> etc</li>
-</ul></li>
-<li><p><code>src/vector.hh</code>: <code>Vector&lt;T&gt;</code> with vector arithmetic operations (multiplication with scalar, addition) and norms</p></li>
-<li><p>LU decomposition in <code>src/lr.hh</code>:</p>
-<ul>
-<li><code>lr_fullpivot(A, p, q)</code></li>
-<li><code>lr_partialpivot(A, p)</code></li>
-<li>triangular solves: <code>solveL(A, x, b)</code>, <code>solveR(A, x, b)</code></li>
-<li><code>permute_forward</code> and <code>permute_backward</code></li>
-</ul></li>
+<li><span class="math inline">\(u_f\)</span> : FP16</li>
+<li><span class="math inline">\(u\)</span>: FP64</li>
+<li><span class="math inline">\(u_r\)</span>: FP128</li>
 </ul>
-</section>
-<section id="mixing-types" class="level3">
-<h3 class="anchored" data-anchor-id="mixing-types">Mixing Types</h3>
-<p>In a mixed precision algorithm different parts of the algorithm are instantiated / computed with different precisions, i.e.&nbsp;different types:</p>
+<p>For matrices of size <span class="math inline">\(100 \times 100\)</span> with <span class="math inline">\(\kappa\)</span> values: <span class="math inline">\(1, 10, 100, 1000, 10000\)</span>.</p>
+<p>The test writes for each matrix the convergence history to csv file. Specifically it writes the values:</p>
 <ul>
-<li>LU factorization is done in lower precision <span class="math inline">\(u_f\)</span>: E.g. <code>DenseMatrix&lt;FP16&gt;</code></li>
-<li>Residual computation in higher precision <span class="math inline">\(u_r\)</span>: E.g. <code>DenseMatrix&lt;FP128&gt;</code></li>
+<li>kappa,</li>
+<li>iteration,</li>
+<li>relative forward error</li>
+<li>relative backward error</li>
+<li>relative correction</li>
 </ul>
-<p>Therefore we must be able to convert from one type (class) like <code>DenseMatrix&lt;FP16</code> to another type (class) like <code>DenseMatrix&lt;FP128</code>. This conversion requires explicit construction or element-wise copying.</p>
-<p>Managing type conversions between precisions is they key challenge. It is suggested to do this with a explicit template functions for matrices and vectors:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> convert<span class="op">(</span>Vector<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span> <span class="at">const</span> Vector<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_out<span class="op">,</span> <span class="kw">class</span> T_in<span class="op">&gt;</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> convert<span class="op">(</span>DenseMatrix<span class="op">&lt;</span>T_out<span class="op">&gt;&amp;</span> out<span class="op">,</span> <span class="at">const</span> Vector<span class="op">&lt;</span>T_in<span class="op">&gt;&amp;</span> in<span class="op">)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</section>
-<section id="methodology" class="level3">
-<h3 class="anchored" data-anchor-id="methodology">Methodology</h3>
-<ul>
-<li><strong>reference solutions</strong>: run a standard solver for <span class="math inline">\(A\cdot x = b\)</span> in <code>FP256</code> and treat the result <span class="math inline">\(x_{ex}\)</span> as exact.</li>
-<li><strong>error metrics</strong>:
-<ul>
-<li>report errors using norms appropriate to your algorithm</li>
-<li>compute <strong>all error measures</strong> in <em>a precision higher than the working precision of your algorithm</em>, i.e.&nbsp;<span class="math inline">\(u\)</span></li>
-<li>otherwise you are measuring the precision of your measurement.</li>
-</ul></li>
-</ul>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<ul>
-<li>What does <strong>error</strong> mean in this context? <span class="math inline">\(\normsub{x^* - x_{ex}}{2}\)</span> ?</li>
-<li>What is a norm that is <strong>apropriate</strong> to LU, simply <span class="math inline">\(\normsub{\bullet}{2}\)</span> ?</li>
-<li>Does Compute error measures in a precision higher than <span class="math inline">\(u\)</span> simply mean that we compute <span class="math inline">\(\norm{\cdot}\)</span> in something like <code>FP128</code>
-<ul>
-<li>what does “otherwise you are measuring the precision of your measurement” mean?</li>
-</ul></li>
-</ul>
-</div>
-</div>
-<ul>
-<li>experiments should be scripted so that re-running them with various precision, condition number and matrix type is convenient.</li>
-</ul>
-</section>
-<section id="what-should-be-studied" class="level3">
-<h3 class="anchored" data-anchor-id="what-should-be-studied">What Should be Studied</h3>
-<ul>
-<li><strong>Convergence Histories</strong>: for each precision combination <span class="math inline">\((u_f, u, u_r)\)</span> and several test matrices <span class="math inline">\(A_i\)</span> with different condition numbers <span class="math inline">\(k(A_i)\)</span>:
-<ul>
-<li>plot <strong>forward error</strong> as a function of i</li>
-<li>plot <strong>backward error</strong> as a function of i</li>
-</ul></li>
-</ul>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>review the definitions of <strong>forward error</strong> and <strong>backward error</strong></p>
-</div>
-</div>
-<ul>
-<li><strong>Summary Across Condition Numbers</strong>: for a wide range of <span class="math inline">\(k(A)\)</span> for each precision combinations
-<ul>
-<li>record:
-<ul>
-<li>the final achieved <strong>forward error</strong></li>
-<li>number of iterations</li>
-</ul></li>
-<li>plot these as a function of <span class="math inline">\(k(A)\)</span>: theory predicts convergence requires roughly <span class="math inline">\(k(A) \cdot u_f &lt; 1\)</span>.</li>
-</ul></li>
-<li><strong>The Role <span class="math inline">\(u_r\)</span></strong>: Fix <span class="math inline">\((u_f, u)\)</span> and vary <span class="math inline">\(u_r\)</span>. When does <span class="math inline">\(u_r &gt; u\)</span> make a measurable difference</li>
-</ul>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<ul>
-<li>Normally <span class="math inline">\(u_r &lt; u\)</span>, i.e.&nbsp;the residual computation is done in a precision higher than the working precision.</li>
-<li>What happens when we lower the precision, when does it make a difference?</li>
-</ul>
-</div>
-</div>
-</section>
-<section id="plan" class="level3">
-<h3 class="anchored" data-anchor-id="plan">Plan</h3>
-<ol type="1">
-<li>Implement hdnum_conversions.hpp.</li>
-<li>Add conversion tests.</li>
-<li>Implement a minimal mixed_ir.hpp.</li>
-<li>First test with all precisions set to FP64.</li>
-<li>Then test real mixed precision triples.</li>
-<li>Add systematic experiments and plotting scripts.</li>
-</ol>
+<p>in a single lines for each iteration step, for each matrix. This gives us the convergence histories.</p>
+<p>It is implemented in the file</p>
+<pre><code>code/experiments/exp_convergence.cc</code></pre>
+<p>Following was the result of the experiment:</p>
+<pre class="csv"><code>kappa,iteration,forward_error_inf,backward_error_inf,rel_correction
+1,0,0,0,0
+1,1,0,0,0
+10,0,0.000976562,0.000441793,0
+10,1,9.53674e-07,4.31651e-07,0.00047591
+10,2,5.96046e-08,5.1214e-09,3.1641e-07
+10,3,5.96046e-08,5.1214e-09,1.68587e-08
+10,4,5.96046e-08,5.1214e-09,1.68587e-08
+10,5,5.96046e-08,5.1214e-09,1.68587e-08
+10,6,5.96046e-08,5.1214e-09,1.68587e-08
+10,7,5.96046e-08,5.1214e-09,1.68587e-08
+10,8,5.96046e-08,5.1214e-09,1.68587e-08
+10,9,5.96046e-08,5.1214e-09,1.68587e-08
+10,10,5.96046e-08,5.1214e-09,1.68587e-08
+10,11,5.96046e-08,5.1214e-09,1.68587e-08
+10,12,5.96046e-08,5.1214e-09,1.68587e-08
+10,13,5.96046e-08,5.1214e-09,1.68587e-08
+10,14,5.96046e-08,5.1214e-09,1.68587e-08
+10,15,5.96046e-08,5.1214e-09,1.68587e-08
+10,16,5.96046e-08,5.1214e-09,1.68587e-08
+10,17,5.96046e-08,5.1214e-09,1.68587e-08
+10,18,5.96046e-08,5.1214e-09,1.68587e-08
+10,19,5.96046e-08,5.1214e-09,1.68587e-08
+10,20,5.96046e-08,5.1214e-09,1.68587e-08
+100,0,0.000976562,0.000481752,0
+100,1,9.53674e-07,4.70694e-07,0.000444832
+100,2,1.78814e-07,1.42242e-09,2.52178e-07
+100,3,1.78814e-07,1.42242e-09,0
+1000,0,0.000976562,0.000460731,0
+1000,1,9.53674e-07,3.07722e-07,0.000591975
+1000,2,8.9407e-07,6.88472e-10,4.02364e-07
+1000,3,8.9407e-07,5.65293e-10,1.3328e-08
+1000,4,8.9407e-07,5.65293e-10,1.19209e-08
+1000,5,8.9407e-07,5.65293e-10,1.19209e-08
+1000,6,8.9407e-07,5.65293e-10,1.19209e-08
+1000,7,8.9407e-07,5.65293e-10,1.19209e-08
+1000,8,8.9407e-07,5.65293e-10,1.19209e-08
+1000,9,8.9407e-07,5.65293e-10,1.19209e-08
+1000,10,8.9407e-07,5.65293e-10,1.19209e-08
+1000,11,8.9407e-07,5.65293e-10,1.19209e-08
+1000,12,8.9407e-07,5.65293e-10,1.19209e-08
+1000,13,8.9407e-07,5.65293e-10,1.19209e-08
+1000,14,8.9407e-07,5.65293e-10,1.19209e-08
+1000,15,8.9407e-07,5.65293e-10,1.19209e-08
+1000,16,8.9407e-07,5.65293e-10,1.19209e-08
+1000,17,8.9407e-07,5.65293e-10,1.19209e-08
+1000,18,8.9407e-07,5.65293e-10,1.19209e-08
+1000,19,8.9407e-07,5.65293e-10,1.19209e-08
+1000,20,8.9407e-07,5.65293e-10,1.19209e-08
+10000,0,0.000976562,0.000375237,0
+10000,1,3.33786e-06,4.73515e-08,0.000488379
+10000,2,9.53674e-07,3.8223e-10,5.28939e-07
+10000,3,9.53674e-07,1.29324e-10,1.03238e-08
+10000,4,9.53674e-07,1.29324e-10,0</code></pre>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->
@@ -915,13 +803,13 @@ Note
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="../notes/project_setup.html" class="pagination-link" aria-label="Project Setup">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Project Setup</span></span>
+      <a href="../notes/mixed_ir.html" class="pagination-link" aria-label="Implementation of the Mixed IR Algorithm">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Implementation of the Mixed IR Algorithm</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../notes/conversions.html" class="pagination-link" aria-label="Conversions">
-        <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Conversions</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../report.html" class="pagination-link" aria-label="Report">
+        <span class="nav-page-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Report</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
