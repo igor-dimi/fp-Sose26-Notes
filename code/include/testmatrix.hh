@@ -4,9 +4,10 @@
 #include <cmath>
 #include <cstddef>
 #include <random>
-#include "densematrix.hh"
-#include "vector.hh"
-#include "qr.hh"
+// #include "densematrix.hh"
+// #include "vector.hh"
+// #include "qr.hh"
+#include "hdnum.hh"
 
 namespace hdnum {
 

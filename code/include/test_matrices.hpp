@@ -6,6 +6,7 @@
 
 #include "hdnum.hh"
 #include "hdnum_conversions.hpp"
+#include "testmatrix.hh"
 
 namespace mpir {
 
@@ -67,5 +68,71 @@ make_rotated_spd_problem(std::size_t n, double kappa, double theta = 0.3)
 
     return LinearSystem<T>{A, b, x_true, kappa};
 }
+
+template<class T>
+LinearSystem<T>
+make_random_spd_problem(std::size_t n, double kappa, unsigned int seed = 42)
+{
+    hdnum::DenseMatrix<T> A(n, n);
+    hdnum::Vector<T> x_true(n);
+    hdnum::Vector<T> b(n);
+
+    // construct the matrix in the working precision
+    hdnum::randspd(
+        A, 
+        scalar_cast<T>(kappa),
+        seed
+    );
+
+    for (std::size_t i = 0; i < n; ++i) {
+        x_true[i] = T(1);
+    }
+
+    A.mv(b, x_true);
+
+    return LinearSystem<T> {
+        A,
+        b,
+        x_true,
+        kappa
+    };
+
+
+
+} //make random spd
+
+
+template<class T>
+LinearSystem<T>
+make_random_svd_problem(std::size_t n, 
+    double kappa,
+    unsigned int seed_u = 42,
+    unsigned int seed_v = 137)
+{
+    hdnum::DenseMatrix<T> A(n, n);
+    hdnum::Vector<T> x_true(n);
+    hdnum::Vector<T> b(n);
+
+    hdnum::randsvd(
+        A,
+        scalar_cast<T>(kappa),
+        seed_u,
+        seed_v
+    );
+
+    for (std::size_t i = 0; i < n; ++i) {
+        x_true[i] = T(1);
+    }
+
+    A.mv(b, x_true);
+
+    return LinearSystem<T>{
+        A,
+        b,
+        x_true,
+        kappa
+    };
+}
+
 
 } // namespace mpir
