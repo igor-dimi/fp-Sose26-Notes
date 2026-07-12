@@ -48,7 +48,7 @@ int main()
     for (double kappa : kappas) {
         auto problem = mpir::make_rotated_spd_problem<T_work>(n, kappa);
 
-        mpir::MixedIROptions options;
+        mpir::MixedIROptions<T_work> options;
         options.max_iterations = 20;
         options.store_iterates = true;
 
