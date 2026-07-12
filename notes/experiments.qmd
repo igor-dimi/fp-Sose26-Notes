@@ -45,10 +45,10 @@ if (options.store_iterates) {
 We start with a simple controlled family, a rotated SPD matrix:
 
 $$
-A = QDQ^T
+A = Q\Lambda Q^T
 $$
 
-where $D$ has eigenvalues $1/\sqrt{\kappa} \dots \sqrt{\kappa}$. Then
+where $\Lambda$ has eigenvalues $1/\sqrt{\kappa} \dots \sqrt{\kappa}$. Then
 
 $$
 \kappa_2(A) = \kappa
@@ -68,10 +68,99 @@ The implementation is in
 code/include/test_matrices.hpp
 ```
 
+## Matrix Generator Supervisor Version
+
+The temporary generator constructs 
+
+$$
+A = Q_{\text{block}}\Lambda Q_{\text{block}}^T
+$$
+
+where $Q_{\text{block}}$ consists only of independent $2 \times 2$ rotations. Consequently $A$ is block 
+diagonal:
+
+$$
+A =
+\begin{pmatrix}
+A_1 &        &        & 0 \\
+    & A_2    &        &   \\
+    &        & \ddots &   \\
+0   &        &        & A_m
+\end{pmatrix},
+\qquad
+A_i \in \mathbb{R}^{2 \times 2}.
+$$
+
+Even though the entire block-diagonal matrix had condition number $\kappa$, the individual $2 \times 2$ blocks is only
+approximately:
+
+$$
+\kappa^{1/(n-1)}
+$$
+
+Supervisors `randspd` constructs 
+
+$$
+A = Q\Lambda Q^T
+$$
+
+where $Q$ is a dense random orthogonal matrix. Consequently, $A$ is generally dense, and every variable is coupled
+to every other variable, producing a genuinelly ill-conditioned system. 
+
+### Nonsymmetric Generator
+
+Iterative refinement with LU is not restricted to SPD matrices, so `randsvd` is also important.
+The wrapper
+
+
+```cpp
+template<class T>
+LinearSystem<T>
+make_random_svd_problem(std::size_t n,
+                        double kappa,
+                        unsigned int seed_u = 42,
+                        unsigned int seed_v = 137)
+{
+    hdnum::DenseMatrix<T> A(n, n);
+    hdnum::Vector<T> x_true(n);
+    hdnum::Vector<T> b(n);
+
+    hdnum::randsvd(
+        A,
+        scalar_cast<T>(kappa),
+        seed_u,
+        seed_v
+    );
+
+    for (std::size_t i = 0; i < n; ++i) {
+        x_true[i] = T(1);
+    }
+
+    A.mv(b, x_true);
+
+    return LinearSystem<T>{
+        A,
+        b,
+        x_true,
+        kappa
+    };
+}
+```
+
+produces
+
+$$
+A = U\Sigma V^T
+$$
+
+with singular values $1, \dots 1/\kappa$. It is nonsymmetric and a more general 
+test of the iterative LU algorithm. 
+
 
 ## Error Metrics Helper
 
-We implement functions to compute 
+We implement functions to compute
+
 * $\normsub{\cdot}{\infty}$ for matrices and vectors,
 * relative forward error with the infinity norm
 * relative backward error with the inifinity norm
