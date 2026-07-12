@@ -8,7 +8,7 @@ We want to plot the **forward error** and the **backward error** as  function of
 forward error: 
 
 $$
-\text{forward error}_i = \frac{\norm{x_i} - \norm{x_{\text{true}}}}{\norm{x_{\text{true}}}}
+\text{forward error}_i = \frac{\norm{x_i - x_{\text{true}}}}{\norm{x_{\text{true}}}}
 $$
 
 Backward error:
