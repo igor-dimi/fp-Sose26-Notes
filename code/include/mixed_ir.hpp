@@ -105,11 +105,13 @@ hdnum::Vector<T_residual> compute_residual(
 
     A_r.mv(Ax_r, x_r);
 
-    for (std::size_t i = 0; i < n; i++) {
-        r_r[i] = b_r[i] - Ax_r[i];
-    }
+    // for (std::size_t i = 0; i < n; i++) {
+    //     r_r[i] = b_r[i] - Ax_r[i];
+    // }
 
-    return r_r;
+    // return r_r;
+
+    return b_r - Ax_r;
 }
 
 
