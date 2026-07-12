@@ -12,9 +12,10 @@
 
 namespace mpir {
 
+template<class T_work>
 struct MixedIROptions {
     std::size_t max_iterations = 10;
-    double rel_correction_tol = 0.0;
+    T_work rel_correction_tol = T_work(0.0);
 
     // Store x0, x1, x2, ... for convergence-history experiments.
     // Keep false for large condition sweeps if memory becomes annoying.
@@ -49,17 +50,28 @@ struct MixedIRResult {
 };
 
 
+// template<class T>
+// double norm2_as_double(const hdnum::Vector<T>& v)
+// {
+//     double sum = 0.0;
+
+//     for (std::size_t i = 0; i < v.size(); ++i) {
+//         const double vi = scalar_cast<double>(v[i]);
+//         sum += vi * vi;
+//     }
+
+//     return std::sqrt(sum);
+// }
+
+
 template<class T>
-double norm2_as_double(const hdnum::Vector<T>& v)
+T relative_correction_2(const hdnum::Vector<T>& d,
+                        const hdnum::Vector<T>& x)
 {
-    double sum = 0.0;
+    const T norm_d = hdnum::norm(d);
+    const T norm_x = hdnum::norm(x);
 
-    for (std::size_t i = 0; i < v.size(); ++i) {
-        const double vi = scalar_cast<double>(v[i]);
-        sum += vi * vi;
-    }
-
-    return std::sqrt(sum);
+    return norm_d / (norm_x > T(0) ? norm_x : T(1));
 }
 
 
@@ -117,7 +129,7 @@ template <class T_factor, class T_work, class T_residual>
 MixedIRResult<T_work> mixed_ir(
     const hdnum::DenseMatrix<T_work>& A,
     const hdnum::Vector<T_work>& b,
-    const MixedIROptions& options = {}
+    const MixedIROptions<T_work>& options = {}
 )
 {
     if (A.rowsize() != A.colsize() || A.rowsize() == 0) {
@@ -130,7 +142,7 @@ MixedIRResult<T_work> mixed_ir(
 
     const std::size_t n = b.size();
 
-    const double tol = 
+    const T_work tol = 
         options.rel_correction_tol > 0.0 ? options.rel_correction_tol
                                          : default_unit_roundoff<T_work>();
 
@@ -184,14 +196,26 @@ MixedIRResult<T_work> mixed_ir(
         hdnum::Vector<T_work> d_w(n);
         convert(d_w, d_f);
 
-        const double norm_d = norm2_as_double(d_w);
-        const double norm_x = norm2_as_double(result.x);
-        const double denominator = (norm_x > 0.0) ? norm_x : 1.0;
+        // const double norm_d = norm2_as_double(d_w);
+        // const double norm_x = norm2_as_double(result.x);
+        // const double denominator = (norm_x > 0.0) ? norm_x : 1.0;
 
-        const double rel_corr = norm_d / denominator;
+        // const double rel_corr = norm_d / denominator;
+        const T_work rel_correction_w = relative_correction_2(d_w, result.x);
 
+        // convert rel correction to double for diagnostics
+        const double rel_corr = scalar_cast<double>(rel_correction_w);
         result.rel_corrections.push_back(rel_corr);
         result.final_rel_correction = rel_corr;
+
+
+
+        if (rel_correction_w < tol) {
+            result.converged = true;
+            break;
+        }
+
+
 
         // update in working precision
         for (std::size_t i = 0; i < n; i++) {
@@ -205,10 +229,10 @@ MixedIRResult<T_work> mixed_ir(
 
         result.iterations = k + 1;
 
-        if (norm_d <= tol * norm_x) {
-            result.converged = true;
-            break;
-        }
+        // if (norm_d <= tol * norm_x) {
+        //     result.converged = true;
+        //     break;
+        // }
 
     }
 
