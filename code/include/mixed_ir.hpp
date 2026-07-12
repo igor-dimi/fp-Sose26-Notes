@@ -169,13 +169,13 @@ MixedIRResult<T_work> mixed_ir(
         hdnum::Vector<T_residual> r_r = compute_residual<T_residual>(A, b, result.x);
 
         // cast residual to working precision
-        hdnum::Vector<T_work> r_w(n);
-        convert(r_w, r_r);
+        // hdnum::Vector<T_work> r_w(n);
+        // convert(r_w, r_r);
 
         // The triangular solve uses T_factor L and U factors,
         // so the right-hand side must also be in T_factor
         hdnum::Vector<T_factor> r_f(n);
-        convert(r_f, r_w);
+        convert(r_f, r_r);
 
         // Solve correction equation A d = r using existing LU factors:
         hdnum::Vector<T_factor> d_f = solve_with_lu_fullpivot(A_f, p, q, r_f);
