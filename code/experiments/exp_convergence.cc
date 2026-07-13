@@ -46,7 +46,10 @@ int main()
        "converged,total_iterations,final_rel_correction\n";
 
     for (double kappa : kappas) {
-        auto problem = mpir::make_rotated_spd_problem<T_work>(n, kappa);
+        mpir::TestProblemOptions problem_options;
+
+        problem_options.rhs_mode = mpir::RightHandSideMode::ones_solution;
+        auto problem = mpir::make_rotated_spd_problem<T_work, T_measure>(n, kappa, problem_options);
 
         mpir::MixedIROptions<T_work> options;
         options.max_iterations = 20;
