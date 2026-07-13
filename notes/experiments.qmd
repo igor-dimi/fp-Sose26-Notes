@@ -590,6 +590,380 @@ kappa,iteration,forward_error_inf,backward_error_inf,rel_correction
 10000,4,9.53674e-07,1.29324e-10,0
 ```
 
+## Plotting Convergence Experiments
+
+The script
+
+```text
+code/scripts/plot_convergence.py
+```
+
+generates convergence-history and summary plots from one mixed-precision iterative-refinement CSV file.
+
+It is designed to be reusable for different:
+
+* matrix generators;
+* right-hand-side or solution-generation modes;
+* precision combinations.
+
+The input CSV is selected using a command-line argument, so a separate plotting script is not needed for each experiment.
+
+### Expected CSV format
+
+The CSV file must contain the columns:
+
+```text
+kappa
+iteration
+forward_error_inf
+backward_error_inf
+rel_correction
+converged
+total_iterations
+final_rel_correction
+```
+
+Each row describes one iterate for one condition number.
+
+The usual relationship is:
+
+```text
+iteration 0  → initial solution x0
+iteration 1  → solution x1 after the first correction
+iteration 2  → solution x2 after the second correction
+...
+```
+
+### Generated plots
+
+For every input CSV, the script generates six plots.
+
+#### Convergence histories
+
+1. Relative forward error against refinement iteration.
+2. Normwise backward error against refinement iteration.
+3. Relative correction norm against refinement iteration.
+
+Each condition number is displayed as a separate curve.
+
+#### Summary plots
+
+4. Final forward and backward errors against condition number.
+5. Best forward and backward errors attained at any iteration.
+6. Total refinement iterations against condition number.
+
+The best-attained-error plot is useful when an iteration initially improves and later deteriorates. For example, a difficult (\kappa=10000) problem may attain its best forward error around iteration 7 but have a worse result at iteration 20.
+
+The script also prints a numerical summary containing:
+
+* condition number;
+* convergence flag;
+* total iterations;
+* final forward error;
+* final backward error;
+* final relative correction;
+* best forward and backward errors;
+* iterations at which the best errors occurred.
+
+### Logarithmic plots and zero values
+
+The error histories use logarithmic vertical axes. Since zero cannot be displayed on a logarithmic scale, the script replaces nonpositive plotting values with `NaN`.
+
+This affects only plotting. The original CSV data is not modified.
+
+Consequently, a curve or point with an exactly zero error may disappear from a logarithmic plot.
+
+### Command-line interface
+
+The general invocation is:
+
+```bash
+python code/scripts/plot_convergence.py CSV_FILE \
+    --label "Description of experiment"
+```
+
+If the terminal is already inside `code/`, use:
+
+```bash
+python scripts/plot_convergence.py CSV_FILE \
+    --label "Description of experiment"
+```
+
+The script first checks whether `CSV_FILE` is a direct path. If it is not found there, it looks under:
+
+```text
+code/results/raw/
+```
+
+The plots are written to:
+
+```text
+code/results/plots/
+```
+
+### Default behavior
+
+The CSV argument is optional. If no filename is provided, the script uses:
+
+```text
+convergence_fp16_fp64_fp128.csv
+```
+
+Therefore:
+
+```bash
+python code/scripts/plot_convergence.py
+```
+
+is equivalent to:
+
+```bash
+python code/scripts/plot_convergence.py \
+    convergence_fp16_fp64_fp128.csv
+```
+
+### Output tags
+
+The output tag is normally derived automatically from the CSV filename.
+
+For example, from:
+
+```text
+convergence_random_spd_fp16_fp64_fp128.csv
+```
+
+the script removes the initial `convergence_` and obtains:
+
+```text
+random_spd_fp16_fp64_fp128
+```
+
+It then generates filenames such as:
+
+```text
+convergence_forward_error_random_spd_fp16_fp64_fp128.png
+convergence_backward_error_random_spd_fp16_fp64_fp128.png
+convergence_rel_correction_random_spd_fp16_fp64_fp128.png
+summary_final_errors_random_spd_fp16_fp64_fp128.png
+summary_best_errors_random_spd_fp16_fp64_fp128.png
+summary_iterations_random_spd_fp16_fp64_fp128.png
+```
+
+A custom output tag can be supplied with:
+
+```bash
+--tag custom_name
+```
+
+For example:
+
+```bash
+python code/scripts/plot_convergence.py \
+    convergence_random_spd_fp16_fp64_fp128.csv \
+    --tag random_spd_test
+```
+
+### Descriptive plot labels
+
+The optional `--label` argument is added to plot titles:
+
+```bash
+--label "Random dense SPD"
+```
+
+This produces titles such as:
+
+```text
+Random dense SPD: relative forward error, infinity norm vs. refinement iteration
+```
+
+The label does not affect the output filenames.
+
+### Matrix-family examples
+
+#### Block-rotated SPD
+
+```bash
+python code/scripts/plot_convergence.py \
+    convergence_fp16_fp64_fp128.csv \
+    --label "Block-rotated SPD"
+```
+
+#### Random dense SPD
+
+```bash
+python code/scripts/plot_convergence.py \
+    convergence_random_spd_fp16_fp64_fp128.csv \
+    --label "Random dense SPD"
+```
+
+#### Random SVD
+
+```bash
+python code/scripts/plot_convergence.py \
+    convergence_random_svd_fp16_fp64_fp128.csv \
+    --label "Random SVD"
+```
+
+### Encoding the solution or RHS mode
+
+The test-problem infrastructure supports three modes:
+
+```cpp
+RightHandSideMode::ones_solution
+RightHandSideMode::random_sign_solution
+RightHandSideMode::random_normal_rhs
+```
+
+These correspond to:
+
+* construct (x=(1,\ldots,1)^T) and form (b=Ax);
+* construct random (x_i\in{-1,1}) and form (b=Ax);
+* generate (b_i\sim N(0,1)) and compute a high-precision reference solution.
+
+The third mode uses a normal distribution, not a uniform distribution.
+
+It is sensible to encode this choice in the CSV filename. A consistent naming scheme is:
+
+```text
+convergence_<matrix-family>_<rhs-mode>_<factor>_<work>_<residual>.csv
+```
+
+For example:
+
+```text
+convergence_random_spd_x_ones_fp16_fp64_fp128.csv
+convergence_random_spd_x_random_signs_fp16_fp64_fp128.csv
+convergence_random_spd_b_random_normal_fp16_fp64_fp128.csv
+```
+
+The plotting script automatically retains the RHS mode as part of the output tag. No code change is needed.
+
+### Examples for the three modes
+
+#### All-ones solution
+
+```bash
+python code/scripts/plot_convergence.py \
+    convergence_random_spd_x_ones_fp16_fp64_fp128.csv \
+    --label "Random SPD, ones solution"
+```
+
+This produces files such as:
+
+```text
+convergence_forward_error_random_spd_x_ones_fp16_fp64_fp128.png
+```
+
+#### Random-sign solution
+
+```bash
+python code/scripts/plot_convergence.py \
+    convergence_random_spd_x_random_signs_fp16_fp64_fp128.csv \
+    --label "Random SPD, random-sign solution"
+```
+
+This produces files such as:
+
+```text
+convergence_forward_error_random_spd_x_random_signs_fp16_fp64_fp128.png
+```
+
+#### Random-normal right-hand side
+
+```bash
+python code/scripts/plot_convergence.py \
+    convergence_random_spd_b_random_normal_fp16_fp64_fp128.csv \
+    --label "Random SPD, normally distributed right-hand side"
+```
+
+This produces files such as:
+
+```text
+convergence_forward_error_random_spd_b_random_normal_fp16_fp64_fp128.png
+```
+
+### What the script detects automatically
+
+The script automatically derives an output tag from the filename. It does not semantically interpret components such as:
+
+```text
+random_spd
+x_ones
+x_random_signs
+b_random_normal
+fp16_fp64_fp128
+```
+
+Therefore:
+
+* output filenames are generated correctly automatically;
+* the same plots are generated for every mode;
+* a human-readable title should currently be supplied through `--label`.
+
+Automatic semantic interpretation could be added later, but it is not necessary for the current workflow.
+
+### Recording metadata inside the CSV
+
+Encoding the experiment configuration in the filename is useful, but the CSV should eventually also record metadata such as:
+
+```text
+matrix_family
+rhs_mode
+matrix_seed_u
+matrix_seed_v
+vector_seed
+```
+
+For example:
+
+```text
+matrix_family,rhs_mode,matrix_seed_u,matrix_seed_v,vector_seed,kappa,...
+random_spd,x_random_signs,42,137,2718,10,...
+```
+
+This makes the experiment self-describing even if the file is renamed.
+
+### Later comparison plots
+
+`plot_convergence.py` plots one CSV dataset at a time. It should remain focused on that task.
+
+A later script, for example
+
+```text
+code/scripts/plot_compare_generators.py
+```
+
+or
+
+```text
+code/scripts/plot_compare_rhs_modes.py
+```
+
+can place multiple experiments on the same figures.
+
+Possible comparisons include:
+
+* block-rotated SPD versus random SPD versus random SVD;
+* all-ones versus random-sign solutions;
+* prescribed (x) versus random-normal (b);
+* different precision triples;
+* different random seeds.
+
+Thus, the intended organization is:
+
+```text
+plot_convergence.py
+    → detailed plots for one experiment
+
+plot_compare_generators.py
+    → compare matrix families
+
+plot_compare_rhs_modes.py
+    → compare solution/RHS-generation strategies
+```
+
+
 
 
 
