@@ -9,7 +9,7 @@
 
 int main()
 {
-    using T_factor = hdnum::FP16;
+    using T_factor = hdnum::FP32;
     using T_work = hdnum::FP64;
     using T_residual = hdnum::FP128;
     using T_measure = hdnum::FP256;
@@ -33,13 +33,30 @@ int main()
 
     const std::size_t n = 100;
 
-    const double kappas[] = {
-        1.0,
-        10.0,
-        100.0,
-        1000.0,
-        10000.0
-    };
+    // const double kappas[] = {
+    //     1.0,
+    //     10.0,
+    //     100.0,
+    //     1000.0,
+    //     10000.0
+    // };
+
+    std::vector<double> kappas;
+    // double kappa = 1.0;
+    // kappas.push_back(kappa);
+    // for (int i = 0; i < 12; i++) {
+    //     kappa *= 10.0;
+    //     kappas.push_back(kappa);
+    // }
+
+    kappas.push_back(1e8);
+    kappas.push_back(1e9);
+    kappas.push_back(1e10);
+    kappas.push_back(1e11);
+
+
+
+
 
 
     out << "kappa,iteration,forward_error_inf,backward_error_inf,rel_correction,"
