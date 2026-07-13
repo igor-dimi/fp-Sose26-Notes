@@ -156,6 +156,338 @@ $$
 with singular values $1, \dots 1/\kappa$. It is nonsymmetric and a more general 
 test of the iterative LU algorithm. 
 
+## Configurable test-problem Construction
+
+The test-matrix infrastructure contained in 'test_matrices.hpp' supports three different ways of constructing
+the right-hand side $b$ and solution of 
+
+$$
+Ax = b
+$$
+
+The matrix generator and the right-hand-side strategy are separated:
+
+1. A matrix generator constructs $A$
+2. A shared `complete_problem` function constructs $b$.
+3. The reference solution is computed in a separate, higher precision.
+
+### Three Right-hand-side Modes
+
+There are three availabe strategies represented by:
+
+
+```cpp
+enum class RightHandSideMode {
+    ones_solution,
+    random_sign_solution,
+    random_normal_rhs
+};
+```
+
+* `ones_solution`:
+
+$$
+\begin{aligned}
+x &= (1, \dots, 1)^T \\
+b &= \text{fl}(Ax)
+\end{aligned}
+$$
+
+* `random_sign_solution`:
+
+Construct a reproducible random vector with
+
+$$
+x_i \in \{-1, 1\}
+$$
+
+
+and form
+
+$$
+b = \text{fl}(Ax)
+$$
+
+* `random_normal_rhs`:
+
+Here we generate the right-hand-side **directly** (randomly):
+
+$$
+b_i \sim \mathcal{N}(0, 1)
+$$
+
+In all these cases the reference (true) solution is obtained by solving
+
+$$
+Ax_{\text{ref}} = b
+$$
+
+in a high precision (called measure or reference precision).
+
+
+### Test-problem Options
+
+The choices and random sees are collected in:
+
+
+```cpp
+struct TestProblemOptions {
+    RightHandSideMode rhs_mode =
+        RightHandSideMode::ones_solution;
+
+    unsigned int matrix_seed_u = 42;
+    unsigned int matrix_seed_v = 137;
+    unsigned int vector_seed = 2718;
+
+    double rotation_theta = 0.3;
+};
+```
+
+* `rhs_mode`: selects how $b$ is constructed
+* `matrix_seed_u`: seed for the first random orthogonal matrix (used by `randspd`)
+* `matrix_seed_v`: seed for the second random orthogonal matrix (used by `randsvd`)
+* `vector_seed`: seed for the random-sign solution or random-normal right-hand side.
+* `rotation_theta`: rotation angle used by the structured rotated-SPD generator.
+
+The default mode is `ones_solution`.
+
+### Linear-system Representation
+
+The system stores the problem and reference solution (potentially in different precisions):
+
+
+```cpp
+template<class T_data, class T_reference = T_data>
+struct LinearSystem {
+    hdnum::DenseMatrix<T_data> A;
+    hdnum::Vector<T_data> b;
+    hdnum::Vector<T_reference> x_true;
+    double kappa;
+};
+```
+
+* `T_data`: the precision in which $A$ and $b$ are stored, normally `T_work`.
+* `T_reference`: precision used for the reference solution, normally `T_measure`. 
+
+### Shared `complete_problem` function
+
+We have three matrix generators, 
+
+* `make_rotated_spd_problem`
+* `make_random_spd_problem`
+* `make_random_svd_problem`
+
+each created only $A$ and delegates the remaining work to `create_problem`, the signature:
+
+
+```cpp
+template<class T_data, class T_reference>
+LinearSystem<T_data, T_reference>
+complete_problem(
+    hdnum::DenseMatrix<T_data> A,
+    double kappa,
+    const TestProblemOptions& options);
+```
+
+The logical structure is:
+
+
+```cpp
+if (options.rhs_mode ==
+    RightHandSideMode::ones_solution) {
+
+    // Construct x = (1,...,1).
+    // Compute b = A*x in T_data.
+}
+else if (options.rhs_mode ==
+         RightHandSideMode::random_sign_solution) {
+
+    // Construct reproducible x_i in {-1,1}.
+    // Compute b = A*x in T_data.
+}
+else {
+    // Construct reproducible b_i ~ N(0,1)
+    // directly in T_data.
+}
+```
+
+After $b$ is constructed the reference solution is computed:
+
+
+```cpp
+auto x_reference =
+    high_precision_solve<T_reference>(A, b);
+```
+
+
+::: {.callout-note}
+
+## The reference solution is recomputed
+
+Even in the first two modes, even if we explicitly construct $x$, we recompute
+
+$$
+x_{\text{true}} = \text{solve}_{\text{T}_{\text{ref}}}(A, b)
+$$
+
+because the matrix-vector product 
+
+$$
+b = \text{fl}(Ax_{\text{constructed}})
+$$
+
+is founded. Therefore, the exact solution of the stored pair $(A, b)$
+can differ slightly from $x_{\text{constructed}}$.
+:::
+
+### High-precision reference solve
+
+The helper 
+
+
+```cpp
+template<class T_reference, class T_data>
+hdnum::Vector<T_reference>
+high_precision_solve(
+    const hdnum::DenseMatrix<T_data>& A,
+    const hdnum::Vector<T_data>& b);
+```
+
+contained in `reference_solve.hpp` computes a reference solution
+using hdnums LU-solver functions in `T_reference` precision.
+
+For example, `T_reference = hdnum::FP256` provides a sufficiently accurate reference solution.
+
+### Matrix-generator interfaces
+
+As mentioned there are three generators, all with compatible
+interfaces:
+
+
+```cpp
+template<class T_data, class T_reference = T_data>
+LinearSystem<T_data, T_reference>
+make_rotated_spd_problem(
+    std::size_t n,
+    double kappa,
+    const TestProblemOptions& options = {});
+```
+
+
+```cpp
+template<class T_data, class T_reference = T_data>
+LinearSystem<T_data, T_reference>
+make_random_spd_problem(
+    std::size_t n,
+    double kappa,
+    const TestProblemOptions& options = {});
+```
+
+
+```cpp
+template<class T_data, class T_reference = T_data>
+LinearSystem<T_data, T_reference>
+make_random_svd_problem(
+    std::size_t n,
+    double kappa,
+    const TestProblemOptions& options = {});
+```
+
+Each generator
+
+1. constructs its particular matrix $A$
+2. calls `complete_problem`
+3. returns `LinearSystem<T_data, T_reference>` struct. 
+
+Which enables plugging in different matrix families in an 
+experiment.
+
+### Usage Examples
+
+Define the precisions:
+
+
+```cpp
+using T_work = hdnum::FP64;
+using T_measure = hdnum::FP256;
+```
+
+* all-ones $x$:
+
+
+```cpp
+mpir::TestProblemOptions problem_options;
+
+problem_options.rhs_mode =
+    mpir::RightHandSideMode::ones_solution;
+
+auto problem =
+    mpir::make_random_spd_problem<T_work, T_measure>(
+        n,
+        kappa,
+        problem_options
+    );
+```
+
+* random-sign ones $x$:
+
+```cpp
+mpir::TestProblemOptions problem_options;
+
+problem_options.rhs_mode =
+    mpir::RightHandSideMode::random_sign_solution;
+
+problem_options.vector_seed = 2718;
+
+auto problem =
+    mpir::make_random_spd_problem<T_work, T_measure>(
+        n,
+        kappa,
+        problem_options
+    );
+```
+
+* random-normal $b$:
+
+
+```cpp
+mpir::TestProblemOptions problem_options;
+
+problem_options.rhs_mode =
+    mpir::RightHandSideMode::random_normal_rhs;
+
+problem_options.vector_seed = 1;
+
+auto problem =
+    mpir::make_random_svd_problem<T_work, T_measure>(
+        n,
+        kappa,
+        problem_options
+    );
+```
+
+
+only the generator call needs to change, the resulting problems are used identically:
+
+
+```cpp
+auto result =
+    mpir::mixed_ir<T_factor, T_work, T_residual>(
+        problem.A,
+        problem.b,
+        ir_options
+    );
+```
+
+
+
+
+
+
+
+
+
+
 
 ## Error Metrics Helper
 
