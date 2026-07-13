@@ -2,16 +2,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.9.37">
+<meta name="generator" content="quarto-1.7.32">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
 <title>5&nbsp; Implementing the Experiments – Advanced Praktika SoSe 26 Notes</title>
 <style>
-/* Default styles provided by pandoc.
-** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
-*/
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
 div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -76,10 +73,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="../site_libs/quarto-html/anchor.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-251915186e5ac48a2a36efd978de2bb8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-bf132de45b538d253cd2e2da5fec6016.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "sidebar",
   "copy-button": false,
@@ -119,7 +116,7 @@ window.MathJax = {
 </script>
 
   <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <script type="text/javascript">
 const typesetMath = (el) => {
@@ -132,7 +129,7 @@ const typesetMath = (el) => {
     var macros = [];
     for (var i = 0; i < mathElements.length; i++) {
       var texText = mathElements[i].firstChild;
-      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+      if (mathElements[i].tagName == "SPAN") {
         window.katex.render(texText.data, mathElements[i], {
           displayMode: mathElements[i].classList.contains('display'),
           throwOnError: false,
@@ -251,8 +248,38 @@ window.Quarto = {
    
   <ul>
   <li><a href="#temporary-matrix-generator" id="toc-temporary-matrix-generator" class="nav-link active" data-scroll-target="#temporary-matrix-generator"><span class="header-section-number">5.1</span> Temporary Matrix Generator</a></li>
-  <li><a href="#error-metrics-helper" id="toc-error-metrics-helper" class="nav-link" data-scroll-target="#error-metrics-helper"><span class="header-section-number">5.2</span> Error Metrics Helper</a></li>
-  <li><a href="#first-convergence-test" id="toc-first-convergence-test" class="nav-link" data-scroll-target="#first-convergence-test"><span class="header-section-number">5.3</span> First Convergence Test</a></li>
+  <li><a href="#matrix-generator-supervisor-version" id="toc-matrix-generator-supervisor-version" class="nav-link" data-scroll-target="#matrix-generator-supervisor-version"><span class="header-section-number">5.2</span> Matrix Generator Supervisor Version</a>
+  <ul class="collapse">
+  <li><a href="#nonsymmetric-generator" id="toc-nonsymmetric-generator" class="nav-link" data-scroll-target="#nonsymmetric-generator">Nonsymmetric Generator</a></li>
+  </ul></li>
+  <li><a href="#configurable-test-problem-construction" id="toc-configurable-test-problem-construction" class="nav-link" data-scroll-target="#configurable-test-problem-construction"><span class="header-section-number">5.3</span> Configurable test-problem Construction</a>
+  <ul class="collapse">
+  <li><a href="#three-right-hand-side-modes" id="toc-three-right-hand-side-modes" class="nav-link" data-scroll-target="#three-right-hand-side-modes">Three Right-hand-side Modes</a></li>
+  <li><a href="#test-problem-options" id="toc-test-problem-options" class="nav-link" data-scroll-target="#test-problem-options">Test-problem Options</a></li>
+  <li><a href="#linear-system-representation" id="toc-linear-system-representation" class="nav-link" data-scroll-target="#linear-system-representation">Linear-system Representation</a></li>
+  <li><a href="#shared-complete_problem-function" id="toc-shared-complete_problem-function" class="nav-link" data-scroll-target="#shared-complete_problem-function">Shared <code>complete_problem</code> function</a></li>
+  <li><a href="#high-precision-reference-solve" id="toc-high-precision-reference-solve" class="nav-link" data-scroll-target="#high-precision-reference-solve">High-precision reference solve</a></li>
+  <li><a href="#matrix-generator-interfaces" id="toc-matrix-generator-interfaces" class="nav-link" data-scroll-target="#matrix-generator-interfaces">Matrix-generator interfaces</a></li>
+  <li><a href="#usage-examples" id="toc-usage-examples" class="nav-link" data-scroll-target="#usage-examples">Usage Examples</a></li>
+  </ul></li>
+  <li><a href="#error-metrics-helper" id="toc-error-metrics-helper" class="nav-link" data-scroll-target="#error-metrics-helper"><span class="header-section-number">5.4</span> Error Metrics Helper</a></li>
+  <li><a href="#first-convergence-test" id="toc-first-convergence-test" class="nav-link" data-scroll-target="#first-convergence-test"><span class="header-section-number">5.5</span> First Convergence Test</a></li>
+  <li><a href="#plotting-convergence-experiments" id="toc-plotting-convergence-experiments" class="nav-link" data-scroll-target="#plotting-convergence-experiments"><span class="header-section-number">5.6</span> Plotting Convergence Experiments</a>
+  <ul class="collapse">
+  <li><a href="#expected-csv-format" id="toc-expected-csv-format" class="nav-link" data-scroll-target="#expected-csv-format">Expected CSV format</a></li>
+  <li><a href="#generated-plots" id="toc-generated-plots" class="nav-link" data-scroll-target="#generated-plots">Generated plots</a></li>
+  <li><a href="#logarithmic-plots-and-zero-values" id="toc-logarithmic-plots-and-zero-values" class="nav-link" data-scroll-target="#logarithmic-plots-and-zero-values">Logarithmic plots and zero values</a></li>
+  <li><a href="#command-line-interface" id="toc-command-line-interface" class="nav-link" data-scroll-target="#command-line-interface">Command-line interface</a></li>
+  <li><a href="#default-behavior" id="toc-default-behavior" class="nav-link" data-scroll-target="#default-behavior">Default behavior</a></li>
+  <li><a href="#output-tags" id="toc-output-tags" class="nav-link" data-scroll-target="#output-tags">Output tags</a></li>
+  <li><a href="#descriptive-plot-labels" id="toc-descriptive-plot-labels" class="nav-link" data-scroll-target="#descriptive-plot-labels">Descriptive plot labels</a></li>
+  <li><a href="#matrix-family-examples" id="toc-matrix-family-examples" class="nav-link" data-scroll-target="#matrix-family-examples">Matrix-family examples</a></li>
+  <li><a href="#encoding-the-solution-or-rhs-mode" id="toc-encoding-the-solution-or-rhs-mode" class="nav-link" data-scroll-target="#encoding-the-solution-or-rhs-mode">Encoding the solution or RHS mode</a></li>
+  <li><a href="#examples-for-the-three-modes" id="toc-examples-for-the-three-modes" class="nav-link" data-scroll-target="#examples-for-the-three-modes">Examples for the three modes</a></li>
+  <li><a href="#what-the-script-detects-automatically" id="toc-what-the-script-detects-automatically" class="nav-link" data-scroll-target="#what-the-script-detects-automatically">What the script detects automatically</a></li>
+  <li><a href="#recording-metadata-inside-the-csv" id="toc-recording-metadata-inside-the-csv" class="nav-link" data-scroll-target="#recording-metadata-inside-the-csv">Recording metadata inside the CSV</a></li>
+  <li><a href="#later-comparison-plots" id="toc-later-comparison-plots" class="nav-link" data-scroll-target="#later-comparison-plots">Later comparison plots</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -281,7 +308,7 @@ window.Quarto = {
 <p>We want to plot the <strong>forward error</strong> and the <strong>backward error</strong> as function of the refinement step <span class="math inline">\(i\)</span>.</p>
 <p>forward error:</p>
 <p><span class="math display">\[
-\text{forward error}_i = \frac{\norm{x_i} - \norm{x_{\text{true}}}}{\norm{x_{\text{true}}}}
+\text{forward error}_i = \frac{\norm{x_i - x_{\text{true}}}}{\norm{x_{\text{true}}}}
 \]</span></p>
 <p>Backward error:</p>
 <p><span class="math display">\[
@@ -292,18 +319,18 @@ window.Quarto = {
 \frac{\norm{d_i}}{\norm{x_i}}
 \]</span></p>
 <p>We have to modify <code>mixed_ir</code> to store the iterates <span class="math inline">\(x_i\)</span>, so that we can compute forward and backward errors. We add the following member variable to the <code>MixedIRResult</code> struct:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>vector<span class="op">&lt;</span>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_work<span class="op">&gt;&gt;</span> iterates<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>vector<span class="op">&lt;</span>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_work<span class="op">&gt;&gt;</span> iterates<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>We append the solutions to the iterates vector before the loop and after each loop iteration with the line:</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>options<span class="op">.</span>store_iterates<span class="op">)</span> <span class="op">{</span></span>
+<div class="sourceCode" id="cb2"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>options<span class="op">.</span>store_iterates<span class="op">)</span> <span class="op">{</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    result<span class="op">.</span>iterates<span class="op">.</span>push_back<span class="op">(</span>result<span class="op">.</span>x<span class="op">);</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <section id="temporary-matrix-generator" class="level2" data-number="5.1">
 <h2 data-number="5.1" class="anchored" data-anchor-id="temporary-matrix-generator"><span class="header-section-number">5.1</span> Temporary Matrix Generator</h2>
 <p>We start with a simple controlled family, a rotated SPD matrix:</p>
 <p><span class="math display">\[
-A = QDQ^T
+A = Q\Lambda Q^T
 \]</span></p>
-<p>where <span class="math inline">\(D\)</span> has eigenvalues <span class="math inline">\(1/\sqrt{\kappa} \dots \sqrt{\kappa}\)</span>. Then</p>
+<p>where <span class="math inline">\(\Lambda\)</span> has eigenvalues <span class="math inline">\(1/\sqrt{\kappa} \dots \sqrt{\kappa}\)</span>. Then</p>
 <p><span class="math display">\[
 \kappa_2(A) = \kappa
 \]</span></p>
@@ -315,14 +342,334 @@ x_{\text{true}} = (1, \dots, 1)^T
 <p>The implementation is in</p>
 <pre><code>code/include/test_matrices.hpp</code></pre>
 </section>
-<section id="error-metrics-helper" class="level2" data-number="5.2">
-<h2 data-number="5.2" class="anchored" data-anchor-id="error-metrics-helper"><span class="header-section-number">5.2</span> Error Metrics Helper</h2>
-<p>We implement functions to compute * <span class="math inline">\(\normsub{\cdot}{\infty}\)</span> for matrices and vectors, * relative forward error with the infinity norm * relative backward error with the inifinity norm</p>
+<section id="matrix-generator-supervisor-version" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="matrix-generator-supervisor-version"><span class="header-section-number">5.2</span> Matrix Generator Supervisor Version</h2>
+<p>The temporary generator constructs</p>
+<p><span class="math display">\[
+A = Q_{\text{block}}\Lambda Q_{\text{block}}^T
+\]</span></p>
+<p>where <span class="math inline">\(Q_{\text{block}}\)</span> consists only of independent <span class="math inline">\(2 \times 2\)</span> rotations. Consequently <span class="math inline">\(A\)</span> is block diagonal:</p>
+<p><span class="math display">\[
+A =
+\begin{pmatrix}
+A_1 &amp;        &amp;        &amp; 0 \\
+    &amp; A_2    &amp;        &amp;   \\
+    &amp;        &amp; \ddots &amp;   \\
+0   &amp;        &amp;        &amp; A_m
+\end{pmatrix},
+\qquad
+A_i \in \mathbb{R}^{2 \times 2}.
+\]</span></p>
+<p>Even though the entire block-diagonal matrix had condition number <span class="math inline">\(\kappa\)</span>, the individual <span class="math inline">\(2 \times 2\)</span> blocks is only approximately:</p>
+<p><span class="math display">\[
+\kappa^{1/(n-1)}
+\]</span></p>
+<p>Supervisors <code>randspd</code> constructs</p>
+<p><span class="math display">\[
+A = Q\Lambda Q^T
+\]</span></p>
+<p>where <span class="math inline">\(Q\)</span> is a dense random orthogonal matrix. Consequently, <span class="math inline">\(A\)</span> is generally dense, and every variable is coupled to every other variable, producing a genuinelly ill-conditioned system.</p>
+<section id="nonsymmetric-generator" class="level3">
+<h3 class="anchored" data-anchor-id="nonsymmetric-generator">Nonsymmetric Generator</h3>
+<p>Iterative refinement with LU is not restricted to SPD matrices, so <code>randsvd</code> is also important. The wrapper</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T<span class="op">&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>LinearSystem<span class="op">&lt;</span>T<span class="op">&gt;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>make_random_svd_problem<span class="op">(</span><span class="bu">std::</span>size_t n<span class="op">,</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                        <span class="dt">double</span> kappa<span class="op">,</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                        <span class="dt">unsigned</span> <span class="dt">int</span> seed_u <span class="op">=</span> <span class="dv">42</span><span class="op">,</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>                        <span class="dt">unsigned</span> <span class="dt">int</span> seed_v <span class="op">=</span> <span class="dv">137</span><span class="op">)</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T<span class="op">&gt;</span> A<span class="op">(</span>n<span class="op">,</span> n<span class="op">);</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T<span class="op">&gt;</span> x_true<span class="op">(</span>n<span class="op">);</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T<span class="op">&gt;</span> b<span class="op">(</span>n<span class="op">);</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>randsvd<span class="op">(</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>        A<span class="op">,</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>        scalar_cast<span class="op">&lt;</span>T<span class="op">&gt;(</span>kappa<span class="op">),</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>        seed_u<span class="op">,</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>        seed_v</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> <span class="op">(</span><span class="bu">std::</span>size_t i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> n<span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>        x_true<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> T<span class="op">(</span><span class="dv">1</span><span class="op">);</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    A<span class="op">.</span>mv<span class="op">(</span>b<span class="op">,</span> x_true<span class="op">);</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> LinearSystem<span class="op">&lt;</span>T<span class="op">&gt;{</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>        A<span class="op">,</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>        b<span class="op">,</span></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>        x_true<span class="op">,</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        kappa</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">};</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>produces</p>
+<p><span class="math display">\[
+A = U\Sigma V^T
+\]</span></p>
+<p>with singular values <span class="math inline">\(1, \dots 1/\kappa\)</span>. It is nonsymmetric and a more general test of the iterative LU algorithm.</p>
+</section>
+</section>
+<section id="configurable-test-problem-construction" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="configurable-test-problem-construction"><span class="header-section-number">5.3</span> Configurable test-problem Construction</h2>
+<p>The test-matrix infrastructure contained in ‘test_matrices.hpp’ supports three different ways of constructing the right-hand side <span class="math inline">\(b\)</span> and solution of</p>
+<p><span class="math display">\[
+Ax = b
+\]</span></p>
+<p>The matrix generator and the right-hand-side strategy are separated:</p>
+<ol type="1">
+<li>A matrix generator constructs <span class="math inline">\(A\)</span></li>
+<li>A shared <code>complete_problem</code> function constructs <span class="math inline">\(b\)</span>.</li>
+<li>The reference solution is computed in a separate, higher precision.</li>
+</ol>
+<section id="three-right-hand-side-modes" class="level3">
+<h3 class="anchored" data-anchor-id="three-right-hand-side-modes">Three Right-hand-side Modes</h3>
+<p>There are three availabe strategies represented by:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">enum</span> <span class="kw">class</span> RightHandSideMode <span class="op">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    ones_solution<span class="op">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    random_sign_solution<span class="op">,</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    random_normal_rhs</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><code>ones_solution</code>:</li>
+</ul>
+<p><span class="math display">\[
+\begin{aligned}
+x &amp;= (1, \dots, 1)^T \\
+b &amp;= \text{fl}(Ax)
+\end{aligned}
+\]</span></p>
+<ul>
+<li><code>random_sign_solution</code>:</li>
+</ul>
+<p>Construct a reproducible random vector with</p>
+<p><span class="math display">\[
+x_i \in \{-1, 1\}
+\]</span></p>
+<p>and form</p>
+<p><span class="math display">\[
+b = \text{fl}(Ax)
+\]</span></p>
+<ul>
+<li><code>random_normal_rhs</code>:</li>
+</ul>
+<p>Here we generate the right-hand-side <strong>directly</strong> (randomly):</p>
+<p><span class="math display">\[
+b_i \sim \mathcal{N}(0, 1)
+\]</span></p>
+<p>In all these cases the reference (true) solution is obtained by solving</p>
+<p><span class="math display">\[
+Ax_{\text{ref}} = b
+\]</span></p>
+<p>in a high precision (called measure or reference precision).</p>
+</section>
+<section id="test-problem-options" class="level3">
+<h3 class="anchored" data-anchor-id="test-problem-options">Test-problem Options</h3>
+<p>The choices and random sees are collected in:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> TestProblemOptions <span class="op">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    RightHandSideMode rhs_mode <span class="op">=</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        RightHandSideMode<span class="op">::</span>ones_solution<span class="op">;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">unsigned</span> <span class="dt">int</span> matrix_seed_u <span class="op">=</span> <span class="dv">42</span><span class="op">;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">unsigned</span> <span class="dt">int</span> matrix_seed_v <span class="op">=</span> <span class="dv">137</span><span class="op">;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">unsigned</span> <span class="dt">int</span> vector_seed <span class="op">=</span> <span class="dv">2718</span><span class="op">;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> rotation_theta <span class="op">=</span> <span class="fl">0.3</span><span class="op">;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><code>rhs_mode</code>: selects how <span class="math inline">\(b\)</span> is constructed</li>
+<li><code>matrix_seed_u</code>: seed for the first random orthogonal matrix (used by <code>randspd</code>)</li>
+<li><code>matrix_seed_v</code>: seed for the second random orthogonal matrix (used by <code>randsvd</code>)</li>
+<li><code>vector_seed</code>: seed for the random-sign solution or random-normal right-hand side.</li>
+<li><code>rotation_theta</code>: rotation angle used by the structured rotated-SPD generator.</li>
+</ul>
+<p>The default mode is <code>ones_solution</code>.</p>
+</section>
+<section id="linear-system-representation" class="level3">
+<h3 class="anchored" data-anchor-id="linear-system-representation">Linear-system Representation</h3>
+<p>The system stores the problem and reference solution (potentially in different precisions):</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_data<span class="op">,</span> <span class="kw">class</span> T_reference <span class="op">=</span> T_data<span class="op">&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> LinearSystem <span class="op">{</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_data<span class="op">&gt;</span> A<span class="op">;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_data<span class="op">&gt;</span> b<span class="op">;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_reference<span class="op">&gt;</span> x_true<span class="op">;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> kappa<span class="op">;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li><code>T_data</code>: the precision in which <span class="math inline">\(A\)</span> and <span class="math inline">\(b\)</span> are stored, normally <code>T_work</code>.</li>
+<li><code>T_reference</code>: precision used for the reference solution, normally <code>T_measure</code>.</li>
+</ul>
+</section>
+<section id="shared-complete_problem-function" class="level3">
+<h3 class="anchored" data-anchor-id="shared-complete_problem-function">Shared <code>complete_problem</code> function</h3>
+<p>We have three matrix generators,</p>
+<ul>
+<li><code>make_rotated_spd_problem</code></li>
+<li><code>make_random_spd_problem</code></li>
+<li><code>make_random_svd_problem</code></li>
+</ul>
+<p>each created only <span class="math inline">\(A\)</span> and delegates the remaining work to <code>create_problem</code>, the signature:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_data<span class="op">,</span> <span class="kw">class</span> T_reference<span class="op">&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>LinearSystem<span class="op">&lt;</span>T_data<span class="op">,</span> T_reference<span class="op">&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>complete_problem<span class="op">(</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_data<span class="op">&gt;</span> A<span class="op">,</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> kappa<span class="op">,</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> TestProblemOptions<span class="op">&amp;</span> options<span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The logical structure is:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>options<span class="op">.</span>rhs_mode <span class="op">==</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    RightHandSideMode<span class="op">::</span>ones_solution<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Construct x = (1,...,1).</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Compute b = A*x in T_data.</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span> <span class="cf">if</span> <span class="op">(</span>options<span class="op">.</span>rhs_mode <span class="op">==</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>         RightHandSideMode<span class="op">::</span>random_sign_solution<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Construct reproducible x_i in {-1,1}.</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Compute b = A*x in T_data.</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Construct reproducible b_i ~ N(0,1)</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    <span class="co">// directly in T_data.</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>After <span class="math inline">\(b\)</span> is constructed the reference solution is computed:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> x_reference <span class="op">=</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    high_precision_solve<span class="op">&lt;</span>T_reference<span class="op">&gt;(</span>A<span class="op">,</span> b<span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+The reference solution is recomputed
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Even in the first two modes, even if we explicitly construct <span class="math inline">\(x\)</span>, we recompute</p>
+<p><span class="math display">\[
+x_{\text{true}} = \text{solve}_{\text{T}_{\text{ref}}}(A, b)
+\]</span></p>
+<p>because the matrix-vector product</p>
+<p><span class="math display">\[
+b = \text{fl}(Ax_{\text{constructed}})
+\]</span></p>
+<p>is founded. Therefore, the exact solution of the stored pair <span class="math inline">\((A, b)\)</span> can differ slightly from <span class="math inline">\(x_{\text{constructed}}\)</span>.</p>
+</div>
+</div>
+</section>
+<section id="high-precision-reference-solve" class="level3">
+<h3 class="anchored" data-anchor-id="high-precision-reference-solve">High-precision reference solve</h3>
+<p>The helper</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_reference<span class="op">,</span> <span class="kw">class</span> T_data<span class="op">&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_reference<span class="op">&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>high_precision_solve<span class="op">(</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> hdnum<span class="op">::</span>DenseMatrix<span class="op">&lt;</span>T_data<span class="op">&gt;&amp;</span> A<span class="op">,</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_data<span class="op">&gt;&amp;</span> b<span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>contained in <code>reference_solve.hpp</code> computes a reference solution using hdnums LU-solver functions in <code>T_reference</code> precision.</p>
+<p>For example, <code>T_reference = hdnum::FP256</code> provides a sufficiently accurate reference solution.</p>
+</section>
+<section id="matrix-generator-interfaces" class="level3">
+<h3 class="anchored" data-anchor-id="matrix-generator-interfaces">Matrix-generator interfaces</h3>
+<p>As mentioned there are three generators, all with compatible interfaces:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_data<span class="op">,</span> <span class="kw">class</span> T_reference <span class="op">=</span> T_data<span class="op">&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>LinearSystem<span class="op">&lt;</span>T_data<span class="op">,</span> T_reference<span class="op">&gt;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>make_rotated_spd_problem<span class="op">(</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>size_t n<span class="op">,</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> kappa<span class="op">,</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> TestProblemOptions<span class="op">&amp;</span> options <span class="op">=</span> <span class="op">{});</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_data<span class="op">,</span> <span class="kw">class</span> T_reference <span class="op">=</span> T_data<span class="op">&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>LinearSystem<span class="op">&lt;</span>T_data<span class="op">,</span> T_reference<span class="op">&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>make_random_spd_problem<span class="op">(</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>size_t n<span class="op">,</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> kappa<span class="op">,</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> TestProblemOptions<span class="op">&amp;</span> options <span class="op">=</span> <span class="op">{});</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_data<span class="op">,</span> <span class="kw">class</span> T_reference <span class="op">=</span> T_data<span class="op">&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>LinearSystem<span class="op">&lt;</span>T_data<span class="op">,</span> T_reference<span class="op">&gt;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>make_random_svd_problem<span class="op">(</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>size_t n<span class="op">,</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> kappa<span class="op">,</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> TestProblemOptions<span class="op">&amp;</span> options <span class="op">=</span> <span class="op">{});</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Each generator</p>
+<ol type="1">
+<li>constructs its particular matrix <span class="math inline">\(A\)</span></li>
+<li>calls <code>complete_problem</code></li>
+<li>returns <code>LinearSystem&lt;T_data, T_reference&gt;</code> struct.</li>
+</ol>
+<p>Which enables plugging in different matrix families in an experiment.</p>
+</section>
+<section id="usage-examples" class="level3">
+<h3 class="anchored" data-anchor-id="usage-examples">Usage Examples</h3>
+<p>Define the precisions:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> T_work <span class="op">=</span> hdnum<span class="op">::</span>FP64<span class="op">;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> T_measure <span class="op">=</span> hdnum<span class="op">::</span>FP256<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>all-ones <span class="math inline">\(x\)</span>:</li>
+</ul>
+<div class="sourceCode" id="cb16"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>TestProblemOptions problem_options<span class="op">;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>problem_options<span class="op">.</span>rhs_mode <span class="op">=</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>RightHandSideMode<span class="op">::</span>ones_solution<span class="op">;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> problem <span class="op">=</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>make_random_spd_problem<span class="op">&lt;</span>T_work<span class="op">,</span> T_measure<span class="op">&gt;(</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>        n<span class="op">,</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>        kappa<span class="op">,</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>        problem_options</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>random-sign ones <span class="math inline">\(x\)</span>:</li>
+</ul>
+<div class="sourceCode" id="cb17"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>TestProblemOptions problem_options<span class="op">;</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>problem_options<span class="op">.</span>rhs_mode <span class="op">=</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>RightHandSideMode<span class="op">::</span>random_sign_solution<span class="op">;</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>problem_options<span class="op">.</span>vector_seed <span class="op">=</span> <span class="dv">2718</span><span class="op">;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> problem <span class="op">=</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>make_random_spd_problem<span class="op">&lt;</span>T_work<span class="op">,</span> T_measure<span class="op">&gt;(</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>        n<span class="op">,</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>        kappa<span class="op">,</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>        problem_options</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<ul>
+<li>random-normal <span class="math inline">\(b\)</span>:</li>
+</ul>
+<div class="sourceCode" id="cb18"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>TestProblemOptions problem_options<span class="op">;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>problem_options<span class="op">.</span>rhs_mode <span class="op">=</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>RightHandSideMode<span class="op">::</span>random_normal_rhs<span class="op">;</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>problem_options<span class="op">.</span>vector_seed <span class="op">=</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> problem <span class="op">=</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>make_random_svd_problem<span class="op">&lt;</span>T_work<span class="op">,</span> T_measure<span class="op">&gt;(</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>        n<span class="op">,</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>        kappa<span class="op">,</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>        problem_options</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>only the generator call needs to change, the resulting problems are used identically:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="kw">auto</span> result <span class="op">=</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>mixed_ir<span class="op">&lt;</span>T_factor<span class="op">,</span> T_work<span class="op">,</span> T_residual<span class="op">&gt;(</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>        problem<span class="op">.</span>A<span class="op">,</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>        problem<span class="op">.</span>b<span class="op">,</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        ir_options</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="error-metrics-helper" class="level2" data-number="5.4">
+<h2 data-number="5.4" class="anchored" data-anchor-id="error-metrics-helper"><span class="header-section-number">5.4</span> Error Metrics Helper</h2>
+<p>We implement functions to compute</p>
+<ul>
+<li><span class="math inline">\(\normsub{\cdot}{\infty}\)</span> for matrices and vectors,</li>
+<li>relative forward error with the infinity norm</li>
+<li>relative backward error with the inifinity norm</li>
+</ul>
 <p>contained in the file</p>
 <pre><code>code/include/error_metrics.hpp</code></pre>
 </section>
-<section id="first-convergence-test" class="level2" data-number="5.3">
-<h2 data-number="5.3" class="anchored" data-anchor-id="first-convergence-test"><span class="header-section-number">5.3</span> First Convergence Test</h2>
+<section id="first-convergence-test" class="level2" data-number="5.5">
+<h2 data-number="5.5" class="anchored" data-anchor-id="first-convergence-test"><span class="header-section-number">5.5</span> First Convergence Test</h2>
 <p>We test our pipeline with a first test that uses the precision tripple:</p>
 <ul>
 <li><span class="math inline">\(u_f\)</span> : FP16</li>
@@ -396,8 +743,254 @@ x_{\text{true}} = (1, \dots, 1)^T
 10000,2,9.53674e-07,3.8223e-10,5.28939e-07
 10000,3,9.53674e-07,1.29324e-10,1.03238e-08
 10000,4,9.53674e-07,1.29324e-10,0</code></pre>
+</section>
+<section id="plotting-convergence-experiments" class="level2" data-number="5.6">
+<h2 data-number="5.6" class="anchored" data-anchor-id="plotting-convergence-experiments"><span class="header-section-number">5.6</span> Plotting Convergence Experiments</h2>
+<p>The script</p>
+<pre class="text"><code>code/scripts/plot_convergence.py</code></pre>
+<p>generates convergence-history and summary plots from one mixed-precision iterative-refinement CSV file.</p>
+<p>It is designed to be reusable for different:</p>
+<ul>
+<li>matrix generators;</li>
+<li>right-hand-side or solution-generation modes;</li>
+<li>precision combinations.</li>
+</ul>
+<p>The input CSV is selected using a command-line argument, so a separate plotting script is not needed for each experiment.</p>
+<section id="expected-csv-format" class="level3">
+<h3 class="anchored" data-anchor-id="expected-csv-format">Expected CSV format</h3>
+<p>The CSV file must contain the columns:</p>
+<pre class="text"><code>kappa
+iteration
+forward_error_inf
+backward_error_inf
+rel_correction
+converged
+total_iterations
+final_rel_correction</code></pre>
+<p>Each row describes one iterate for one condition number.</p>
+<p>The usual relationship is:</p>
+<pre class="text"><code>iteration 0  → initial solution x0
+iteration 1  → solution x1 after the first correction
+iteration 2  → solution x2 after the second correction
+...</code></pre>
+</section>
+<section id="generated-plots" class="level3">
+<h3 class="anchored" data-anchor-id="generated-plots">Generated plots</h3>
+<p>For every input CSV, the script generates six plots.</p>
+<section id="convergence-histories" class="level4">
+<h4 class="anchored" data-anchor-id="convergence-histories">Convergence histories</h4>
+<ol type="1">
+<li>Relative forward error against refinement iteration.</li>
+<li>Normwise backward error against refinement iteration.</li>
+<li>Relative correction norm against refinement iteration.</li>
+</ol>
+<p>Each condition number is displayed as a separate curve.</p>
+</section>
+<section id="summary-plots" class="level4">
+<h4 class="anchored" data-anchor-id="summary-plots">Summary plots</h4>
+<ol start="4" type="1">
+<li>Final forward and backward errors against condition number.</li>
+<li>Best forward and backward errors attained at any iteration.</li>
+<li>Total refinement iterations against condition number.</li>
+</ol>
+<p>The best-attained-error plot is useful when an iteration initially improves and later deteriorates. For example, a difficult () problem may attain its best forward error around iteration 7 but have a worse result at iteration 20.</p>
+<p>The script also prints a numerical summary containing:</p>
+<ul>
+<li>condition number;</li>
+<li>convergence flag;</li>
+<li>total iterations;</li>
+<li>final forward error;</li>
+<li>final backward error;</li>
+<li>final relative correction;</li>
+<li>best forward and backward errors;</li>
+<li>iterations at which the best errors occurred.</li>
+</ul>
+</section>
+</section>
+<section id="logarithmic-plots-and-zero-values" class="level3">
+<h3 class="anchored" data-anchor-id="logarithmic-plots-and-zero-values">Logarithmic plots and zero values</h3>
+<p>The error histories use logarithmic vertical axes. Since zero cannot be displayed on a logarithmic scale, the script replaces nonpositive plotting values with <code>NaN</code>.</p>
+<p>This affects only plotting. The original CSV data is not modified.</p>
+<p>Consequently, a curve or point with an exactly zero error may disappear from a logarithmic plot.</p>
+</section>
+<section id="command-line-interface" class="level3">
+<h3 class="anchored" data-anchor-id="command-line-interface">Command-line interface</h3>
+<p>The general invocation is:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py CSV_FILE <span class="dt">\</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Description of experiment"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>If the terminal is already inside <code>code/</code>, use:</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/plot_convergence.py CSV_FILE <span class="dt">\</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Description of experiment"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The script first checks whether <code>CSV_FILE</code> is a direct path. If it is not found there, it looks under:</p>
+<pre class="text"><code>code/results/raw/</code></pre>
+<p>The plots are written to:</p>
+<pre class="text"><code>code/results/plots/</code></pre>
+</section>
+<section id="default-behavior" class="level3">
+<h3 class="anchored" data-anchor-id="default-behavior">Default behavior</h3>
+<p>The CSV argument is optional. If no filename is provided, the script uses:</p>
+<pre class="text"><code>convergence_fp16_fp64_fp128.csv</code></pre>
+<p>Therefore:</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>is equivalent to:</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    convergence_fp16_fp64_fp128.csv</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="output-tags" class="level3">
+<h3 class="anchored" data-anchor-id="output-tags">Output tags</h3>
+<p>The output tag is normally derived automatically from the CSV filename.</p>
+<p>For example, from:</p>
+<pre class="text"><code>convergence_random_spd_fp16_fp64_fp128.csv</code></pre>
+<p>the script removes the initial <code>convergence_</code> and obtains:</p>
+<pre class="text"><code>random_spd_fp16_fp64_fp128</code></pre>
+<p>It then generates filenames such as:</p>
+<pre class="text"><code>convergence_forward_error_random_spd_fp16_fp64_fp128.png
+convergence_backward_error_random_spd_fp16_fp64_fp128.png
+convergence_rel_correction_random_spd_fp16_fp64_fp128.png
+summary_final_errors_random_spd_fp16_fp64_fp128.png
+summary_best_errors_random_spd_fp16_fp64_fp128.png
+summary_iterations_random_spd_fp16_fp64_fp128.png</code></pre>
+<p>A custom output tag can be supplied with:</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="ex">--tag</span> custom_name</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>For example:</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--tag</span> random_spd_test</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="descriptive-plot-labels" class="level3">
+<h3 class="anchored" data-anchor-id="descriptive-plot-labels">Descriptive plot labels</h3>
+<p>The optional <code>--label</code> argument is added to plot titles:</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="ex">--label</span> <span class="st">"Random dense SPD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This produces titles such as:</p>
+<pre class="text"><code>Random dense SPD: relative forward error, infinity norm vs. refinement iteration</code></pre>
+<p>The label does not affect the output filenames.</p>
+</section>
+<section id="matrix-family-examples" class="level3">
+<h3 class="anchored" data-anchor-id="matrix-family-examples">Matrix-family examples</h3>
+<section id="block-rotated-spd" class="level4">
+<h4 class="anchored" data-anchor-id="block-rotated-spd">Block-rotated SPD</h4>
+<div class="sourceCode" id="cb40"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    convergence_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Block-rotated SPD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="random-dense-spd" class="level4">
+<h4 class="anchored" data-anchor-id="random-dense-spd">Random dense SPD</h4>
+<div class="sourceCode" id="cb41"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random dense SPD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="random-svd" class="level4">
+<h4 class="anchored" data-anchor-id="random-svd">Random SVD</h4>
+<div class="sourceCode" id="cb42"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_svd_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SVD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="encoding-the-solution-or-rhs-mode" class="level3">
+<h3 class="anchored" data-anchor-id="encoding-the-solution-or-rhs-mode">Encoding the solution or RHS mode</h3>
+<p>The test-problem infrastructure supports three modes:</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>RightHandSideMode<span class="op">::</span>ones_solution</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>RightHandSideMode<span class="op">::</span>random_sign_solution</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>RightHandSideMode<span class="op">::</span>random_normal_rhs</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>These correspond to:</p>
+<ul>
+<li>construct (x=(1,,1)^T) and form (b=Ax);</li>
+<li>construct random (x_i) and form (b=Ax);</li>
+<li>generate (b_iN(0,1)) and compute a high-precision reference solution.</li>
+</ul>
+<p>The third mode uses a normal distribution, not a uniform distribution.</p>
+<p>It is sensible to encode this choice in the CSV filename. A consistent naming scheme is:</p>
+<pre class="text"><code>convergence_&lt;matrix-family&gt;_&lt;rhs-mode&gt;_&lt;factor&gt;_&lt;work&gt;_&lt;residual&gt;.csv</code></pre>
+<p>For example:</p>
+<pre class="text"><code>convergence_random_spd_x_ones_fp16_fp64_fp128.csv
+convergence_random_spd_x_random_signs_fp16_fp64_fp128.csv
+convergence_random_spd_b_random_normal_fp16_fp64_fp128.csv</code></pre>
+<p>The plotting script automatically retains the RHS mode as part of the output tag. No code change is needed.</p>
+</section>
+<section id="examples-for-the-three-modes" class="level3">
+<h3 class="anchored" data-anchor-id="examples-for-the-three-modes">Examples for the three modes</h3>
+<section id="all-ones-solution" class="level4">
+<h4 class="anchored" data-anchor-id="all-ones-solution">All-ones solution</h4>
+<div class="sourceCode" id="cb46"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_x_ones_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SPD, ones solution"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This produces files such as:</p>
+<pre class="text"><code>convergence_forward_error_random_spd_x_ones_fp16_fp64_fp128.png</code></pre>
+</section>
+<section id="random-sign-solution" class="level4">
+<h4 class="anchored" data-anchor-id="random-sign-solution">Random-sign solution</h4>
+<div class="sourceCode" id="cb48"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_x_random_signs_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SPD, random-sign solution"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This produces files such as:</p>
+<pre class="text"><code>convergence_forward_error_random_spd_x_random_signs_fp16_fp64_fp128.png</code></pre>
+</section>
+<section id="random-normal-right-hand-side" class="level4">
+<h4 class="anchored" data-anchor-id="random-normal-right-hand-side">Random-normal right-hand side</h4>
+<div class="sourceCode" id="cb50"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_b_random_normal_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SPD, normally distributed right-hand side"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This produces files such as:</p>
+<pre class="text"><code>convergence_forward_error_random_spd_b_random_normal_fp16_fp64_fp128.png</code></pre>
+</section>
+</section>
+<section id="what-the-script-detects-automatically" class="level3">
+<h3 class="anchored" data-anchor-id="what-the-script-detects-automatically">What the script detects automatically</h3>
+<p>The script automatically derives an output tag from the filename. It does not semantically interpret components such as:</p>
+<pre class="text"><code>random_spd
+x_ones
+x_random_signs
+b_random_normal
+fp16_fp64_fp128</code></pre>
+<p>Therefore:</p>
+<ul>
+<li>output filenames are generated correctly automatically;</li>
+<li>the same plots are generated for every mode;</li>
+<li>a human-readable title should currently be supplied through <code>--label</code>.</li>
+</ul>
+<p>Automatic semantic interpretation could be added later, but it is not necessary for the current workflow.</p>
+</section>
+<section id="recording-metadata-inside-the-csv" class="level3">
+<h3 class="anchored" data-anchor-id="recording-metadata-inside-the-csv">Recording metadata inside the CSV</h3>
+<p>Encoding the experiment configuration in the filename is useful, but the CSV should eventually also record metadata such as:</p>
+<pre class="text"><code>matrix_family
+rhs_mode
+matrix_seed_u
+matrix_seed_v
+vector_seed</code></pre>
+<p>For example:</p>
+<pre class="text"><code>matrix_family,rhs_mode,matrix_seed_u,matrix_seed_v,vector_seed,kappa,...
+random_spd,x_random_signs,42,137,2718,10,...</code></pre>
+<p>This makes the experiment self-describing even if the file is renamed.</p>
+</section>
+<section id="later-comparison-plots" class="level3">
+<h3 class="anchored" data-anchor-id="later-comparison-plots">Later comparison plots</h3>
+<p><code>plot_convergence.py</code> plots one CSV dataset at a time. It should remain focused on that task.</p>
+<p>A later script, for example</p>
+<pre class="text"><code>code/scripts/plot_compare_generators.py</code></pre>
+<p>or</p>
+<pre class="text"><code>code/scripts/plot_compare_rhs_modes.py</code></pre>
+<p>can place multiple experiments on the same figures.</p>
+<p>Possible comparisons include:</p>
+<ul>
+<li>block-rotated SPD versus random SPD versus random SVD;</li>
+<li>all-ones versus random-sign solutions;</li>
+<li>prescribed (x) versus random-normal (b);</li>
+<li>different precision triples;</li>
+<li>different random seeds.</li>
+</ul>
+<p>Thus, the intended organization is:</p>
+<pre class="text"><code>plot_convergence.py
+    → detailed plots for one experiment
+
+plot_compare_generators.py
+    → compare matrix families
+
+plot_compare_rhs_modes.py
+    → compare solution/RHS-generation strategies</code></pre>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
@@ -452,14 +1045,13 @@ x_{\text{true}} = (1, \dots, 1)^T
       e.clearSelection();
     }
     const getTextToCopy = function(trigger) {
-      const outerScaffold = trigger.parentElement.cloneNode(true);
-      const codeEl = outerScaffold.querySelector('code');
-      for (const childEl of codeEl.children) {
-        if (isCodeAnnotation(childEl)) {
-          childEl.remove();
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
         }
-      }
-      return codeEl.innerText;
+        return codeEl.innerText;
     }
     const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
       text: getTextToCopy
