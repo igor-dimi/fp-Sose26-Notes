@@ -49,10 +49,15 @@ int main()
     //     kappas.push_back(kappa);
     // }
 
+    // kappas.push_back(1e5);
+    kappas.push_back(1e4);
+    kappas.push_back(1e1);
+    kappas.push_back(1e2);
+    kappas.push_back(1e6);
     kappas.push_back(1e8);
-    kappas.push_back(1e9);
     kappas.push_back(1e10);
     kappas.push_back(1e11);
+    kappas.push_back(1e9);
 
 
 
@@ -65,7 +70,7 @@ int main()
     for (double kappa : kappas) {
         mpir::TestProblemOptions problem_options;
 
-        problem_options.rhs_mode = mpir::RightHandSideMode::ones_solution;
+        problem_options.rhs_mode = mpir::RightHandSideMode::random_normal_rhs;
         auto problem = mpir::make_random_spd_problem<T_work, T_measure>(n, 
             kappa,
             problem_options);
