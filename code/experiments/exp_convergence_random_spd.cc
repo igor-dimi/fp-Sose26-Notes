@@ -9,7 +9,7 @@
 
 int main()
 {
-    using T_factor = hdnum::FP32;
+    using T_factor = hdnum::FP64;
     using T_work = hdnum::FP64;
     using T_residual = hdnum::FP128;
     using T_measure = hdnum::FP256;
