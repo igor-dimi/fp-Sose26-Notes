@@ -33,13 +33,17 @@ int main()
 
     const std::size_t n = 100;
 
-    const double kappas[] = {
-        1.0,
-        10.0,
-        100.0,
-        1000.0,
-        10000.0
-    };
+    // const double kappas[] = {
+    //     1.0,
+    //     10.0,
+    //     100.0,
+    //     1000.0,
+    //     10000.0
+    // };
+
+    std::vector<double> kappas;
+
+    kappas.push_back(1e9);
 
 
     out << "kappa,iteration,forward_error_inf,backward_error_inf,rel_correction,"
