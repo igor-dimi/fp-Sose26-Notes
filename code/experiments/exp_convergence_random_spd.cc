@@ -9,7 +9,7 @@
 
 int main()
 {
-    using T_factor = hdnum::FP64;
+    using T_factor = hdnum::FP16;
     using T_work = hdnum::FP64;
     using T_residual = hdnum::FP128;
     using T_measure = hdnum::FP256;
@@ -50,13 +50,13 @@ int main()
     // }
 
     // kappas.push_back(1e5);
-    kappas.push_back(1e4);
-    kappas.push_back(1e1);
-    kappas.push_back(1e2);
-    kappas.push_back(1e6);
-    kappas.push_back(1e8);
-    kappas.push_back(1e10);
-    kappas.push_back(1e11);
+    // kappas.push_back(1e4);
+    // kappas.push_back(1e1);
+    // kappas.push_back(1e2);
+    // kappas.push_back(1e6);
+    // kappas.push_back(1e8);
+    // kappas.push_back(1e10);
+    // kappas.push_back(1e11);
     kappas.push_back(1e9);
 
 
