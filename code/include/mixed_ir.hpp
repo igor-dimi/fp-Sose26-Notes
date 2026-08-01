@@ -3,12 +3,30 @@
 #include <cstddef>
 #include <stdexcept>
 #include <vector>
+#include <cmath>
 
 #include "hdnum.hh"
 #include "hdnum_conversions.hpp"
 #include "unit_roundoff.hpp"
 
 namespace mpir {
+
+
+/**
+ * @brief Describes why the mixed-precision iterative-refinement
+ *        algorithm terminated.
+ *
+ * The status distinguishes successful convergence, exhaustion of the
+ * iteration limit, non-finite factorization input, non-finite values
+ * produced during the algorithm, and detected divergence.
+ */
+enum class MixedIRStatus {
+    converged,                     ///< The convergence criterion was satisfied.
+    max_iterations,                ///< The maximum number of iterations was reached.
+    factorization_input_non_finite,///< A or b became NaN/Inf in factor precision.
+    non_finite,                    ///< NaN or Inf appeared later in the algorithm.
+    diverged                       ///< Rapid numerical growth indicated divergence.
+};
 
 
 template<class T_work>
@@ -33,9 +51,21 @@ struct MixedIRResult {
     // The initial low-precision solve for x0 is not counted.
     std::size_t iterations = 0;
 
-    // True if the relative-correction stopping criterion was
-    // satisfied during the refinement loop.
-    bool converged = false;
+    /**
+     * @brief Reason why the algorithm terminated.
+     */
+    MixedIRStatus status = MixedIRStatus::max_iterations;
+
+    /**
+     * @brief Returns whether iterative refinement converged successfully.
+     *
+     * Convergence is derived from the termination status, avoiding a
+     * separate Boolean state that could become inconsistent with it.
+     */
+    [[nodiscard]] bool converged() const noexcept
+    {
+        return status == MixedIRStatus::converged;
+    }
 
     // Last computed value of
     //
@@ -180,6 +210,72 @@ compute_residual(
     return b_r - Ax_r;
 }
 
+/**
+ * @brief Checks whether every entry of a vector is finite.
+ *
+ * For ordinary IEEE types and CPFloat, values are converted to double
+ * and tested for NaN or infinity.
+ *
+ * HDNUM's GMP-backed FP type does not represent NaN or infinity, so
+ * every successfully constructed FP value is finite.
+ */
+template<class T>
+bool all_finite(const hdnum::Vector<T>& v)
+{
+    if constexpr (is_hdnum_fp_v<T>) {
+        return true;
+    } else {
+        for (std::size_t i = 0; i < v.size(); ++i) {
+            if (!std::isfinite(static_cast<double>(v[i]))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
+
+/**
+ * @brief Checks whether every entry of a dense matrix is finite.
+ */
+template<class T>
+bool all_finite(const hdnum::DenseMatrix<T>& A)
+{
+    if constexpr (is_hdnum_fp_v<T>) {
+        return true;
+    } else {
+        for (std::size_t i = 0; i < A.rowsize(); ++i) {
+            for (std::size_t j = 0; j < A.colsize(); ++j) {
+                if (!std::isfinite(
+                        static_cast<double>(A[i][j]))) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+}
+
+
+/**
+ * @brief Checks whether a scalar value is finite.
+ *
+ * GMP-backed FP values cannot represent NaN or infinity, so every
+ * successfully constructed value of that type is treated as finite.
+ */
+template<class T>
+bool scalar_is_finite(const T& value)
+{
+    if constexpr (is_hdnum_fp_v<T>) {
+        return true;
+    } else {
+        return std::isfinite(
+            static_cast<double>(value)
+        );
+    }
+}
 
 // Three-precision iterative refinement.
 //
@@ -218,6 +314,7 @@ mixed_ir(
             ? options.rel_correction_tol
             : default_unit_roundoff<T_work>();
 
+    MixedIRResult<T_work> result;
 
     // 1. Convert A and b to factorization precision.
     hdnum::DenseMatrix<T_factor> A_f(n, n);
@@ -226,6 +323,14 @@ mixed_ir(
     convert(A_f, A);
     convert(b_f, b);
 
+    // The conversion may overflow if A or b exceeds the numerical
+    // range of T_factor. In that case, do not attempt LU factorization.
+    if (!all_finite(A_f) || !all_finite(b_f)) {
+        result.status =
+            MixedIRStatus::factorization_input_non_finite;
+
+        return result;
+    }
 
     // 2. Compute the full-pivoting LU factorization
     //
@@ -242,10 +347,15 @@ mixed_ir(
     hdnum::Vector<T_factor> x0_f =
         solve_with_lu_fullpivot(A_f, p, q, b_f);
 
+    // LU factorization or the triangular solve may produce NaN or Inf,
+    // even when the original factorization inputs were finite.
+    if (!all_finite(x0_f)) {
+        result.status = MixedIRStatus::non_finite;
+        return result;
+    }
 
-    // 4. Convert x0 to working precision.
-    MixedIRResult<T_work> result;
 
+    // 4. Convert the validated initial solution x0_f to working precision.
     result.x = hdnum::Vector<T_work>(n);
     convert(result.x, x0_f);
 
@@ -280,11 +390,23 @@ mixed_ir(
                 result.x
             );
 
+        // Useful when T_residual is an IEEE-like type.
+        if (!all_finite(r_r)) {
+            result.status = MixedIRStatus::non_finite;
+            return result;
+        }
+
 
         // The triangular correction solve uses T_factor LU
         // factors, so its right-hand side must be in T_factor.
         hdnum::Vector<T_factor> r_f(n);
         convert(r_f, r_r);
+
+        // Important: narrowing a finite residual to T_factor can overflow.
+        if (!all_finite(r_f)) {
+            result.status = MixedIRStatus::non_finite;
+            return result;
+        }
 
 
         // Solve
@@ -300,10 +422,25 @@ mixed_ir(
                 r_f
             );
 
+        
+        // The low-precision triangular solve may produce NaN or Inf,
+        // for example because of invalid LU factors or a zero pivot.
+        if (!all_finite(d_f)) {
+            result.status = MixedIRStatus::non_finite;
+            return result;
+        }
 
         // Convert the correction to working precision.
         hdnum::Vector<T_work> d_w(n);
         convert(d_w, d_f);
+
+        // This is mostly defensive because T_work is normally at least as
+        // capable as T_factor.
+        if (!all_finite(d_w)) {
+            result.status = MixedIRStatus::non_finite;
+            return result;
+        }
+
 
 
         // Compute
@@ -316,12 +453,43 @@ mixed_ir(
                 d_w,
                 result.x
             );
+        
+        // Although d_w and result.x contain finite entries, the norm
+        // calculation itself can overflow, for example while forming
+        // sums of squares.
+        if (!scalar_is_finite(rel_correction_w)) {
+            result.status = MixedIRStatus::non_finite;
+            return result;
+        }
+
 
         const double rel_correction =
             scalar_cast<double>(
                 rel_correction_w
             );
 
+        // Form a candidate for
+        //
+        //     x_{k+1} = x_k + d_k
+        //
+        // without overwriting the last valid iterate.
+        hdnum::Vector<T_work> x_next(result.x);
+
+        for (std::size_t i = 0; i < n; ++i) {
+            x_next[i] += d_w[i];
+        }
+
+        // Two finite values can produce infinity when their sum exceeds the
+        // range of T_work. Only accept the update if every entry is finite.
+        if (!all_finite(x_next)) {
+            result.status = MixedIRStatus::non_finite;
+            return result;
+        }
+
+        // The update was successful, so commit x_{k + 1}
+        result.x = x_next;
+
+        // record diagnostics only for a successfully completed update
         result.rel_corrections.push_back(
             rel_correction
         );
@@ -330,14 +498,6 @@ mixed_ir(
             rel_correction;
 
 
-        // Form
-        //
-        //     x_{k+1} = x_k + d_k
-        //
-        // in working precision.
-        for (std::size_t i = 0; i < n; ++i) {
-            result.x[i] += d_w[i];
-        }
 
 
         // One refinement update has now been completed.
@@ -354,7 +514,7 @@ mixed_ir(
 
         // Stop after completing the update associated with d_k.
         if (rel_correction_w < tol) {
-            result.converged = true;
+            result.status = MixedIRStatus::converged;
             break;
         }
     }
