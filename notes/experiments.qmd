@@ -590,32 +590,271 @@ kappa,iteration,forward_error_inf,backward_error_inf,rel_correction
 10000,4,9.53674e-07,1.29324e-10,0
 ```
 
-### Overflow Issues
+## Robustness Improvements to `mixed_ir`
 
-We encountered two distinct failures at $\kappa(A) = 10^9$. Both eventually
-produced a `Floating point exception`, but their numerical causes were different.
+We encountered two failures at $\kappa(A)=10^9$. Both caused a floating-point exception, but for different reasons.
 
+### 1. FP16–FP64–FP128: overflow during input conversion
 
-#### `<FP16,FP64,FP128>`: overflow during conversion to `FP16`
+#### Problem
 
-**Problem**: The entries of the $u$-precision matrix $A$, and potentially $b$,
-were converted from `FP64` to the factorization precision `FP16` before LU
-factorization. `FP16` has a maximum finite magnitude of approximately 
+We converted $A$ and $b$ from FP64 to the FP16 factorization precision. FP16 has a maximum finite value of approximately
 
 $$
-65504
+65504.
 $$
 
-Some matrix entries exceeded this range, to the converted factorization input
-contained `Inf` or `NaN`. These values were propagated by the initial $LU$ 
-factorization into $x_0$. 
+Some entries exceeded this limit. The converted data therefore contained non-finite values. LU factorization and the initial solve propagated these values into $x_0$.
 
-The crash ocured when the algorithm tried to convert this non-finite `FP64` iterate
-into the GMP-backed `FP128` residual type. But GMP does not support `NaN` or infinity.
+The program crashed when `compute_residual` attempted to convert the non-finite iterate to the GMP-backed FP128 type. This type cannot represent `NaN` or infinity.
 
-#### How was the problem detected?
+#### Detection
 
+The GDB backtrace located the crash in the GMP conversion performed by `compute_residual`.
 
+We traced the invalid values backward:
+
+$$
+A_f,b_f
+\longrightarrow LU_f
+\longrightarrow x_{0,f}
+\longrightarrow x_0
+\longrightarrow \text{GMP conversion}.
+$$
+
+Inspection showed that the first non-finite values appeared during conversion to FP16.
+
+The bfloat16 experiment supported this conclusion. Bfloat16 has a wider exponent range and did not overflow at the same point.
+
+#### Solution
+
+We chose to detect the overflow and terminate safely. We did not implement scaling or equilibration.
+
+The algorithm now terminates with `factorization_input_non_finite` if $A_f$ or $b_f$ contains a non-finite value.
+
+Scaling could prevent this specific overflow, but it would not change $\kappa(A)$. It would therefore not make FP16 iterative refinement reliable at $\kappa(A)=10^9$.
+
+---
+
+### 2. FP32–FP64–FP128: divergence of iterative refinement
+
+#### Problem
+
+FP32 could represent the matrix entries, so the initial conversion succeeded. The refinement process nevertheless diverged because
+
+$$
+\kappa(A)u_f
+\approx 10^9\cdot 6\times 10^{-8}
+\approx 60>1.
+$$
+
+The absolute correction norms grew by a factor of approximately $36$ per iteration.
+
+The existing stopping quantity,
+
+$$
+\frac{\lVert d_k\rVert_2}{\lVert x_k\rVert_2},
+$$
+
+did not detect this behavior. Both $d_k$ and $x_k$ grew at similar rates, so the ratio remained approximately constant at $37.29$.
+
+Without additional checks, the growth eventually produced non-finite values and another unsafe conversion to FP128.
+
+#### Detection
+
+We examined the ratio of consecutive correction norms:
+
+$$
+\frac{\lVert d_k\rVert_2}
+     {\lVert d_{k-1}\rVert_2}
+\approx 36.
+$$
+
+This showed persistent, rapid growth. We therefore decided to monitor absolute correction norms instead of relying only on relative corrections.
+
+#### Solution
+
+We added a divergence detector based on
+
+$$
+\lVert d_k\rVert_2
+>
+\gamma\lVert d_{k-1}\rVert_2.
+$$
+
+The default parameters are
+
+$$
+\gamma=10,
+\qquad
+\text{required growth steps}=3.
+$$
+
+The algorithm reports divergence after three consecutive excessive-growth comparisons. It rejects the correction that triggers termination and preserves the last accepted iterate.
+
+---
+
+## Source-Code Changes
+
+### Termination statuses
+
+We introduced statuses that distinguish the main outcomes:
+
+```cpp
+enum class MixedIRStatus {
+    converged,
+    max_iterations,
+    factorization_input_non_finite,
+    non_finite,
+    diverged
+};
+```
+
+These represent:
+
+- successful convergence;
+- reaching the iteration limit;
+- non-finite factorization input;
+- a non-finite value produced later;
+- detected divergence.
+
+### Finite-value checks
+
+We added `all_finite` helpers for vectors and matrices.
+
+IEEE-like types and CPFloat values are checked with `std::isfinite`. GMP-backed `hdnum::FP<m>` values require separate handling because they cannot represent `NaN` or infinity.
+
+The main rule is:
+
+> Check IEEE-like values before converting them to a GMP-backed type.
+
+We kept all checks inside `mixed_ir`. We did not modify HDNUM, `lowprec_cpfloat.hh`, `compute_residual`, or the triangular solvers.
+
+### Guard placement
+
+We added finite-value checks at the following points:
+
+| Location | Purpose |
+|---|---|
+| After converting $A,b$ to $A_f,b_f$ | Detect factorization-input overflow |
+| After the initial solve | Detect an invalid initial solution |
+| After converting $x_{0,f}$ to working precision | Validate the initial iterate |
+| Before `compute_residual` | Protect the GMP conversion |
+| After computing $r_r$ | Support generic residual types |
+| After converting $r_r$ to $r_f$ | Detect narrowing overflow |
+| After solving for $d_f$ | Detect an invalid correction |
+| After converting $d_f$ to $d_w$ | Validate the working-precision correction |
+| After converting the relative correction to `double` | Detect norm or conversion overflow |
+| After forming $x_{k+1}$ | Detect overflow during the update |
+
+We now form the new iterate as a candidate:
+
+```cpp
+hdnum::Vector<T_work> x_next(result.x);
+
+for (std::size_t i = 0; i < n; ++i) {
+    x_next[i] += d_w[i];
+}
+
+if (!all_finite(x_next)) {
+    result.status = MixedIRStatus::non_finite;
+    return result;
+}
+
+result.x = x_next;
+```
+
+This preserves the last valid iterate if the update fails. We increment `result.iterations` only after accepting the update.
+
+### Divergence options
+
+We added three options:
+
+```cpp
+bool detect_divergence = true;
+
+T_work divergence_growth_factor = T_work(10);
+
+std::size_t divergence_growth_steps = 3;
+```
+
+They control:
+
+- whether divergence detection is enabled;
+- the minimum excessive-growth factor;
+- the required number of consecutive growth steps.
+
+Valid user-supplied values should satisfy:
+
+```cpp
+divergence_growth_factor > T_work(1)
+divergence_growth_steps > 0
+```
+
+### Correction-norm history
+
+We added diagnostic storage to `MixedIRResult`:
+
+```cpp
+std::vector<double> correction_norms;
+```
+
+It stores each finite value of $\lVert d_k\rVert_2$.
+
+The history also includes a correction that triggers divergence but is not applied. We store the norms even when divergence detection is disabled.
+
+### Detector state and comparison
+
+Before the refinement loop, we introduced:
+
+```cpp
+T_work previous_correction_norm = T_work(0);
+bool have_previous_correction_norm = false;
+std::size_t consecutive_growth_steps = 0;
+```
+
+After computing and validating $d_w$, we calculate:
+
+```cpp
+const T_work correction_norm_w = hdnum::norm(d_w);
+```
+
+We then test for excessive growth:
+
+```cpp
+const bool excessive_growth =
+    previous_correction_norm > T_work(0)
+    &&
+    correction_norm_w
+        > options.divergence_growth_factor
+            * previous_correction_norm;
+```
+
+Excessive growth increments the counter. Any other result resets it. Once the counter reaches the configured limit, the algorithm returns
+
+```cpp
+result.status = MixedIRStatus::diverged;
+```
+
+before applying the correction.
+
+## Result
+
+With divergence detection enabled, the FP32–FP64–FP128 experiment terminates early with `diverged`.
+
+With divergence detection disabled, the finite-value guards still prevent a crash. In our test, the algorithm completed 19 updates before detecting a non-finite value:
+
+```text
+kappa = 1e+09
+converged = 0
+iterations = 19
+final_rel_correction = 37.2908
+```
+
+The two safeguards have separate roles:
+
+- The divergence detector stops persistent growth early.
+- The finite-value checks prevent unsafe operations and crashes.
 
 ## Plotting Convergence Experiments
 
