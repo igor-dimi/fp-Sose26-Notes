@@ -17,6 +17,13 @@ book:
       - notes/experiments.qmd
     - report.qmd
 
+  appendices:
+    - appendices/gdb.qmd  
+
+
+
+
+
     # - intro.qmd
     # - summary.qmd
     # - references.qmd

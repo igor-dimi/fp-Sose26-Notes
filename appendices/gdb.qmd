@@ -1,0 +1,11 @@
+---
+title: GDB usage Notes
+---
+
+## Basic GDB Commands
+
+* `bt`: backtrace. Displays the active **call stack**, i.e. the chain of function calls that led to the program's current stopping point.
+
+  GDP lists the currently executing frame first as frame `#0`, then it's callers as `#1` and the `#n`th callers caller as `#n+1`. 
+* `frame <n>`: switch to frame $n$. 
+* `info locals`: information about the stack variables. 

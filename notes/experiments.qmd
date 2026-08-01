@@ -590,6 +590,33 @@ kappa,iteration,forward_error_inf,backward_error_inf,rel_correction
 10000,4,9.53674e-07,1.29324e-10,0
 ```
 
+### Overflow Issues
+
+We encountered two distinct failures at $\kappa(A) = 10^9$. Both eventually
+produced a `Floating point exception`, but their numerical causes were different.
+
+
+#### `<FP16,FP64,FP128>`: overflow during conversion to `FP16`
+
+**Problem**: The entries of the $u$-precision matrix $A$, and potentially $b$,
+were converted from `FP64` to the factorization precision `FP16` before LU
+factorization. `FP16` has a maximum finite magnitude of approximately 
+
+$$
+65504
+$$
+
+Some matrix entries exceeded this range, to the converted factorization input
+contained `Inf` or `NaN`. These values were propagated by the initial $LU$ 
+factorization into $x_0$. 
+
+The crash ocured when the algorithm tried to convert this non-finite `FP64` iterate
+into the GMP-backed `FP128` residual type. But GMP does not support `NaN` or infinity.
+
+#### How was the problem detected?
+
+
+
 ## Plotting Convergence Experiments
 
 The script

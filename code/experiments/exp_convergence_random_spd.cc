@@ -9,7 +9,7 @@
 
 int main()
 {
-    using T_factor = hdnum::FP16;
+    using T_factor = hdnum::FP32;
     using T_work = hdnum::FP64;
     using T_residual = hdnum::FP128;
     using T_measure = hdnum::FP256;
@@ -75,19 +75,20 @@ int main()
             kappa,
             problem_options);
 
-        mpir::MixedIROptions<T_work> options;
-        options.max_iterations = 20;
-        options.store_iterates = true;
+        mpir::MixedIROptions<T_work> mir_options;
+        mir_options.max_iterations = 20;
+        mir_options.store_iterates = true;
+        mir_options.detect_divergence = true;
 
         auto result =
             mpir::mixed_ir<T_factor, T_work, T_residual>(
                 problem.A,
                 problem.b,
-                options
+                mir_options
             );
 
         std::cout << "kappa = " << kappa
-          << ", converged = " << result.converged
+          << ", converged = " << result.converged()
           << ", iterations = " << result.iterations
           << ", final_rel_correction = " << result.final_rel_correction
           << "\n";
@@ -117,7 +118,7 @@ int main()
                 << ferr << ","
                 << berr << ","
                 << rel_corr << ","
-                << result.converged << ","
+                << result.converged() << ","
                 << result.iterations << ","
                 << result.final_rel_correction
                 << "\n";

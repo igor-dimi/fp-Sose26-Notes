@@ -36,6 +36,23 @@ struct MixedIROptions {
     // A value <= 0 means that the unit roundoff of T_work is used.
     T_work rel_correction_tol = T_work(0);
 
+    // Enable detection of persistent growth in the correction norms.
+    bool detect_divergence = true;
+
+    // A correction-growth step is detected when
+    //
+    //     ||d_k||_2 >
+    //         divergence_growth_factor * ||d_{k-1}||_2.
+    //
+    // This value should be greater than 1.
+    T_work divergence_growth_factor = T_work(10);
+
+    // Number of consecutive correction-growth comparisons required
+    // before the algorithm terminates with status diverged.
+    //
+    // For example, 3 growth steps require 4 computed corrections.
+    std::size_t divergence_growth_steps = 3;
+
     // Store x0, x1, x2, ... for convergence-history experiments.
     // This can be disabled for large parameter sweeps to save memory.
     bool store_iterates = false;
@@ -79,6 +96,14 @@ struct MixedIRResult {
     // rel_corrections[k] is the relative correction that
     // produced x_{k+1} from x_k.
     std::vector<double> rel_corrections;
+
+
+    // Absolute 2-norms of the computed refinement corrections.
+    //
+    // correction_norms[k] stores ||d_k||_2. If divergence is detected,
+    // the history includes the correction that triggered termination,
+    // even though that correction is not applied to the iterate.
+    std::vector<double> correction_norms;
 
     // Optional iterate history.
     //
@@ -363,6 +388,10 @@ mixed_ir(
         options.max_iterations
     );
 
+    result.correction_norms.reserve(
+        options.max_iterations
+    );
+
     if (options.store_iterates) {
         result.iterates.reserve(
             options.max_iterations + 1
@@ -371,6 +400,12 @@ mixed_ir(
         // iterates[0] = x0.
         result.iterates.push_back(result.x);
     }
+
+
+    // Local state used to detect persistent growth in correction norms
+    T_work previous_correction_norm = T_work(0);
+    bool have_previous_correction_norm = false;
+    std::size_t consecutive_growth_steps = 0;
 
 
     // 5. Refinement loop.
@@ -440,6 +475,64 @@ mixed_ir(
             result.status = MixedIRStatus::non_finite;
             return result;
         }
+
+        // Compute the absolute correction norm
+        //
+        //     ||d_k||_2
+        // used by the divergence detector
+        const T_work correction_norm_w = 
+            hdnum::norm(d_w);
+
+        const double correction_norm =
+        scalar_cast<double>(
+            correction_norm_w
+        );
+
+
+        // Detect overflow during the norm calculation or conversion
+        // to the diagnostic double representation.
+        if (!std::isfinite(correction_norm)) {
+            result.status = MixedIRStatus::non_finite;
+            return result;
+        }
+
+
+        // Record every finite computed correction norm. This includes a
+        // correction that may subsequently trigger divergence detection.
+        result.correction_norms.push_back(
+            correction_norm
+        );
+
+
+        // Detect persistent excessive growth in the correction norms.
+        if (options.detect_divergence) {
+            if (have_previous_correction_norm) {
+                const bool excessive_growth =
+                    previous_correction_norm > T_work(0)
+                    &&
+                    correction_norm_w
+                        > options.divergence_growth_factor
+                            * previous_correction_norm;
+
+                if (excessive_growth) {
+                    ++consecutive_growth_steps;
+                } else {
+                    consecutive_growth_steps = 0;
+                }
+
+                if (consecutive_growth_steps
+                    >= options.divergence_growth_steps) {
+                    result.status = MixedIRStatus::diverged;
+                    return result;
+                }
+            }
+
+            previous_correction_norm =
+                correction_norm_w;
+
+            have_previous_correction_norm = true;
+        }
+
 
 
 
