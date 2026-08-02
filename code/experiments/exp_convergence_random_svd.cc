@@ -64,7 +64,7 @@ int main()
             );
 
         std::cout << "kappa = " << kappa
-          << ", converged = " << result.converged
+          << ", converged = " << result.converged()
           << ", iterations = " << result.iterations
           << ", final_rel_correction = " << result.final_rel_correction
           << "\n";
@@ -94,7 +94,7 @@ int main()
                 << ferr << ","
                 << berr << ","
                 << rel_corr << ","
-                << result.converged << ","
+                << result.converged() << ","
                 << result.iterations << ","
                 << result.final_rel_correction
                 << "\n";

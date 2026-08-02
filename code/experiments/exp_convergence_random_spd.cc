@@ -14,6 +14,8 @@ int main()
     using T_residual = hdnum::FP128;
     using T_measure = hdnum::FP256;
 
+    std::cout << "hey there" << std::endl;
+
     const std::filesystem::path output_dir = MPIR_RESULTS_RAW_DIR;
     std::filesystem::create_directories(output_dir);
 

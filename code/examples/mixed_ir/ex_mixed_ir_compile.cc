@@ -45,7 +45,7 @@ void print_result(
     std::cout << title << '\n';
     std::cout << std::string(title.size(), '-') << '\n';
 
-    std::cout << "converged:              " << result.converged << '\n';
+    std::cout << "converged:              " << result.converged() << '\n';
     std::cout << "iterations:             " << result.iterations << '\n';
     std::cout << "final_rel_correction:   "
               << result.final_rel_correction << '\n';

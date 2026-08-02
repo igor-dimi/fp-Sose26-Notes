@@ -5,13 +5,18 @@
 #include "hdnum.hh"
 #include "unit_roundoff.hpp"
 
-void check(const char* name, double got, int p)
+#include "hdnum_conversions.hpp"
+
+template<class T>
+void check(const char* name, const T& value, int p)
 {
-    const double expected = std::ldexp(1.0, -p); // exactly 2^-p, if representable
+    const double got = mpir::scalar_cast<double>(value);
+    const double expected = std::ldexp(1.0, -p);
     const double diff = std::abs(got - expected);
 
     std::cout << std::left << std::setw(12) << name
-              << " got = " << std::scientific << std::setprecision(17) << got
+              << " got = " << std::scientific
+              << std::setprecision(17) << got
               << " expected = " << expected
               << " diff = " << diff
               << '\n';

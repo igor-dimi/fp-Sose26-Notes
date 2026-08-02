@@ -28,7 +28,7 @@ int main(int argc, char const *argv[])
     const double kappa = 10;
 
     auto problem = mpir::make_rotated_spd_problem<hdnum::FP64>(n, kappa);
-    mpir::MixedIROptions options;
+    mpir::MixedIROptions<T_work> options;
     options.max_iterations = 20;
     options.store_iterates = true;
 
@@ -40,7 +40,7 @@ int main(int argc, char const *argv[])
 
     std::cout << std::boolalpha;
     std::cout << "iterations: "<< result.iterations << "\n";
-    std::cout << "converged: "<< result.converged << "\n";
+    std::cout << "converged: "<< result.converged() << "\n";
 
     // const double kappas[] = {
     //     1.0,
