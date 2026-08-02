@@ -1,5 +1,5 @@
 ---
-title: Implementing the Experiments
+title: Implementing the Experiments & Robustness Improvements
 ---
 
 We want to plot the **forward error** and the **backward error** as  function of the refinement step $i$.
@@ -692,11 +692,10 @@ $$
 
 The algorithm reports divergence after three consecutive excessive-growth comparisons. It rejects the correction that triggers termination and preserves the last accepted iterate.
 
----
 
-## Source-Code Changes
+### Source-Code Changes
 
-### Termination statuses
+#### Termination statuses
 
 We introduced statuses that distinguish the main outcomes:
 
@@ -718,7 +717,7 @@ These represent:
 - a non-finite value produced later;
 - detected divergence.
 
-### Finite-value checks
+#### Finite-value checks
 
 We added `all_finite` helpers for vectors and matrices.
 
@@ -730,7 +729,7 @@ The main rule is:
 
 We kept all checks inside `mixed_ir`. We did not modify HDNUM, `lowprec_cpfloat.hh`, `compute_residual`, or the triangular solvers.
 
-### Guard placement
+#### Guard placement
 
 We added finite-value checks at the following points:
 
@@ -766,7 +765,7 @@ result.x = x_next;
 
 This preserves the last valid iterate if the update fails. We increment `result.iterations` only after accepting the update.
 
-### Divergence options
+#### Divergence options
 
 We added three options:
 
@@ -791,7 +790,7 @@ divergence_growth_factor > T_work(1)
 divergence_growth_steps > 0
 ```
 
-### Correction-norm history
+#### Correction-norm history
 
 We added diagnostic storage to `MixedIRResult`:
 
@@ -803,7 +802,7 @@ It stores each finite value of $\lVert d_k\rVert_2$.
 
 The history also includes a correction that triggers divergence but is not applied. We store the norms even when divergence detection is disabled.
 
-### Detector state and comparison
+#### Detector state and comparison
 
 Before the refinement loop, we introduced:
 
@@ -838,7 +837,7 @@ result.status = MixedIRStatus::diverged;
 
 before applying the correction.
 
-## Result
+### Result
 
 With divergence detection enabled, the FP32–FP64–FP128 experiment terminates early with `diverged`.
 
@@ -855,6 +854,467 @@ The two safeguards have separate roles:
 
 - The divergence detector stops persistent growth early.
 - The finite-value checks prevent unsafe operations and crashes.
+
+### FP16 residual underflow and stagnation problem
+
+We tested three-precision iterative refinement with
+
+$$
+T_{\mathrm{factor}}=\mathrm{FP16},\qquad
+T_{\mathrm{work}}=\mathrm{FP64},\qquad
+T_{\mathrm{residual}}=\mathrm{FP128}.
+$$
+
+The LU factorization and correction solve used FP16. Iterates were stored and updated in FP64. Residuals were computed in FP128.
+
+For $n=100$, the convergence sweep produced unexpected results:
+
+- For $\kappa=10$, the method did not converge after 20 iterations. The forward error stagnated near $5.96\times10^{-8}$, and the relative correction stagnated near $1.69\times10^{-8}$.
+
+- For $\kappa=100$, the method appeared to converge after only three iterations because the computed correction became exactly zero.
+
+- Similar nonmonotone behavior occurred for larger condition numbers.
+
+This was inconsistent with the usual refinement condition. Since
+
+$$
+u_{\mathrm{FP16}}=2^{-11}\approx4.88\times10^{-4},
+$$
+
+we have, for $\kappa=10$,
+
+$$
+\kappa u_{\mathrm{FP16}}
+\approx4.88\times10^{-3}\ll1.
+$$
+
+The $\kappa=10$ problem should therefore have been favorable for iterative refinement.
+
+The repeated values
+
+$$
+5.96046\times10^{-8}
+\quad\text{and}\quad
+1.19209\times10^{-7}
+$$
+
+were an important clue. These are respectively the smallest positive FP16 subnormal number and twice that number.
+
+####  Empirical diagnosis
+
+#####  Comparison with bfloat16
+
+We replaced FP16 with bfloat16. Bfloat16 has fewer significand bits than FP16 but a much larger exponent range.
+
+The relevant results were:
+
+| $\kappa$ | Converged | Iterations | Final relative correction |
+|---:|:---:|---:|---:|
+| 1 | Yes | 2 | $5.07389\times10^{-17}$ |
+| 10 | Yes | 14 | $4.71855\times10^{-17}$ |
+| 100 | No | 20 | $6.68688\times10^{-15}$ |
+| 1000 | No | 20 | $2.24847$ |
+| 10000 | No | 20 | $12.5079$ |
+
+In particular, bfloat16 converged for $\kappa=10$, while FP16 did not. Because bfloat16 has lower precision but greater range, this supported the hypothesis that the FP16 failure was caused by its restricted exponent range, not by insufficient significand precision alone.
+
+##### Conceptual hypothesis
+
+At iteration $k$, the residual is computed accurately in FP128:
+
+$$
+r_k=b-Ax_k.
+$$
+
+The original implementation then converted it directly to FP16:
+
+$$
+r_k^{(128)}
+\longrightarrow
+r_k^{(16)}.
+$$
+
+For FP16,
+
+$$
+x_{\min,\mathrm{normal}}
+=
+2^{-14}
+\approx6.1035\times10^{-5},
+$$
+
+and
+
+$$
+x_{\min,\mathrm{subnormal}}
+=
+2^{-24}
+\approx5.9605\times10^{-8}.
+$$
+
+Under round-to-nearest, values below approximately
+
+$$
+2^{-25}\approx2.9802\times10^{-8}
+$$
+
+round to zero.
+
+We therefore hypothesized that, as refinement reduced the residual:
+
+1. Some FP128 residual components became zero when converted to FP16.
+
+2. Surviving components were rounded to a small number of FP16 subnormal values.
+
+3. The FP16 correction solve received an increasingly inaccurate right-hand side.
+
+4. The correction eventually stagnated or became exactly zero.
+
+An exactly zero correction could also cause false convergence because the relative-correction stopping criterion would evaluate to zero.
+
+##### Diagnostic implementation
+
+We added per-iteration residual-conversion diagnostics to `mixed_ir`:
+
+- $\lVert r_k\rVert_\infty$, computed in residual precision;
+
+- the smallest nonzero component of $r_k$;
+
+- the number of nonzero FP128 residual components;
+
+- the number of nonzero components that became exactly zero during FP128-to-FP16 conversion.
+
+The important distinction was:
+
+- `nonzero_components` described the original FP128 residual;
+
+- `zeroed_by_conversion` described information lost in the FP16 copy.
+
+Thus,
+
+```text
+nonzero_components = 100
+zeroed_by_conversion = 20
+```
+
+meant that all 100 components were nonzero in FP128, but only 80 remained nonzero after conversion to FP16.
+
+##### Diagnostic experiment
+
+We tested one fixed random symmetric positive-definite system with
+
+$$
+n=100,qquad \kappa(A)=10,
+$$
+
+using FP16--FP64--FP128 refinement.
+
+The initial diagnostic results were:
+
+| Iteration | $\lVert r_k\rVert_\infty$ | Smallest nonzero component | Zeroed by FP16 conversion |
+|---:|---:|---:|---:|
+| 0 | $1.3474\times10^{-2}$ | $3.3279\times10^{-5}$ | 0 |
+| 1 | $5.4754\times10^{-5}$ | $3.4203\times10^{-8}$ | 0 |
+| 2 | $4.8336\times10^{-7}$ | $3.0833\times10^{-9}$ | 9 |
+| 3 | $4.1084\times10^{-7}$ | $2.0158\times10^{-9}$ | 20 |
+
+The first two refinement steps reduced the residual substantially:
+
+$$
+\frac{\lVert r_0\rVert_\infty}
+     {\lVert r_1\rVert_\infty}
+\approx246,
+\qquad
+\frac{\lVert r_1\rVert_\infty}
+     {\lVert r_2\rVert_\infty}
+\approx113.
+$$
+
+At iteration 2, residual components first became zero during conversion. At essentially the same point, residual reduction stopped.
+
+For $k\ge2$,
+
+$$
+2.97\times10^{-7}
+\le
+\lVert r_k\rVert_\infty
+\le
+5.00\times10^{-7},
+$$
+
+with mean approximately
+
+$$
+4.17\times10^{-7}.
+$$
+
+Between 9 and 20 components were lost per iteration, with an average of approximately 14.5.
+
+Even before components became zero, conversion was already inaccurate. At iteration 1, the smallest component was
+
+$$
+3.4203\times10^{-8}.
+$$
+
+It was above the rounding-to-zero threshold but below the smallest FP16 subnormal, so it was rounded to approximately
+
+$$
+5.9605\times10^{-8}.
+$$
+
+Therefore, `zeroed_by_conversion = 0` did not imply an accurate conversion.
+
+After iteration 2, the entire residual was only several FP16 subnormal increments away from zero. The residual was consequently represented by a very small set of possible FP16 values. This produced severe quantization even for components that remained nonzero.
+
+The experiment confirmed the hypothesis:
+
+> The FP128 residual remained fully nonzero, but conversion to unscaled FP16 discarded or severely quantized its components. This information loss began at the same point as residual stagnation.
+
+#### Implemented solution
+
+##### Conceptual solution
+
+We introduced infinity-norm residual scaling:
+
+$$
+\theta_k=\lVert r_k\rVert_\infty,
+\qquad
+\widehat r_k=\frac{r_k}{\theta_k}.
+$$
+
+Instead of solving directly with the small residual, we solve
+
+$$
+A\widehat d_k=\widehat r_k
+$$
+
+in factor precision and then recover the actual correction:
+
+$$
+d_k=\theta_k\widehat d_k.
+$$
+
+In exact arithmetic, this is equivalent to
+
+$$
+Ad_k=r_k.
+$$
+
+The normalization ensures
+
+$$
+\lVert\widehat r_k\rVert_\infty=1.
+$$
+
+The residual conversion therefore uses the available FP16 range effectively rather than placing the entire vector near zero.
+
+Scaling does not increase FP16 precision. It removes the irrelevant absolute magnitude of the residual before conversion.
+
+##### Implementation in `mixed_ir`
+
+We added an optional setting:
+
+```cpp
+bool scale_residual = false;
+```
+
+The default preserves the original algorithm.
+
+When scaling is enabled, the implementation:
+
+1. Computes $\lVert r_k\rVert_\infty$ in `T_residual`.
+
+2. Preserves the original residual `r_r` for diagnostics.
+
+3. Creates a separate correction right-hand side:
+
+   ```cpp
+   hdnum::Vector<T_residual> correction_rhs_r(r_r);
+   ```
+
+4. Normalizes it when the residual is nonzero:
+
+   ```cpp
+   correction_rhs_r[i] =
+       correction_rhs_r[i] / residual_scale_r;
+   ```
+
+5. Converts the normalized vector, rather than the original residual, to factor precision:
+
+   ```cpp
+   convert(r_f, correction_rhs_r);
+   ```
+
+6. Performs the existing FP16 LU solve without changing the factors or solve routine.
+
+7. Converts the normalized correction to working precision.
+
+8. Rescales it in FP64:
+
+   ```cpp
+   d_w[i] = residual_scale_w * d_w[i];
+   ```
+
+9. Performs the original update:
+
+   $$
+   x_{k+1}=x_k+d_k.
+   $$
+
+The scale is applied in working precision, not factor precision. Thus, the small value $\theta_k$ never needs to be represented in FP16.
+
+The zero-residual case skips normalization, preventing division by zero. We also retained the existing finite-value checks after rescaling.
+
+The diagnostic semantics were updated accordingly:
+
+- residual magnitudes still describe the original $r_k$;
+
+- `zeroed_by_conversion` describes conversion of the actual correction right-hand side:
+
+  - $r_k$ in unscaled mode;
+
+  - $\widehat r_k$ in scaled mode.
+
+#### Validation experiment
+
+##### Experimental design
+
+We generated the problem once and ran:
+
+```cpp
+run("unscaled", false);
+run("scaled", true);
+```
+
+Both runs used exactly the same:
+
+- matrix;
+
+- right-hand side;
+
+- random seed;
+
+- dimension $n=100$;
+
+- condition number $\kappa(A)=10$;
+
+- precision triple FP16--FP64--FP128;
+
+- stopping criterion and iteration limit.
+
+The identical initial residual,
+
+$$
+\lVert r_0\rVert_\infty
+=
+1.34744462924774981\times10^{-2},
+$$
+
+confirmed that scaling did not alter the matrix factorization or initial solution.
+
+The unscaled results also reproduced the previous baseline. Therefore, adding the optional scaling path did not change the original behavior when scaling was disabled.
+
+##### Unscaled result
+
+The unscaled method:
+
+- first lost components at iteration 2;
+
+- lost between 9 and 20 components per later iteration;
+
+- stagnated near $4.17\times10^{-7}$;
+
+- failed to converge after 20 updates;
+
+- ended with
+
+$$
+\text{final relative correction}
+=
+1.1685\times10^{-7}.
+$$
+
+##### Scaled result
+
+The scaled run produced:
+
+| Iteration | $\lVert r_k\rVert_\infty$ | Zeroed by conversion | Reduction factor |
+|---:|---:|---:|---:|
+| 0 | $1.3474\times10^{-2}$ | 0 | -- |
+| 1 | $5.3874\times10^{-5}$ | 0 | $250.1$ |
+| 2 | $2.8349\times10^{-7}$ | 0 | $190.0$ |
+| 3 | $2.1471\times10^{-9}$ | 0 | $132.0$ |
+| 4 | $1.1636\times10^{-11}$ | 0 | $184.5$ |
+| 5 | $7.5515\times10^{-14}$ | 0 | $154.1$ |
+| 6 | $4.3479\times10^{-16}$ | 0 | $173.7$ |
+
+No normalized residual component became zero during FP16 conversion.
+
+The residual decreased by
+
+$$
+\frac{\lVert r_0\rVert_\infty}
+     {\lVert r_6\rVert_\infty}
+\approx3.10\times10^{13},
+$$
+
+or approximately 13.5 decimal orders.
+
+The method converged after seven updates with
+
+$$
+\text{final relative correction}
+=
+9.7687\times10^{-17}.
+$$
+
+This was below FP64 unit roundoff:
+
+$$
+u_{\mathrm{FP64}}
+=
+2^{-53}
+\approx1.1102\times10^{-16}.
+$$
+
+##### Interpretation
+
+The observed reduction factors, between approximately 132 and 250, correspond to contraction factors between roughly
+
+$$
+4.0\times10^{-3}
+\quad\text{and}\quad
+7.6\times10^{-3}.
+$$
+
+This agrees well with the theoretical scale
+
+$$
+\kappa(A)u_{\mathrm{FP16}}
+\approx4.88\times10^{-3}.
+$$
+
+Once the residual-range problem was removed, the algorithm behaved as expected from mixed-precision iterative-refinement theory.
+
+#### Conclusion
+
+The investigation established the following sequence:
+
+1. FP16 refinement failed unexpectedly for a well-conditioned problem.
+
+2. Bfloat16 succeeded despite having lower significand precision, pointing to an exponent-range problem.
+
+3. Direct diagnostics showed that nonzero FP128 residual components were zeroed or severely quantized during FP16 conversion.
+
+4. Conversion loss began at the same point as residual stagnation.
+
+5. Infinity-norm scaling removed the irrelevant absolute residual magnitude before conversion.
+
+6. A controlled scaled-versus-unscaled experiment eliminated all observed conversion-to-zero events.
+
+7. The scaled method restored regular convergence and reached FP64 accuracy in seven iterations.
+
+This is strong validation for the tested system. Broader validation should repeat the comparison over multiple dimensions, condition numbers, and random seeds. Residual scaling addresses residual underflow only; it does not address separate FP16 overflow caused by matrix entries exceeding the FP16 range.
 
 ## Plotting Convergence Experiments
 
