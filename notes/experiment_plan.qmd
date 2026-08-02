@@ -1,0 +1,1205 @@
+---
+title: "Mixed-Precision Iterative Refinement: Experiment Plan"
+format:
+  html:
+    toc: true
+    number-sections: true
+---
+
+With the corrected third task and the decision to keep the primary condition sweeps deterministic, the complete plan becomes the following.
+
+The best place to begin remains the experiment-output infrastructure. Once the full suite is running, incomplete metadata, inconsistent filenames, or unclear seed handling would force us to regenerate results.
+
+## Overall experiment plan
+
+The experiments can be divided into the four objectives from the project brief and a fifth group covering our FP16 robustness extension.
+
+| Group | Purpose | Main variables | Main outputs |
+|---|---|---|---|
+| A. Convergence histories | Examine refinement iteration by iteration | precision triple, selected $\kappa(A)$ | forward error, backward error, relative correction |
+| B. Condition-number sweeps | Locate the convergence boundary | $\kappa(A)$, precision triple | final/best errors, iterations, status |
+| C. Residual-precision comparison | Validate the last two rows of Table 7.1 | single--double--double vs. single--double--quad | forward and backward error vs. $\kappa(A)$ |
+| D. Direct-solve comparison | Measure the benefit of refinement | mixed IR vs. direct solve in working precision | error vs. $\kappa(A)$ |
+| E. FP16 robustness extension | Demonstrate range checks and residual scaling | scaling on/off, $\kappa(A)$ | histories, conversion diagnostics, termination status |
+
+For the primary experiments, the default random seeds should remain fixed. This isolates the effect of the condition number and keeps the plots straightforward.
+
+## Group A: convergence histories
+
+These experiments show how the algorithm behaves over individual refinement iterations.
+
+### Representative precision triples
+
+A suitable selection is:
+
+- FP64--FP64--FP64: same-precision baseline;
+- FP32--FP64--FP64: classical mixed precision;
+- FP32--FP64--FP128: higher residual precision;
+- FP16--FP64--FP64: half-precision factorization;
+- FP16--FP64--FP128: principal FP16 configuration;
+- bfloat16--FP64--FP128: exponent-range comparison;
+- FP8--FP64--FP128: optional stress test.
+
+Not every precision triple needs to appear in the main report. A representative subset can be selected after inspecting the results.
+
+### Condition numbers
+
+For each factorization precision, choose condition numbers:
+
+- clearly inside the predicted convergence region;
+- near $\kappa(A)u_f\approx 1$;
+- outside the predicted region.
+
+### Plots
+
+For every selected configuration, plot against iteration:
+
+1. relative forward error;
+2. normwise backward error;
+3. relative correction,
+
+$$
+\frac{\lVert d_k\rVert_2}{\lVert x_k\rVert_2}.
+$$
+
+The seeds remain fixed within and across comparisons. This ensures that different precision triples solve exactly the same problems.
+
+## Group B: general condition-number sweeps
+
+These experiments study how each precision configuration behaves as conditioning deteriorates.
+
+Use a logarithmic condition-number grid, supplemented with additional points near the expected convergence boundary $1/u_f$.
+
+For example:
+
+- FP16: concentrate around $10^2$--$10^4$;
+- bfloat16: concentrate around $10^1$--$10^3$;
+- FP32: concentrate around $10^6$--$10^9$.
+
+### Seed policy
+
+Only $\kappa(A)$ should vary. Use the default fixed seeds for:
+
+- the matrix generator;
+- the right-hand side;
+- any generated orthogonal transformations.
+
+Provided the generator is reset deterministically for each value of $\kappa(A)$, this keeps the matrix orientation and right-hand side controlled while changing the prescribed spectrum.
+
+Multiple seeds are not required. They can be added later only if the primary sweep produces unexpectedly irregular results.
+
+A concise report formulation is:
+
+> The random seeds were fixed throughout the sweep. Thus, the matrix structure and right-hand side remained controlled while the prescribed condition number was varied. This isolates the effect of conditioning and permits direct comparisons between precision configurations.
+
+### Recorded quantities
+
+For each run, record:
+
+- requested condition number;
+- measured condition number;
+- termination status;
+- final forward and backward errors;
+- best attained forward and backward errors;
+- iterations at which the best errors occurred;
+- number of completed refinement updates;
+- final relative correction.
+
+### Plots
+
+Create:
+
+1. final forward error vs. $\kappa(A)$;
+2. final backward error vs. $\kappa(A)$;
+3. best attained error vs. $\kappa(A)$;
+4. iteration count vs. $\kappa(A)$;
+5. termination status vs. $\kappa(A)$.
+
+Show the theoretical condition
+
+$$
+\kappa(A)u_f=1
+$$
+
+as a vertical reference line.
+
+Because the seeds are fixed, each configuration produces a single curve. No medians, ranges, or quantile bands are needed.
+
+## Group C: single--double--double versus single--double--quad
+
+This replaces the earlier broad residual-precision study. It directly implements the experiment requested by the supervisor and validates the final two rows of Table 7.1 in the Carson--Higham paper.
+
+### Precision configurations
+
+Compare:
+
+1. single--double--double:
+
+   $$
+   u_f=u_{\mathrm{single}},
+   \qquad
+   u=u_r=u_{\mathrm{double}};
+   $$
+
+2. single--double--quad:
+
+   $$
+   u_f=u_{\mathrm{single}},
+   \qquad
+   u=u_{\mathrm{double}},
+   \qquad
+   u_r=u_{\mathrm{quad}}\approx u^2.
+   $$
+
+Only the residual precision changes. Both variants must use:
+
+- the same matrix;
+- the same right-hand side;
+- the same fixed seeds;
+- the same stopping criterion;
+- the same maximum iteration count;
+- the same remaining algorithm options.
+
+### Theoretical expectation
+
+The general limiting forward-error bound is
+
+$$
+\frac{\lVert x-\widehat{x}\rVert_\infty}
+     {\lVert x\rVert_\infty}
+\lesssim
+4p\,u_r\,\operatorname{cond}(A,x)+u.
+$$
+
+For single--double--double, $u_r=u$, giving
+
+$$
+4p\,u\,\operatorname{cond}(A,x)+u.
+$$
+
+The conditioning-dependent term generally dominates, so the expected forward error is
+
+$$
+O\!\left(u\,\operatorname{cond}(A,x)\right).
+$$
+
+For single--double--quad, $u_r\approx u^2$, giving
+
+$$
+4p\,u^2\,\operatorname{cond}(A,x)+u.
+$$
+
+Within the convergence region of the single-precision factorization, the first term is sufficiently small that the working-precision term dominates. Therefore, the expected forward error is
+
+$$
+O(u).
+$$
+
+Both variants should attain a backward error of order
+
+$$
+O(u).
+$$
+
+Thus, the quad residual should improve the limiting forward error substantially, while both variants should produce approximately double-precision backward errors.
+
+The remembered equation
+
+$$
+4pu^2\operatorname{cond}(A,x)+u\lesssim 4pu
+$$
+
+is correct, but equation (8.5) appears in the later GMRES-IR analysis. For ordinary LU-IR, the general bound above provides the more direct explanation.
+
+### Condition-number sweep
+
+A suitable initial range is approximately
+
+$$
+10^0\leq\kappa(A)\leq10^9,
+$$
+
+with additional points between $10^6$ and $10^8$, near the single-precision convergence boundary.
+
+For IEEE single precision,
+
+$$
+u_f=2^{-24}\approx5.96\times10^{-8},
+\qquad
+u_f^{-1}\approx1.68\times10^7.
+$$
+
+This is only an approximate boundary. The actual transition can occur earlier because it also depends on the stability of the computed factorization.
+
+### Required plots
+
+The supervisor requested two log--log plots, both with condition number on the horizontal axis:
+
+1. forward error for both variants in one plot;
+2. backward error for both variants in one plot.
+
+Expected behaviour:
+
+| Plot | Expected result |
+|---|---|
+| Forward error | single--double--double grows approximately as $u\,\operatorname{cond}(A,x)$; single--double--quad remains near $u$ |
+| Backward error | both variants remain near $u$ while refinement converges |
+
+Useful reference lines are:
+
+- $u$, representing the double-precision floor;
+- $u\kappa(A)$, illustrating the expected single--double--double trend;
+- $1/u_f$, marking the approximate convergence boundary.
+
+### Measurement details
+
+Table 7.1 uses $\kappa_\infty(A)$, whereas the forward-error bound contains $\operatorname{cond}(A,x)$. They are related but not identical.
+
+Each run should therefore record:
+
+- requested/generated condition number;
+- measured $\kappa_2(A)$;
+- preferably measured $\kappa_\infty(A)$;
+- $\operatorname{cond}(A,x)$, if practical;
+- forward and backward errors;
+- termination status;
+- iteration count.
+
+The main horizontal axis should preferably use measured $\kappa_\infty(A)$, matching Table 7.1. Error measurements should use sufficiently high precision, ideally FP256.
+
+This experiment can be summarized as:
+
+> A condition-number sweep compares single--double--double and single--double--quad iterative refinement. Both variants are expected to attain double-precision backward error. The quad-residual variant should also attain double-precision forward error, whereas the double-residual variant should attain forward error of order $u\,\operatorname{cond}(A,x)$.
+
+## Group D: comparison with a direct solve
+
+For every chosen working precision $u$, compare:
+
+- a single LU solve performed entirely in $u$;
+- mixed-precision iterative refinement whose iterates are stored in $u$.
+
+The principal question is whether mixed IR attains working-precision accuracy while performing the factorization in a cheaper, lower precision.
+
+### Plots
+
+Create:
+
+1. relative forward error vs. $\kappa(A)$;
+2. backward error vs. $\kappa(A)$;
+3. optionally, iteration count for mixed IR.
+
+Both methods must solve identical problems with fixed seeds.
+
+## Group E: FP16 robustness extension
+
+This should form a separate report section because it goes beyond the original project requirements.
+
+Two distinct FP16 range problems should be presented separately:
+
+- factorization-input overflow;
+- residual-conversion underflow.
+
+Residual scaling mitigates the second problem. It does not repair overflow in the original factorization input.
+
+### E1. Controlled scaling comparison
+
+Use the existing controlled problem:
+
+- random SPD matrix;
+- $n=100$;
+- $\kappa(A)=10$;
+- random-normal right-hand side;
+- FP16--FP64--FP128;
+- identical default seeds;
+- residual scaling off and on.
+
+Only `scale_residual` should change.
+
+### Principal plots
+
+Plot:
+
+1. forward error vs. iteration;
+2. backward error vs. iteration;
+3. relative correction vs. iteration;
+4. residual infinity norm vs. iteration.
+
+### Diagnostic plots
+
+Also plot:
+
+5. number of residual components zeroed during conversion to FP16;
+6. smallest nonzero residual component vs. iteration, with the FP16 subnormal threshold shown.
+
+This experiment should demonstrate the observed mechanism:
+
+- without scaling, increasingly many residual components are lost during conversion and the algorithm stagnates;
+- with scaling, the residual is normalized before conversion;
+- conversion-to-zero is avoided or greatly reduced;
+- the algorithm reaches approximately FP64 accuracy.
+
+### E2. Broader scaling validation
+
+A simple broader validation can also keep the default seeds fixed and vary only $\kappa(A)$. Compare scaling on and off over several condition numbers for which the FP16 factorization input remains finite.
+
+Record:
+
+- termination status;
+- final and best forward errors;
+- iteration count;
+- maximum number of zeroed residual components;
+- total number of zeroing events;
+- residual-reduction factor.
+
+Create:
+
+1. final forward error vs. $\kappa(A)$;
+2. iterations vs. $\kappa(A)$;
+3. maximum zeroed-component count vs. $\kappa(A)$;
+4. termination status vs. $\kappa(A)$.
+
+Multiple seeds are optional here as well. They would strengthen a claim of general robustness, but they are not necessary for the primary report. They should only be added if time permits or if the fixed-seed results appear atypical.
+
+### E3. FP16 overflow handling
+
+Input overflow should be demonstrated separately.
+
+Record:
+
+| $\kappa(A)$ | Maximum $\lvert A_{ij}\rvert$ | FP16 input finite | Termination status |
+|---:|---:|---|---|
+
+The expected robust behaviour is termination with a status such as `factorization_input_non_finite`, rather than a crash or propagation of invalid values.
+
+A table or categorical status plot is more suitable than a convergence-history plot.
+
+## Controlling the experiment space
+
+Testing every combination of matrix family, right-hand side, precision triple, condition number, seed, dimension, and scaling mode would produce an unnecessarily large experiment suite.
+
+A focused selection is preferable:
+
+- primary matrix family: random SPD;
+- primary right-hand side: random-normal;
+- primary dimension: $n=100$;
+- fixed default seeds;
+- rotated SPD: supplementary controlled case;
+- random SVD: supplementary nonsymmetric case;
+- alternative right-hand sides: optional sensitivity study;
+- multiple seeds: optional robustness check only.
+
+This keeps the report centred on the requested effects.
+
+## Common metadata design
+
+The experimental utilities should be based on one shared experiment description.
+
+Conceptually:
+
+```cpp
+struct PrecisionNames {
+    std::string factor;
+    std::string work;
+    std::string residual;
+    std::string measure;
+};
+
+struct ExperimentDescription {
+    ExperimentKind kind;
+    MatrixFamily matrix_family;
+    std::size_t dimension;
+    PrecisionNames precisions;
+};
+```
+
+The metadata writer should additionally receive:
+
+- `TestProblemOptions`;
+- `MixedIROptions<T_work>`;
+- the condition number or condition-number grid;
+- the variant name, such as `scaled` or `unscaled`.
+
+### Experiment identity
+
+Record:
+
+- experiment kind;
+- matrix family;
+- dimension $n$;
+- factorization precision;
+- working precision;
+- residual precision;
+- measurement precision;
+- algorithm variant.
+
+### Test-problem options
+
+Record:
+
+- right-hand-side mode;
+- `matrix_seed_u`;
+- `matrix_seed_v`;
+- `vector_seed`;
+- `rotation_theta`;
+- prescribed condition number;
+- measured condition numbers.
+
+Recording the seeds is important even though they remain fixed. It makes the deterministic problem construction reproducible.
+
+### Algorithm options
+
+Record:
+
+- `max_iterations`;
+- effective relative-correction tolerance;
+- `detect_divergence`;
+- `divergence_growth_factor`;
+- `divergence_growth_steps`;
+- `store_iterates`;
+- `scale_residual`;
+- `record_residual_diagnostics`.
+
+The effective tolerance should be written, not merely a sentinel value such as a nonpositive number meaning "use the default."
+
+### Results
+
+Record:
+
+- termination status;
+- convergence flag, if retained;
+- number of completed updates;
+- final relative correction;
+- final forward and backward errors;
+- best forward and backward errors;
+- iterations of the best errors.
+
+### CSV representation
+
+I recommend repeating invariant metadata as ordinary columns in every CSV row. This is redundant but useful:
+
+- every file remains self-contained;
+- `pandas.read_csv()` works without a custom parser;
+- files can be concatenated directly;
+- the experiment remains identifiable if the file is renamed.
+
+A JSON sidecar containing the Git revision, compiler information, timestamp, and build configuration could be added later, but it is not required for the first refactoring.
+
+## Automatic filenames
+
+The filename should encode the experiment identity, but not every option.
+
+A suitable pattern is:
+
+```text
+<experiment>__<matrix>__<rhs>__uf-<factor>__u-<work>__ur-<residual>__<variant>.csv
+```
+
+Examples:
+
+```text
+convergence__random-spd__random-normal__uf-fp32__u-fp64__ur-fp128.csv
+```
+
+```text
+residual-precision__random-spd__random-normal__uf-fp32__u-fp64__ur-comparison.csv
+```
+
+```text
+residual-scaling__random-spd__random-normal__uf-fp16__u-fp64__ur-fp128__comparison.csv
+```
+
+The filename generator and metadata writer should consume the same `ExperimentDescription`. This prevents the filename and CSV contents from disagreeing.
+
+Precision names can initially be supplied explicitly. They can later be generated through traits such as `precision_name<T>()`.
+
+## Output-directory organization
+
+A moderate hierarchy is sufficient:
+
+```text
+results/
+├── raw/
+│   ├── convergence/
+│   ├── condition_sweeps/
+│   ├── residual_precision/
+│   ├── direct_comparison/
+│   └── robustness/
+│       ├── residual_scaling/
+│       └── range_failures/
+└── plots/
+    ├── convergence/
+    ├── condition_sweeps/
+    ├── residual_precision/
+    ├── direct_comparison/
+    └── robustness/
+        ├── residual_scaling/
+        └── range_failures/
+```
+
+Plotting scripts should mirror the raw-data directory structure. This avoids accumulating many ambiguously named plots in one flat directory.
+
+## Recommended implementation order
+
+1. Define the experiment kinds, metadata schema, seed policy, filename convention, and directory layout.
+2. Implement `experiment_io.hpp` with:
+   - enum-to-string conversions;
+   - metadata-header writing;
+   - metadata-value writing;
+   - filename generation;
+   - output-path construction.
+3. Refactor the residual-scaling comparison as the pilot experiment.
+4. Ensure residual diagnostics distinguish:
+   - the original residual;
+   - the normalized residual actually passed to the conversion;
+   - values lost during conversion.
+5. Add a dedicated scaled-versus-unscaled plotting script.
+6. Refactor the existing convergence-history experiment.
+7. Implement the general condition-number sweep with fixed default seeds.
+8. Implement the targeted single--double--double versus single--double--quad sweep.
+9. Implement the direct-solve comparison.
+10. Run the broader fixed-seed FP16 scaling validation.
+11. Add multiple-seed tests only if they become scientifically useful and time permits.
+
+The immediate next step therefore remains the shared experiment-description and output utilities. The residual-scaling comparison is the best first script to refactor because it applies two algorithm configurations to exactly the same deterministic test problem.
+
+### Implementation Plan
+
+Start with one small vertical slice: build the shared output utility and use it only in the residual-scaling comparison. Once that works, extend it to the other experiments.
+
+### 1. Create the branch
+
+If you have not already done so:
+
+```bash
+git switch -c feature/experiment-infrastructure
+```
+
+### 2. Freeze the common schema first
+
+Before implementing functions, decide which information every experimental row should contain.
+
+I suggest separating it into three groups.
+
+#### Experiment identity
+
+```text
+experiment
+matrix_family
+dimension
+factor_precision
+work_precision
+residual_precision
+measure_precision
+variant
+```
+
+#### Problem and algorithm configuration
+
+```text
+rhs_mode
+matrix_seed_u
+matrix_seed_v
+vector_seed
+rotation_theta
+requested_kappa
+max_iterations
+effective_rel_correction_tol
+detect_divergence
+divergence_growth_factor
+divergence_growth_steps
+store_iterates
+scale_residual
+record_residual_diagnostics
+```
+
+#### Run result
+
+```text
+status
+converged
+total_iterations
+final_rel_correction
+```
+
+Experiment-specific columns—such as `iteration`, `forward_error_inf`, or `zeroed_by_conversion`—come after these common columns.
+
+The important distinction is:
+
+* metadata describes how the run was configured;
+* result fields describe how it terminated;
+* measurement fields depend on the experiment.
+
+### 3. Create `experiment_io.hpp`
+
+The first version only needs the following components:
+
+```cpp
+enum class ExperimentKind {
+    convergence_history,
+    condition_sweep,
+    residual_precision,
+    direct_solve_comparison,
+    residual_scaling,
+    range_failure
+};
+
+enum class MatrixFamily {
+    random_spd,
+    rotated_spd,
+    random_svd
+};
+
+struct PrecisionNames {
+    std::string factor;
+    std::string work;
+    std::string residual;
+    std::string measure;
+};
+
+struct ExperimentDescription {
+    ExperimentKind kind;
+    MatrixFamily matrix_family;
+    std::size_t dimension;
+    PrecisionNames precisions;
+};
+```
+
+Then implement these utility groups:
+
+```cpp
+std::string_view to_string(ExperimentKind kind);
+std::string_view to_string(MatrixFamily family);
+std::string_view to_string(RightHandSideMode mode);
+std::string_view to_string(MixedIRStatus status);
+```
+
+```cpp
+std::filesystem::path make_output_directory(
+    const std::filesystem::path& raw_results_root,
+    ExperimentKind kind
+);
+```
+
+```cpp
+std::string make_experiment_filename(
+    const ExperimentDescription& experiment,
+    const TestProblemOptions& problem_options,
+    std::string_view tag = {}
+);
+```
+
+```cpp
+void write_common_csv_header(std::ostream& out);
+```
+
+```cpp
+template<class T_work>
+void write_common_csv_fields(
+    std::ostream& out,
+    const ExperimentDescription& experiment,
+    const TestProblemOptions& problem_options,
+    const MixedIROptions<T_work>& algorithm_options,
+    double requested_kappa,
+    std::string_view variant,
+    const MixedIRResult<T_work>& result
+);
+```
+
+The last function should write the values in exactly the same order as `write_common_csv_header()`.
+
+### 4. Use the residual-scaling experiment as the pilot
+
+Refactor [exp_residual_scaling_fp16_fp64_fp128(1).cc](sandbox:/workspace/scratch/47115038590b/upload/exp_residual_scaling_fp16_fp64_fp128%281%29.cc) first.
+
+Define its identity once:
+
+```cpp
+const mpir::ExperimentDescription experiment{
+    mpir::ExperimentKind::residual_scaling,
+    mpir::MatrixFamily::random_spd,
+    n,
+    {"fp16", "fp64", "fp128", "fp256"}
+};
+```
+
+Generate its path rather than hard-coding it:
+
+```cpp
+const auto output_dir =
+    mpir::make_output_directory(
+        MPIR_RESULTS_RAW_DIR,
+        experiment.kind
+    );
+
+const auto output_file =
+    output_dir /
+    mpir::make_experiment_filename(
+        experiment,
+        problem_options,
+        "comparison"
+    );
+```
+
+The expected result would be something like:
+
+```text
+results/raw/robustness/residual_scaling/
+residual-scaling__random-spd__random-normal__uf-fp16__u-fp64__ur-fp128__comparison.csv
+```
+
+Inside the two runs, set:
+
+```cpp
+run("unscaled", false);
+run("scaled", true);
+```
+
+The metadata should then show that every option is identical except:
+
+```text
+variant
+scale_residual
+```
+
+This makes the controlled nature of the comparison explicit.
+
+### 5. Verify the pilot carefully
+
+Check four things:
+
+1. The automatically generated directory exists.
+2. The generated filename matches the actual precision types.
+3. Every CSV row contains the complete configuration.
+4. The numerical results are unchanged from the old experiment.
+
+That final check is important: this refactoring should change only output organization, not algorithm behaviour.
+
+The current convergence experiment demonstrates exactly why automatic naming is useful: [exp_convergence_random_spd(3).cc](sandbox:/workspace/scratch/47115038590b/upload/exp_convergence_random_spd%283%29.cc) declares `T_factor = FP32`, but its hard-coded filename says `fp16`.
+
+### 6. Keep the first milestone narrow
+
+For the first milestone, do only:
+
+* `experiment_io.hpp`;
+* common enum-to-string functions;
+* common metadata columns;
+* filename generation;
+* output-directory generation;
+* refactoring of the residual-scaling experiment.
+
+Leave these for the following commits:
+
+* refining `ResidualDiagnostic`;
+* plotting scaled versus unscaled histories;
+* refactoring all other experiments;
+* implementing the condition-number sweeps.
+
+A suitable first commit sequence would be:
+
+```text
+Add common experiment metadata and naming utilities
+Refactor residual-scaling experiment to use shared output utilities
+```
+
+So the immediate next action is to create `experiment_io.hpp` and define the two enums, `PrecisionNames`, and `ExperimentDescription`. That gives us the vocabulary on which all subsequent output functions will depend.
+
+### Condition Grids
+
+. The two groups need related but distinct condition-number grids:
+
+* Group A needs a small representative set: clearly below, near, and above the theoretical boundary.
+* Group B needs a denser logarithmic sweep to observe where convergence actually breaks down.
+
+The reference boundary should be computed from the factorization precision:
+
+[
+\kappa_*=\frac{1}{u_f},
+]
+
+not from the working precision (u). The condition (\kappa(A)u_f<1) is the approximate convergence condition for standard iterative refinement.
+
+I would introduce two utilities rather than manually listing condition numbers.
+
+```cpp
+template<class T_factor>
+std::vector<double> representative_kappas();
+
+template<class T_factor>
+std::vector<double> kappa_sweep(
+    double min_kappa = 1.0,
+    double upper_boundary_factor = 10.0,
+    std::size_t points_per_decade = 10
+);
+```
+
+The first could generate condition numbers relative to (\kappa_*), for example:
+
+```text
+1,
+0.01 κ*,
+0.1 κ*,
+0.5 κ*,
+κ*,
+2 κ*,
+10 κ*
+```
+
+after sorting and removing duplicates. This provides:
+
+* a well-conditioned baseline;
+* points clearly inside the theoretical region;
+* points close to the boundary;
+* several points outside it.
+
+The dense sweep could logarithmically cover
+
+[
+1\leq \kappa(A)\leq 10\kappa_*,
+]
+
+with perhaps 8–12 points per decade. We may later add extra points around (\kappa_*), such as
+
+[
+0.5\kappa_*,\quad
+0.8\kappa_*,\quad
+\kappa_*,\quad
+1.25\kappa_*,\quad
+2\kappa_*,
+]
+
+if the ordinary logarithmic grid is not sufficiently dense there.
+
+One important qualification is that this boundary is approximate:
+
+1. Our generator may prescribe (\kappa_2(A)), whereas the theoretical result may use (\kappa_\infty(A)).
+2. The actual convergence boundary also depends on the computed LU factors and their stability.
+3. A generated point satisfying (\kappa u_f<1) is therefore not guaranteed to converge, and a point slightly above it is not guaranteed to fail.
+
+That is precisely why the larger sweep is useful: the utility centers the experiment around the theoretical prediction, while the experiment identifies the empirical transition.
+
+I would place these functions in a separate shared header such as:
+
+```text
+code/include/condition_grids.hpp
+```
+
+They are numerical experiment-design utilities, whereas `experiment_io.hpp` should remain concerned with filenames, directories, metadata, and CSV output. Keeping those responsibilities separate will make the structure clearer.
+
+
+We should use one source file for Group A, not one file per precision triple.
+
+Each precision triple is a compile-time type combination, so the Group A driver will define one templated runner and instantiate it for each selected triple. Each instantiation writes a separate CSV containing all representative condition numbers and all iterations.
+
+### Further Details
+
+```text
+code/
+├── CMakeLists.txt
+├── include/
+│   ├── mixed_ir.hpp
+│   ├── experiment_io.hpp
+│   ├── condition_grids.hpp
+│   └── ...
+├── experiments/
+│   ├── CMakeLists.txt
+│   ├── convergence/
+│   │   ├── CMakeLists.txt
+│   │   └── exp_convergence_histories.cc
+│   ├── condition_sweeps/
+│   │   ├── CMakeLists.txt
+│   │   └── exp_condition_sweeps.cc
+│   ├── residual_precision/
+│   ├── direct_comparison/
+│   └── robustness/
+│       ├── CMakeLists.txt
+│       ├── exp_residual_scaling.cc
+│       └── exp_range_failure.cc
+├── scripts/
+│   └── convergence/
+│       └── plot_convergence_histories.py
+└── results/
+    ├── raw/
+    │   └── convergence/
+    └── plots/
+        └── convergence/
+```
+
+Descriptive directory names are preferable to `group_a`, `group_b`, and so on. The letters belong to our current report plan; the experiment purposes are more stable.
+
+The existing residual-scaling driver can eventually be moved into `experiments/robustness/`.
+
+### One template, several precision triples
+
+The central function will have approximately this interface:
+
+```cpp
+template<
+    class T_factor,
+    class T_work,
+    class T_residual,
+    class T_measure
+>
+void run_convergence_histories(
+    const mpir::PrecisionNames& precision_names,
+    const std::vector<double>& kappas
+);
+```
+
+It will perform the complete experiment for one precision triple:
+
+1. Construct its `ExperimentDescription`.
+2. Generate its output directory and filename.
+3. Write the CSV header.
+4. Loop over the supplied condition numbers.
+5. Generate the test problem with fixed seeds.
+6. Run iterative refinement with `store_iterates = true`.
+7. Measure forward and backward error at every stored iterate.
+8. Write one CSV row per iterate.
+
+Then `main()` invokes it explicitly:
+
+```cpp
+int main()
+{
+    using hdnum::FP8;
+    using hdnum::FP16;
+    using hdnum::FP32;
+    using hdnum::FP64;
+    using hdnum::FP128;
+    using hdnum::FP256;
+    using hdnum::bfloat16;
+
+    run_convergence_histories<
+        FP64, FP64, FP64, FP256
+    >(
+        {"fp64", "fp64", "fp64", "fp256"},
+        fp64_baseline_kappas
+    );
+
+    run_convergence_histories<
+        FP32, FP64, FP64, FP256
+    >(
+        {"fp32", "fp64", "fp64", "fp256"},
+        mpir::representative_kappas<FP32>()
+    );
+
+    run_convergence_histories<
+        FP32, FP64, FP128, FP256
+    >(
+        {"fp32", "fp64", "fp128", "fp256"},
+        mpir::representative_kappas<FP32>()
+    );
+
+    run_convergence_histories<
+        FP16, FP64, FP64, FP256
+    >(
+        {"fp16", "fp64", "fp64", "fp256"},
+        mpir::representative_kappas<FP16>()
+    );
+
+    run_convergence_histories<
+        FP16, FP64, FP128, FP256
+    >(
+        {"fp16", "fp64", "fp128", "fp256"},
+        mpir::representative_kappas<FP16>()
+    );
+
+    run_convergence_histories<
+        bfloat16, FP64, FP128, FP256
+    >(
+        {"bfloat16", "fp64", "fp128", "fp256"},
+        mpir::representative_kappas<bfloat16>()
+    );
+
+    // Optional stress test.
+    run_convergence_histories<
+        FP8, FP64, FP128, FP256
+    >(
+        {"fp8", "fp64", "fp128", "fp256"},
+        mpir::representative_kappas<FP8>()
+    );
+}
+```
+
+The precise implementation will use the actual HDNUM aliases, but this is the intended structure.
+
+### Condition-number selection
+
+For FP8, bfloat16, FP16, and FP32, we can use:
+
+```cpp
+mpir::representative_kappas<T_factor>()
+```
+
+This produces points clearly below, near, and above
+
+$$
+\kappa_*=\frac{1}{u_f}.
+$$
+
+Configurations with the same factorization precision automatically receive the same condition numbers. For example, FP32–FP64–FP64 and FP32–FP64–FP128 will solve identical problems, allowing a direct residual-precision comparison.
+
+The FP64 baseline requires special treatment. Its boundary is approximately
+
+$$
+\frac{1}{u_{\mathrm{FP64}}}\approx 9\times10^{15},
+$$
+
+which is too close to the numerical resolution limit of an FP64-stored test matrix. We should therefore use a moderate baseline grid, for example:
+
+```cpp
+const std::vector<double> fp64_baseline_kappas{
+    1.0,
+    1.0e4,
+    1.0e8,
+    1.0e12
+};
+```
+
+The FP64 run is a same-precision accuracy baseline, not an attempt to locate its full convergence boundary.
+
+### Experiment settings
+
+The initial Group A dataset should use:
+
+```cpp
+const std::size_t n = 100;
+
+mpir::TestProblemOptions problem_options;
+problem_options.rhs_mode =
+    mpir::RightHandSideMode::random_normal_rhs;
+```
+
+The default seeds remain unchanged, ensuring that a given $\kappa$ produces the same matrix and right-hand side for every precision triple.
+
+The algorithm options should be fixed:
+
+```cpp
+mpir::MixedIROptions<T_work> options;
+options.max_iterations = 20;
+options.store_iterates = true;
+options.detect_divergence = true;
+options.record_residual_diagnostics = false;
+options.scale_residual = true;
+```
+
+I recommend enabling residual scaling in the main Group A experiments because it is now part of our robust implementation. Group E retains the controlled scaled-versus-unscaled comparison that demonstrates why it is needed. The CSV metadata records this choice explicitly.
+
+### CSV organization
+
+Each precision triple gets one CSV containing all its condition numbers and iteration histories.
+
+For example:
+
+```text
+results/raw/convergence/
+├── convergence-history__random-spd__n-100__random-normal__uf-fp64__u-fp64__ur-fp64__um-fp256.csv
+├── convergence-history__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp64__um-fp256.csv
+├── convergence-history__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp128__um-fp256.csv
+└── ...
+```
+
+Each file will have the common columns followed by:
+
+```csv
+iteration,forward_error_inf,backward_error_inf,rel_correction
+```
+
+For iteration zero, `rel_correction` should preferably be empty rather than `0`, because no correction precedes the initial solution. Writing zero would create an artificial value that is problematic on a logarithmic plot.
+
+### Plot organization
+
+For each precision triple, the plotting script should produce one figure with three panels:
+
+1. relative forward error versus iteration;
+2. normwise backward error versus iteration;
+3. relative correction versus iteration.
+
+Each condition number appears as a separate curve. We can later select the clearest subset of precision triples and condition numbers for the report without rerunning the experiments.
+
+### CMake organization
+
+The parent file becomes:
+
+```cmake
+## code/experiments/CMakeLists.txt
+
+add_subdirectory(convergence)
+add_subdirectory(condition_sweeps)
+add_subdirectory(residual_precision)
+add_subdirectory(direct_comparison)
+add_subdirectory(robustness)
+```
+
+For Group A:
+
+```cmake
+## code/experiments/convergence/CMakeLists.txt
+
+add_executable(
+    exp_convergence_histories
+    exp_convergence_histories.cc
+)
+
+target_link_libraries(
+    exp_convergence_histories
+    PRIVATE
+        mixed_precision_core
+        mixed_precision_warnings
+)
+```
+
+The top-level `code/CMakeLists.txt` only needs:
+
+```cmake
+add_subdirectory(experiments)
+```
+
+We can keep `mixed_precision_core` as an `INTERFACE` library: adding experiment `.cc` files does not require converting the core into a compiled library.
+
+So the next concrete step is to refactor the old `exp_convergence_random_spd.cc` into `exp_convergence_histories.cc` with the templated runner above.
+
+### How to run
+
+Implemented and verified the new plotting script:
+
+[plot_convergence_histories.py](sandbox:/workspace/scratch/47115038590b/plot_convergence_histories.py)
+
+Place it under `code/scripts/`, then run from `code/`:
+
+```bash
+python3 scripts/plot_convergence_histories.py
+```
+
+It automatically:
+
+* Finds all `convergence-history__*.csv` files under `results/raw/convergence/`.
+* Generates one three-panel figure per precision configuration.
+* Plots each condition number as a separate curve.
+* Uses logarithmic vertical axes.
+* Handles the empty iteration-0 relative correction correctly.
+* Writes figures to `results/plots/convergence/` using the corresponding CSV filename.
+* Validates the CSV schema and warns about unplottable status-only runs.
+
+PNG is the default. Vector PDF output is available with:
+
+```bash
+python3 scripts/plot_convergence_histories.py --format pdf
+```
+
+You can also plot a particular file:
+
+```bash
+python3 scripts/plot_convergence_histories.py \
+    results/raw/convergence/convergence-history__...csv
+```
+
+### Legends Codes
+
+
+* `[C]` — converged
+* `[M]` — maximum iterations
+* `[D]` — diverged
+* `[N]` — non-finite value
+* `[F]` — non-finite factorization input
+

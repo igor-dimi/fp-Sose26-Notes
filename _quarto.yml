@@ -15,6 +15,7 @@ book:
       - notes/conversions.qmd
       - notes/mixed_ir.qmd
       - notes/experiments.qmd
+      - notes/experiment_plan.qmd
     - report.qmd
 
   appendices:
