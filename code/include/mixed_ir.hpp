@@ -56,6 +56,30 @@ struct MixedIROptions {
     // Store x0, x1, x2, ... for convergence-history experiments.
     // This can be disabled for large parameter sweeps to save memory.
     bool store_iterates = false;
+
+    // Normalize each residual by its infinity norm before narrowing it
+    // to T_factor. The correction is rescaled in T_work after the
+    // triangular solve. Disabled by default so existing experiments
+    // preserve their previous behavior unless scaling is requested.
+    bool scale_residual = false;
+
+    // Record componentwise residual-conversion diagnostics.
+    bool record_residual_diagnostics = false;
+};
+
+
+struct ResidualDiagnostic {
+    // This record describes r_k = b - A*x_k.
+    std::size_t iteration = 0;
+
+    // Statistics of the original residual in T_residual.
+    double residual_inf_norm = 0.0;
+    double min_nonzero_abs = 0.0;
+    std::size_t nonzero_components = 0;
+
+    // Number of nonzero components in the right-hand side presented
+    // for conversion that became exactly zero in T_factor.
+    std::size_t zeroed_by_conversion = 0;
 };
 
 
@@ -115,6 +139,12 @@ struct MixedIRResult {
     //
     //     iterates.size() == iterations + 1.
     std::vector<hdnum::Vector<T_work>> iterates;
+
+    // Optional diagnostics for residual narrowing. When residual
+    // scaling is enabled, zeroed_by_conversion refers to conversion
+    // of the normalized residual; the magnitude statistics above
+    // still refer to the original residual.
+    std::vector<ResidualDiagnostic> residual_diagnostics;
 };
 
 
@@ -392,6 +422,12 @@ mixed_ir(
         options.max_iterations
     );
 
+    if (options.record_residual_diagnostics) {
+        result.residual_diagnostics.reserve(
+            options.max_iterations
+        );
+    }
+
     if (options.store_iterates) {
         result.iterates.reserve(
             options.max_iterations + 1
@@ -432,23 +468,104 @@ mixed_ir(
         }
 
 
+        // The infinity norm is needed either as the scaling factor or
+        // as a recorded diagnostic. The remaining statistics are only
+        // collected when diagnostics are enabled.
+        T_residual residual_inf_norm_r = T_residual(0);
+        T_residual min_nonzero_abs_r = T_residual(0);
+        std::size_t nonzero_components = 0;
+
+        if (options.scale_residual ||
+            options.record_residual_diagnostics) {
+            using std::abs;
+
+            for (std::size_t i = 0; i < n; ++i) {
+                const T_residual abs_value = abs(r_r[i]);
+
+                if (abs_value > residual_inf_norm_r) {
+                    residual_inf_norm_r = abs_value;
+                }
+
+                if (options.record_residual_diagnostics &&
+                    abs_value > T_residual(0)) {
+                    if (nonzero_components == 0 ||
+                        abs_value < min_nonzero_abs_r) {
+                        min_nonzero_abs_r = abs_value;
+                    }
+
+                    ++nonzero_components;
+                }
+            }
+        }
+
+        // Form the right-hand side that will be narrowed to T_factor.
+        // If scaling is enabled and r_k is nonzero, use
+        //
+        //     r_hat_k = r_k / ||r_k||_infinity.
+        //
+        // Every component of r_hat_k then has magnitude at most one.
+        hdnum::Vector<T_residual> correction_rhs_r(r_r);
+        T_residual residual_scale_r = T_residual(1);
+        bool residual_was_scaled = false;
+
+        if (options.scale_residual &&
+            residual_inf_norm_r > T_residual(0)) {
+            residual_scale_r = residual_inf_norm_r;
+            residual_was_scaled = true;
+
+            for (std::size_t i = 0; i < n; ++i) {
+                correction_rhs_r[i] =
+                    correction_rhs_r[i] / residual_scale_r;
+            }
+        }
+
         // The triangular correction solve uses T_factor LU
         // factors, so its right-hand side must be in T_factor.
         hdnum::Vector<T_factor> r_f(n);
-        convert(r_f, r_r);
+        convert(r_f, correction_rhs_r);
 
-        // Important: narrowing a finite residual to T_factor can overflow.
+        // Narrowing the normalized residual should not overflow because
+        // its components have magnitude at most one. Keep this check for
+        // the unscaled path and as a defensive check for custom types.
         if (!all_finite(r_f)) {
             result.status = MixedIRStatus::non_finite;
             return result;
         }
 
+        if (options.record_residual_diagnostics) {
+            std::size_t zeroed_by_conversion = 0;
 
-        // Solve
+            for (std::size_t i = 0; i < n; ++i) {
+                if (!(correction_rhs_r[i] == T_residual(0)) &&
+                    r_f[i] == T_factor(0)) {
+                    ++zeroed_by_conversion;
+                }
+            }
+
+            ResidualDiagnostic diagnostic;
+            diagnostic.iteration = k;
+            diagnostic.residual_inf_norm =
+                scalar_cast<double>(residual_inf_norm_r);
+            diagnostic.min_nonzero_abs =
+                nonzero_components > 0
+                    ? scalar_cast<double>(min_nonzero_abs_r)
+                    : 0.0;
+            diagnostic.nonzero_components =
+                nonzero_components;
+            diagnostic.zeroed_by_conversion =
+                zeroed_by_conversion;
+
+            result.residual_diagnostics.push_back(
+                diagnostic
+            );
+        }
+
+        // Solve the correction system using the existing low-precision
+        // LU factors. With scaling enabled this computes
         //
-        //     A*d_k = r_k
+        //     A*d_hat_k = r_k / theta_k;
         //
-        // using the existing low-precision LU factors.
+        // otherwise it computes A*d_k = r_k directly.
         hdnum::Vector<T_factor> d_f =
             solve_with_lu_fullpivot(
                 A_f,
@@ -465,7 +582,7 @@ mixed_ir(
             return result;
         }
 
-        // Convert the correction to working precision.
+        // Convert the normalized correction to working precision.
         hdnum::Vector<T_work> d_w(n);
         convert(d_w, d_f);
 
@@ -474,6 +591,32 @@ mixed_ir(
         if (!all_finite(d_w)) {
             result.status = MixedIRStatus::non_finite;
             return result;
+        }
+
+        // The normalized solve produced d_hat_k satisfying
+        //
+        //     A*d_hat_k = r_k / theta_k.
+        //
+        // Recover d_k = theta_k*d_hat_k in working precision. The small
+        // absolute scale theta_k is therefore never represented in
+        // T_factor.
+        if (residual_was_scaled) {
+            const T_work residual_scale_w =
+                scalar_cast<T_work>(residual_scale_r);
+
+            if (!scalar_is_finite(residual_scale_w)) {
+                result.status = MixedIRStatus::non_finite;
+                return result;
+            }
+
+            for (std::size_t i = 0; i < n; ++i) {
+                d_w[i] = residual_scale_w * d_w[i];
+            }
+
+            if (!all_finite(d_w)) {
+                result.status = MixedIRStatus::non_finite;
+                return result;
+            }
         }
 
         // Compute the absolute correction norm
