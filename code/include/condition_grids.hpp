@@ -125,7 +125,8 @@ template<class T_factor>
         0.5,
         1.0,
         2.0,
-        10.0
+        10.0,
+        100.0
     };
 
     std::vector<double> kappas;
