@@ -1,10 +1,10 @@
-#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
 #include <string_view>
 
+#include "experiment_io.hpp"
 #include "hdnum.hh"
 #include "mixed_ir.hpp"
 #include "test_matrices.hpp"
@@ -16,12 +16,33 @@ int main()
     using T_residual = hdnum::FP128;
     using T_measure = hdnum::FP256;
 
-    const std::filesystem::path output_dir = MPIR_RESULTS_RAW_DIR;
-    std::filesystem::create_directories(output_dir);
+    const std::size_t n = 100;
+    const double kappa = 10.0;
 
-    const std::filesystem::path output_file =
+    mpir::TestProblemOptions problem_options;
+    problem_options.rhs_mode =
+        mpir::RightHandSideMode::random_normal_rhs;
+
+    const mpir::ExperimentDescription experiment{
+        mpir::ExperimentKind::residual_scaling,
+        mpir::MatrixFamily::random_spd,
+        n,
+        {"fp16", "fp64", "fp128", "fp256"}
+    };
+
+    const auto output_dir =
+        mpir::make_output_directory(
+            MPIR_RESULTS_RAW_DIR,
+            experiment.kind
+        );
+
+    const auto output_file =
         output_dir /
-        "residual_scaling_comparison_fp16_fp64_fp128.csv";
+        mpir::make_experiment_filename(
+            experiment,
+            problem_options,
+            "comparison"
+        );
 
     std::ofstream out(output_file);
 
@@ -36,13 +57,6 @@ int main()
                std::numeric_limits<double>::max_digits10
            );
 
-    const std::size_t n = 100;
-    const double kappa = 10.0;
-
-    mpir::TestProblemOptions problem_options;
-    problem_options.rhs_mode =
-        mpir::RightHandSideMode::random_normal_rhs;
-
     // Both runs use this same matrix and right-hand side, so any
     // difference is caused by residual scaling rather than a new
     // random problem instance.
@@ -53,13 +67,12 @@ int main()
             problem_options
         );
 
-    out << "mode,iteration,residual_inf_norm,min_nonzero_abs,"
-           "nonzero_components,zeroed_by_conversion,rel_correction,"
-           "converged,"
-           "total_iterations,final_rel_correction\n";
+    mpir::write_common_csv_header(out);
+    out << ",iteration,residual_inf_norm,min_nonzero_abs,"
+           "nonzero_components,zeroed_by_conversion,rel_correction\n";
 
     const auto run =
-        [&](std::string_view mode, bool scale_residual) {
+        [&](std::string_view variant, bool scale_residual) {
             mpir::MixedIROptions<T_work> options;
             options.max_iterations = 20;
             options.store_iterates = false;
@@ -84,19 +97,25 @@ int main()
                           ]
                         : std::numeric_limits<double>::quiet_NaN();
 
-                out << mode << ","
-                    << diagnostic.iteration << ","
+                mpir::write_common_csv_fields(
+                    out,
+                    experiment,
+                    problem_options,
+                    options,
+                    kappa,
+                    variant,
+                    result
+                );
+
+                out << "," << diagnostic.iteration << ","
                     << diagnostic.residual_inf_norm << ","
                     << diagnostic.min_nonzero_abs << ","
                     << diagnostic.nonzero_components << ","
                     << diagnostic.zeroed_by_conversion << ","
-                    << rel_correction << ","
-                    << result.converged() << ","
-                    << result.iterations << ","
-                    << result.final_rel_correction << "\n";
+                    << rel_correction << "\n";
             }
 
-            std::cout << mode
+            std::cout << variant
                       << ": converged = " << result.converged()
                       << ", iterations = " << result.iterations
                       << ", final_rel_correction = "
