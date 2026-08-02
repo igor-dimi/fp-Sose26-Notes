@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>6&nbsp; Mixed-Precision Iterative Refinement: Experiment Plan – Advanced Praktika SoSe 26 Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../report.html" rel="next">
+<link href="../notes/experiments.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-bf132de45b538d253cd2e2da5fec6016.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script>
+window.MathJax = {
+  tex: {
+    macros: {
+      norm: ["\\left\\lVert #1 \\right\\rVert", 1],
+      normsub: ["\\left\\lVert #1 \\right\\rVert_{#2}", 2] 
+    }
+  }
+};
+</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../notes/project_setup.html">Notes</a></li><li class="breadcrumb-item"><a href="../notes/experiment_plan.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Experiment Plan</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Advanced Praktika SoSe 26 Notes</a> 
+        <div class="sidebar-tools-main">
+    <a href="../Advanced-Praktika-SoSe-26-Notes.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Notes</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notes/project_setup.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Project Setup</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notes/project_overview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Project Summary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notes/conversions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Conversions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notes/mixed_ir.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Implementation of the Mixed IR Algorithm</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notes/experiments.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments &amp; Robustness Improvements</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notes/experiment_plan.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Experiment Plan</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../report.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Report</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/gdb.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">GDB usage Notes</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#overall-experiment-plan" id="toc-overall-experiment-plan" class="nav-link active" data-scroll-target="#overall-experiment-plan"><span class="header-section-number">6.1</span> Overall experiment plan</a></li>
+  <li><a href="#group-a-convergence-histories" id="toc-group-a-convergence-histories" class="nav-link" data-scroll-target="#group-a-convergence-histories"><span class="header-section-number">6.2</span> Group A: convergence histories</a>
+  <ul class="collapse">
+  <li><a href="#representative-precision-triples" id="toc-representative-precision-triples" class="nav-link" data-scroll-target="#representative-precision-triples">Representative precision triples</a></li>
+  <li><a href="#condition-numbers" id="toc-condition-numbers" class="nav-link" data-scroll-target="#condition-numbers">Condition numbers</a></li>
+  <li><a href="#plots" id="toc-plots" class="nav-link" data-scroll-target="#plots">Plots</a></li>
+  </ul></li>
+  <li><a href="#group-b-general-condition-number-sweeps" id="toc-group-b-general-condition-number-sweeps" class="nav-link" data-scroll-target="#group-b-general-condition-number-sweeps"><span class="header-section-number">6.3</span> Group B: general condition-number sweeps</a>
+  <ul class="collapse">
+  <li><a href="#seed-policy" id="toc-seed-policy" class="nav-link" data-scroll-target="#seed-policy">Seed policy</a></li>
+  <li><a href="#recorded-quantities" id="toc-recorded-quantities" class="nav-link" data-scroll-target="#recorded-quantities">Recorded quantities</a></li>
+  <li><a href="#plots-1" id="toc-plots-1" class="nav-link" data-scroll-target="#plots-1">Plots</a></li>
+  </ul></li>
+  <li><a href="#group-c-singledoubledouble-versus-singledoublequad" id="toc-group-c-singledoubledouble-versus-singledoublequad" class="nav-link" data-scroll-target="#group-c-singledoubledouble-versus-singledoublequad"><span class="header-section-number">6.4</span> Group C: single–double–double versus single–double–quad</a>
+  <ul class="collapse">
+  <li><a href="#precision-configurations" id="toc-precision-configurations" class="nav-link" data-scroll-target="#precision-configurations">Precision configurations</a></li>
+  <li><a href="#theoretical-expectation" id="toc-theoretical-expectation" class="nav-link" data-scroll-target="#theoretical-expectation">Theoretical expectation</a></li>
+  <li><a href="#condition-number-sweep" id="toc-condition-number-sweep" class="nav-link" data-scroll-target="#condition-number-sweep">Condition-number sweep</a></li>
+  <li><a href="#required-plots" id="toc-required-plots" class="nav-link" data-scroll-target="#required-plots">Required plots</a></li>
+  <li><a href="#measurement-details" id="toc-measurement-details" class="nav-link" data-scroll-target="#measurement-details">Measurement details</a></li>
+  </ul></li>
+  <li><a href="#group-d-comparison-with-a-direct-solve" id="toc-group-d-comparison-with-a-direct-solve" class="nav-link" data-scroll-target="#group-d-comparison-with-a-direct-solve"><span class="header-section-number">6.5</span> Group D: comparison with a direct solve</a>
+  <ul class="collapse">
+  <li><a href="#plots-2" id="toc-plots-2" class="nav-link" data-scroll-target="#plots-2">Plots</a></li>
+  </ul></li>
+  <li><a href="#group-e-fp16-robustness-extension" id="toc-group-e-fp16-robustness-extension" class="nav-link" data-scroll-target="#group-e-fp16-robustness-extension"><span class="header-section-number">6.6</span> Group E: FP16 robustness extension</a>
+  <ul class="collapse">
+  <li><a href="#e1.-controlled-scaling-comparison" id="toc-e1.-controlled-scaling-comparison" class="nav-link" data-scroll-target="#e1.-controlled-scaling-comparison">E1. Controlled scaling comparison</a></li>
+  <li><a href="#principal-plots" id="toc-principal-plots" class="nav-link" data-scroll-target="#principal-plots">Principal plots</a></li>
+  <li><a href="#diagnostic-plots" id="toc-diagnostic-plots" class="nav-link" data-scroll-target="#diagnostic-plots">Diagnostic plots</a></li>
+  <li><a href="#e2.-broader-scaling-validation" id="toc-e2.-broader-scaling-validation" class="nav-link" data-scroll-target="#e2.-broader-scaling-validation">E2. Broader scaling validation</a></li>
+  <li><a href="#e3.-fp16-overflow-handling" id="toc-e3.-fp16-overflow-handling" class="nav-link" data-scroll-target="#e3.-fp16-overflow-handling">E3. FP16 overflow handling</a></li>
+  </ul></li>
+  <li><a href="#controlling-the-experiment-space" id="toc-controlling-the-experiment-space" class="nav-link" data-scroll-target="#controlling-the-experiment-space"><span class="header-section-number">6.7</span> Controlling the experiment space</a></li>
+  <li><a href="#common-metadata-design" id="toc-common-metadata-design" class="nav-link" data-scroll-target="#common-metadata-design"><span class="header-section-number">6.8</span> Common metadata design</a>
+  <ul class="collapse">
+  <li><a href="#experiment-identity" id="toc-experiment-identity" class="nav-link" data-scroll-target="#experiment-identity">Experiment identity</a></li>
+  <li><a href="#test-problem-options" id="toc-test-problem-options" class="nav-link" data-scroll-target="#test-problem-options">Test-problem options</a></li>
+  <li><a href="#algorithm-options" id="toc-algorithm-options" class="nav-link" data-scroll-target="#algorithm-options">Algorithm options</a></li>
+  <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results">Results</a></li>
+  <li><a href="#csv-representation" id="toc-csv-representation" class="nav-link" data-scroll-target="#csv-representation">CSV representation</a></li>
+  </ul></li>
+  <li><a href="#automatic-filenames" id="toc-automatic-filenames" class="nav-link" data-scroll-target="#automatic-filenames"><span class="header-section-number">6.9</span> Automatic filenames</a></li>
+  <li><a href="#output-directory-organization" id="toc-output-directory-organization" class="nav-link" data-scroll-target="#output-directory-organization"><span class="header-section-number">6.10</span> Output-directory organization</a></li>
+  <li><a href="#recommended-implementation-order" id="toc-recommended-implementation-order" class="nav-link" data-scroll-target="#recommended-implementation-order"><span class="header-section-number">6.11</span> Recommended implementation order</a>
+  <ul class="collapse">
+  <li><a href="#implementation-plan" id="toc-implementation-plan" class="nav-link" data-scroll-target="#implementation-plan">Implementation Plan</a></li>
+  <li><a href="#create-the-branch" id="toc-create-the-branch" class="nav-link" data-scroll-target="#create-the-branch">1. Create the branch</a></li>
+  <li><a href="#freeze-the-common-schema-first" id="toc-freeze-the-common-schema-first" class="nav-link" data-scroll-target="#freeze-the-common-schema-first">2. Freeze the common schema first</a></li>
+  <li><a href="#create-experiment_io.hpp" id="toc-create-experiment_io.hpp" class="nav-link" data-scroll-target="#create-experiment_io.hpp">3. Create <code>experiment_io.hpp</code></a></li>
+  <li><a href="#use-the-residual-scaling-experiment-as-the-pilot" id="toc-use-the-residual-scaling-experiment-as-the-pilot" class="nav-link" data-scroll-target="#use-the-residual-scaling-experiment-as-the-pilot">4. Use the residual-scaling experiment as the pilot</a></li>
+  <li><a href="#verify-the-pilot-carefully" id="toc-verify-the-pilot-carefully" class="nav-link" data-scroll-target="#verify-the-pilot-carefully">5. Verify the pilot carefully</a></li>
+  <li><a href="#keep-the-first-milestone-narrow" id="toc-keep-the-first-milestone-narrow" class="nav-link" data-scroll-target="#keep-the-first-milestone-narrow">6. Keep the first milestone narrow</a></li>
+  <li><a href="#condition-grids" id="toc-condition-grids" class="nav-link" data-scroll-target="#condition-grids">Condition Grids</a></li>
+  <li><a href="#further-details" id="toc-further-details" class="nav-link" data-scroll-target="#further-details">Further Details</a></li>
+  <li><a href="#one-template-several-precision-triples" id="toc-one-template-several-precision-triples" class="nav-link" data-scroll-target="#one-template-several-precision-triples">One template, several precision triples</a></li>
+  <li><a href="#condition-number-selection" id="toc-condition-number-selection" class="nav-link" data-scroll-target="#condition-number-selection">Condition-number selection</a></li>
+  <li><a href="#experiment-settings" id="toc-experiment-settings" class="nav-link" data-scroll-target="#experiment-settings">Experiment settings</a></li>
+  <li><a href="#csv-organization" id="toc-csv-organization" class="nav-link" data-scroll-target="#csv-organization">CSV organization</a></li>
+  <li><a href="#plot-organization" id="toc-plot-organization" class="nav-link" data-scroll-target="#plot-organization">Plot organization</a></li>
+  <li><a href="#cmake-organization" id="toc-cmake-organization" class="nav-link" data-scroll-target="#cmake-organization">CMake organization</a></li>
+  <li><a href="#how-to-run" id="toc-how-to-run" class="nav-link" data-scroll-target="#how-to-run">How to run</a></li>
+  <li><a href="#legends-codes" id="toc-legends-codes" class="nav-link" data-scroll-target="#legends-codes">Legends Codes</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../notes/project_setup.html">Notes</a></li><li class="breadcrumb-item"><a href="../notes/experiment_plan.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Experiment Plan</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Experiment Plan</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>With the corrected third task and the decision to keep the primary condition sweeps deterministic, the complete plan becomes the following.</p>
+<p>The best place to begin remains the experiment-output infrastructure. Once the full suite is running, incomplete metadata, inconsistent filenames, or unclear seed handling would force us to regenerate results.</p>
+<section id="overall-experiment-plan" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="overall-experiment-plan"><span class="header-section-number">6.1</span> Overall experiment plan</h2>
+<p>The experiments can be divided into the four objectives from the project brief and a fifth group covering our FP16 robustness extension.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Group</th>
+<th>Purpose</th>
+<th>Main variables</th>
+<th>Main outputs</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A. Convergence histories</td>
+<td>Examine refinement iteration by iteration</td>
+<td>precision triple, selected <span class="math inline">\(\kappa(A)\)</span></td>
+<td>forward error, backward error, relative correction</td>
+</tr>
+<tr class="even">
+<td>B. Condition-number sweeps</td>
+<td>Locate the convergence boundary</td>
+<td><span class="math inline">\(\kappa(A)\)</span>, precision triple</td>
+<td>final/best errors, iterations, status</td>
+</tr>
+<tr class="odd">
+<td>C. Residual-precision comparison</td>
+<td>Validate the last two rows of Table 7.1</td>
+<td>single–double–double vs.&nbsp;single–double–quad</td>
+<td>forward and backward error vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span></td>
+</tr>
+<tr class="even">
+<td>D. Direct-solve comparison</td>
+<td>Measure the benefit of refinement</td>
+<td>mixed IR vs.&nbsp;direct solve in working precision</td>
+<td>error vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span></td>
+</tr>
+<tr class="odd">
+<td>E. FP16 robustness extension</td>
+<td>Demonstrate range checks and residual scaling</td>
+<td>scaling on/off, <span class="math inline">\(\kappa(A)\)</span></td>
+<td>histories, conversion diagnostics, termination status</td>
+</tr>
+</tbody>
+</table>
+<p>For the primary experiments, the default random seeds should remain fixed. This isolates the effect of the condition number and keeps the plots straightforward.</p>
+</section>
+<section id="group-a-convergence-histories" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="group-a-convergence-histories"><span class="header-section-number">6.2</span> Group A: convergence histories</h2>
+<p>These experiments show how the algorithm behaves over individual refinement iterations.</p>
+<section id="representative-precision-triples" class="level3">
+<h3 class="anchored" data-anchor-id="representative-precision-triples">Representative precision triples</h3>
+<p>A suitable selection is:</p>
+<ul>
+<li>FP64–FP64–FP64: same-precision baseline;</li>
+<li>FP32–FP64–FP64: classical mixed precision;</li>
+<li>FP32–FP64–FP128: higher residual precision;</li>
+<li>FP16–FP64–FP64: half-precision factorization;</li>
+<li>FP16–FP64–FP128: principal FP16 configuration;</li>
+<li>bfloat16–FP64–FP128: exponent-range comparison;</li>
+<li>FP8–FP64–FP128: optional stress test.</li>
+</ul>
+<p>Not every precision triple needs to appear in the main report. A representative subset can be selected after inspecting the results.</p>
+</section>
+<section id="condition-numbers" class="level3">
+<h3 class="anchored" data-anchor-id="condition-numbers">Condition numbers</h3>
+<p>For each factorization precision, choose condition numbers:</p>
+<ul>
+<li>clearly inside the predicted convergence region;</li>
+<li>near <span class="math inline">\(\kappa(A)u_f\approx 1\)</span>;</li>
+<li>outside the predicted region.</li>
+</ul>
+</section>
+<section id="plots" class="level3">
+<h3 class="anchored" data-anchor-id="plots">Plots</h3>
+<p>For every selected configuration, plot against iteration:</p>
+<ol type="1">
+<li>relative forward error;</li>
+<li>normwise backward error;</li>
+<li>relative correction,</li>
+</ol>
+<p><span class="math display">\[
+\frac{\lVert d_k\rVert_2}{\lVert x_k\rVert_2}.
+\]</span></p>
+<p>The seeds remain fixed within and across comparisons. This ensures that different precision triples solve exactly the same problems.</p>
+</section>
+</section>
+<section id="group-b-general-condition-number-sweeps" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="group-b-general-condition-number-sweeps"><span class="header-section-number">6.3</span> Group B: general condition-number sweeps</h2>
+<p>These experiments study how each precision configuration behaves as conditioning deteriorates.</p>
+<p>Use a logarithmic condition-number grid, supplemented with additional points near the expected convergence boundary <span class="math inline">\(1/u_f\)</span>.</p>
+<p>For example:</p>
+<ul>
+<li>FP16: concentrate around <span class="math inline">\(10^2\)</span>–<span class="math inline">\(10^4\)</span>;</li>
+<li>bfloat16: concentrate around <span class="math inline">\(10^1\)</span>–<span class="math inline">\(10^3\)</span>;</li>
+<li>FP32: concentrate around <span class="math inline">\(10^6\)</span>–<span class="math inline">\(10^9\)</span>.</li>
+</ul>
+<section id="seed-policy" class="level3">
+<h3 class="anchored" data-anchor-id="seed-policy">Seed policy</h3>
+<p>Only <span class="math inline">\(\kappa(A)\)</span> should vary. Use the default fixed seeds for:</p>
+<ul>
+<li>the matrix generator;</li>
+<li>the right-hand side;</li>
+<li>any generated orthogonal transformations.</li>
+</ul>
+<p>Provided the generator is reset deterministically for each value of <span class="math inline">\(\kappa(A)\)</span>, this keeps the matrix orientation and right-hand side controlled while changing the prescribed spectrum.</p>
+<p>Multiple seeds are not required. They can be added later only if the primary sweep produces unexpectedly irregular results.</p>
+<p>A concise report formulation is:</p>
+<blockquote class="blockquote">
+<p>The random seeds were fixed throughout the sweep. Thus, the matrix structure and right-hand side remained controlled while the prescribed condition number was varied. This isolates the effect of conditioning and permits direct comparisons between precision configurations.</p>
+</blockquote>
+</section>
+<section id="recorded-quantities" class="level3">
+<h3 class="anchored" data-anchor-id="recorded-quantities">Recorded quantities</h3>
+<p>For each run, record:</p>
+<ul>
+<li>requested condition number;</li>
+<li>measured condition number;</li>
+<li>termination status;</li>
+<li>final forward and backward errors;</li>
+<li>best attained forward and backward errors;</li>
+<li>iterations at which the best errors occurred;</li>
+<li>number of completed refinement updates;</li>
+<li>final relative correction.</li>
+</ul>
+</section>
+<section id="plots-1" class="level3">
+<h3 class="anchored" data-anchor-id="plots-1">Plots</h3>
+<p>Create:</p>
+<ol type="1">
+<li>final forward error vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>;</li>
+<li>final backward error vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>;</li>
+<li>best attained error vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>;</li>
+<li>iteration count vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>;</li>
+<li>termination status vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>.</li>
+</ol>
+<p>Show the theoretical condition</p>
+<p><span class="math display">\[
+\kappa(A)u_f=1
+\]</span></p>
+<p>as a vertical reference line.</p>
+<p>Because the seeds are fixed, each configuration produces a single curve. No medians, ranges, or quantile bands are needed.</p>
+</section>
+</section>
+<section id="group-c-singledoubledouble-versus-singledoublequad" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="group-c-singledoubledouble-versus-singledoublequad"><span class="header-section-number">6.4</span> Group C: single–double–double versus single–double–quad</h2>
+<p>This replaces the earlier broad residual-precision study. It directly implements the experiment requested by the supervisor and validates the final two rows of Table 7.1 in the Carson–Higham paper.</p>
+<section id="precision-configurations" class="level3">
+<h3 class="anchored" data-anchor-id="precision-configurations">Precision configurations</h3>
+<p>Compare:</p>
+<ol type="1">
+<li><p>single–double–double:</p>
+<p><span class="math display">\[
+u_f=u_{\mathrm{single}},
+\qquad
+u=u_r=u_{\mathrm{double}};
+\]</span></p></li>
+<li><p>single–double–quad:</p>
+<p><span class="math display">\[
+u_f=u_{\mathrm{single}},
+\qquad
+u=u_{\mathrm{double}},
+\qquad
+u_r=u_{\mathrm{quad}}\approx u^2.
+\]</span></p></li>
+</ol>
+<p>Only the residual precision changes. Both variants must use:</p>
+<ul>
+<li>the same matrix;</li>
+<li>the same right-hand side;</li>
+<li>the same fixed seeds;</li>
+<li>the same stopping criterion;</li>
+<li>the same maximum iteration count;</li>
+<li>the same remaining algorithm options.</li>
+</ul>
+</section>
+<section id="theoretical-expectation" class="level3">
+<h3 class="anchored" data-anchor-id="theoretical-expectation">Theoretical expectation</h3>
+<p>The general limiting forward-error bound is</p>
+<p><span class="math display">\[
+\frac{\lVert x-\widehat{x}\rVert_\infty}
+     {\lVert x\rVert_\infty}
+\lesssim
+4p\,u_r\,\operatorname{cond}(A,x)+u.
+\]</span></p>
+<p>For single–double–double, <span class="math inline">\(u_r=u\)</span>, giving</p>
+<p><span class="math display">\[
+4p\,u\,\operatorname{cond}(A,x)+u.
+\]</span></p>
+<p>The conditioning-dependent term generally dominates, so the expected forward error is</p>
+<p><span class="math display">\[
+O\!\left(u\,\operatorname{cond}(A,x)\right).
+\]</span></p>
+<p>For single–double–quad, <span class="math inline">\(u_r\approx u^2\)</span>, giving</p>
+<p><span class="math display">\[
+4p\,u^2\,\operatorname{cond}(A,x)+u.
+\]</span></p>
+<p>Within the convergence region of the single-precision factorization, the first term is sufficiently small that the working-precision term dominates. Therefore, the expected forward error is</p>
+<p><span class="math display">\[
+O(u).
+\]</span></p>
+<p>Both variants should attain a backward error of order</p>
+<p><span class="math display">\[
+O(u).
+\]</span></p>
+<p>Thus, the quad residual should improve the limiting forward error substantially, while both variants should produce approximately double-precision backward errors.</p>
+<p>The remembered equation</p>
+<p><span class="math display">\[
+4pu^2\operatorname{cond}(A,x)+u\lesssim 4pu
+\]</span></p>
+<p>is correct, but equation (8.5) appears in the later GMRES-IR analysis. For ordinary LU-IR, the general bound above provides the more direct explanation.</p>
+</section>
+<section id="condition-number-sweep" class="level3">
+<h3 class="anchored" data-anchor-id="condition-number-sweep">Condition-number sweep</h3>
+<p>A suitable initial range is approximately</p>
+<p><span class="math display">\[
+10^0\leq\kappa(A)\leq10^9,
+\]</span></p>
+<p>with additional points between <span class="math inline">\(10^6\)</span> and <span class="math inline">\(10^8\)</span>, near the single-precision convergence boundary.</p>
+<p>For IEEE single precision,</p>
+<p><span class="math display">\[
+u_f=2^{-24}\approx5.96\times10^{-8},
+\qquad
+u_f^{-1}\approx1.68\times10^7.
+\]</span></p>
+<p>This is only an approximate boundary. The actual transition can occur earlier because it also depends on the stability of the computed factorization.</p>
+</section>
+<section id="required-plots" class="level3">
+<h3 class="anchored" data-anchor-id="required-plots">Required plots</h3>
+<p>The supervisor requested two log–log plots, both with condition number on the horizontal axis:</p>
+<ol type="1">
+<li>forward error for both variants in one plot;</li>
+<li>backward error for both variants in one plot.</li>
+</ol>
+<p>Expected behaviour:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Plot</th>
+<th>Expected result</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Forward error</td>
+<td>single–double–double grows approximately as <span class="math inline">\(u\,\operatorname{cond}(A,x)\)</span>; single–double–quad remains near <span class="math inline">\(u\)</span></td>
+</tr>
+<tr class="even">
+<td>Backward error</td>
+<td>both variants remain near <span class="math inline">\(u\)</span> while refinement converges</td>
+</tr>
+</tbody>
+</table>
+<p>Useful reference lines are:</p>
+<ul>
+<li><span class="math inline">\(u\)</span>, representing the double-precision floor;</li>
+<li><span class="math inline">\(u\kappa(A)\)</span>, illustrating the expected single–double–double trend;</li>
+<li><span class="math inline">\(1/u_f\)</span>, marking the approximate convergence boundary.</li>
+</ul>
+</section>
+<section id="measurement-details" class="level3">
+<h3 class="anchored" data-anchor-id="measurement-details">Measurement details</h3>
+<p>Table 7.1 uses <span class="math inline">\(\kappa_\infty(A)\)</span>, whereas the forward-error bound contains <span class="math inline">\(\operatorname{cond}(A,x)\)</span>. They are related but not identical.</p>
+<p>Each run should therefore record:</p>
+<ul>
+<li>requested/generated condition number;</li>
+<li>measured <span class="math inline">\(\kappa_2(A)\)</span>;</li>
+<li>preferably measured <span class="math inline">\(\kappa_\infty(A)\)</span>;</li>
+<li><span class="math inline">\(\operatorname{cond}(A,x)\)</span>, if practical;</li>
+<li>forward and backward errors;</li>
+<li>termination status;</li>
+<li>iteration count.</li>
+</ul>
+<p>The main horizontal axis should preferably use measured <span class="math inline">\(\kappa_\infty(A)\)</span>, matching Table 7.1. Error measurements should use sufficiently high precision, ideally FP256.</p>
+<p>This experiment can be summarized as:</p>
+<blockquote class="blockquote">
+<p>A condition-number sweep compares single–double–double and single–double–quad iterative refinement. Both variants are expected to attain double-precision backward error. The quad-residual variant should also attain double-precision forward error, whereas the double-residual variant should attain forward error of order <span class="math inline">\(u\,\operatorname{cond}(A,x)\)</span>.</p>
+</blockquote>
+</section>
+</section>
+<section id="group-d-comparison-with-a-direct-solve" class="level2" data-number="6.5">
+<h2 data-number="6.5" class="anchored" data-anchor-id="group-d-comparison-with-a-direct-solve"><span class="header-section-number">6.5</span> Group D: comparison with a direct solve</h2>
+<p>For every chosen working precision <span class="math inline">\(u\)</span>, compare:</p>
+<ul>
+<li>a single LU solve performed entirely in <span class="math inline">\(u\)</span>;</li>
+<li>mixed-precision iterative refinement whose iterates are stored in <span class="math inline">\(u\)</span>.</li>
+</ul>
+<p>The principal question is whether mixed IR attains working-precision accuracy while performing the factorization in a cheaper, lower precision.</p>
+<section id="plots-2" class="level3">
+<h3 class="anchored" data-anchor-id="plots-2">Plots</h3>
+<p>Create:</p>
+<ol type="1">
+<li>relative forward error vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>;</li>
+<li>backward error vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>;</li>
+<li>optionally, iteration count for mixed IR.</li>
+</ol>
+<p>Both methods must solve identical problems with fixed seeds.</p>
+</section>
+</section>
+<section id="group-e-fp16-robustness-extension" class="level2" data-number="6.6">
+<h2 data-number="6.6" class="anchored" data-anchor-id="group-e-fp16-robustness-extension"><span class="header-section-number">6.6</span> Group E: FP16 robustness extension</h2>
+<p>This should form a separate report section because it goes beyond the original project requirements.</p>
+<p>Two distinct FP16 range problems should be presented separately:</p>
+<ul>
+<li>factorization-input overflow;</li>
+<li>residual-conversion underflow.</li>
+</ul>
+<p>Residual scaling mitigates the second problem. It does not repair overflow in the original factorization input.</p>
+<section id="e1.-controlled-scaling-comparison" class="level3">
+<h3 class="anchored" data-anchor-id="e1.-controlled-scaling-comparison">E1. Controlled scaling comparison</h3>
+<p>Use the existing controlled problem:</p>
+<ul>
+<li>random SPD matrix;</li>
+<li><span class="math inline">\(n=100\)</span>;</li>
+<li><span class="math inline">\(\kappa(A)=10\)</span>;</li>
+<li>random-normal right-hand side;</li>
+<li>FP16–FP64–FP128;</li>
+<li>identical default seeds;</li>
+<li>residual scaling off and on.</li>
+</ul>
+<p>Only <code>scale_residual</code> should change.</p>
+</section>
+<section id="principal-plots" class="level3">
+<h3 class="anchored" data-anchor-id="principal-plots">Principal plots</h3>
+<p>Plot:</p>
+<ol type="1">
+<li>forward error vs.&nbsp;iteration;</li>
+<li>backward error vs.&nbsp;iteration;</li>
+<li>relative correction vs.&nbsp;iteration;</li>
+<li>residual infinity norm vs.&nbsp;iteration.</li>
+</ol>
+</section>
+<section id="diagnostic-plots" class="level3">
+<h3 class="anchored" data-anchor-id="diagnostic-plots">Diagnostic plots</h3>
+<p>Also plot:</p>
+<ol start="5" type="1">
+<li>number of residual components zeroed during conversion to FP16;</li>
+<li>smallest nonzero residual component vs.&nbsp;iteration, with the FP16 subnormal threshold shown.</li>
+</ol>
+<p>This experiment should demonstrate the observed mechanism:</p>
+<ul>
+<li>without scaling, increasingly many residual components are lost during conversion and the algorithm stagnates;</li>
+<li>with scaling, the residual is normalized before conversion;</li>
+<li>conversion-to-zero is avoided or greatly reduced;</li>
+<li>the algorithm reaches approximately FP64 accuracy.</li>
+</ul>
+</section>
+<section id="e2.-broader-scaling-validation" class="level3">
+<h3 class="anchored" data-anchor-id="e2.-broader-scaling-validation">E2. Broader scaling validation</h3>
+<p>A simple broader validation can also keep the default seeds fixed and vary only <span class="math inline">\(\kappa(A)\)</span>. Compare scaling on and off over several condition numbers for which the FP16 factorization input remains finite.</p>
+<p>Record:</p>
+<ul>
+<li>termination status;</li>
+<li>final and best forward errors;</li>
+<li>iteration count;</li>
+<li>maximum number of zeroed residual components;</li>
+<li>total number of zeroing events;</li>
+<li>residual-reduction factor.</li>
+</ul>
+<p>Create:</p>
+<ol type="1">
+<li>final forward error vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>;</li>
+<li>iterations vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>;</li>
+<li>maximum zeroed-component count vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>;</li>
+<li>termination status vs.&nbsp;<span class="math inline">\(\kappa(A)\)</span>.</li>
+</ol>
+<p>Multiple seeds are optional here as well. They would strengthen a claim of general robustness, but they are not necessary for the primary report. They should only be added if time permits or if the fixed-seed results appear atypical.</p>
+</section>
+<section id="e3.-fp16-overflow-handling" class="level3">
+<h3 class="anchored" data-anchor-id="e3.-fp16-overflow-handling">E3. FP16 overflow handling</h3>
+<p>Input overflow should be demonstrated separately.</p>
+<p>Record:</p>
+<table class="caption-top">
+<colgroup>
+<col style="width: 28%">
+<col style="width: 28%">
+<col style="width: 21%">
+<col style="width: 21%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;"><span class="math inline">\(\kappa(A)\)</span></th>
+<th style="text-align: right;">Maximum <span class="math inline">\(\lvert A_{ij}\rvert\)</span></th>
+<th>FP16 input finite</th>
+<th>Termination status</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table>
+<p>The expected robust behaviour is termination with a status such as <code>factorization_input_non_finite</code>, rather than a crash or propagation of invalid values.</p>
+<p>A table or categorical status plot is more suitable than a convergence-history plot.</p>
+</section>
+</section>
+<section id="controlling-the-experiment-space" class="level2" data-number="6.7">
+<h2 data-number="6.7" class="anchored" data-anchor-id="controlling-the-experiment-space"><span class="header-section-number">6.7</span> Controlling the experiment space</h2>
+<p>Testing every combination of matrix family, right-hand side, precision triple, condition number, seed, dimension, and scaling mode would produce an unnecessarily large experiment suite.</p>
+<p>A focused selection is preferable:</p>
+<ul>
+<li>primary matrix family: random SPD;</li>
+<li>primary right-hand side: random-normal;</li>
+<li>primary dimension: <span class="math inline">\(n=100\)</span>;</li>
+<li>fixed default seeds;</li>
+<li>rotated SPD: supplementary controlled case;</li>
+<li>random SVD: supplementary nonsymmetric case;</li>
+<li>alternative right-hand sides: optional sensitivity study;</li>
+<li>multiple seeds: optional robustness check only.</li>
+</ul>
+<p>This keeps the report centred on the requested effects.</p>
+</section>
+<section id="common-metadata-design" class="level2" data-number="6.8">
+<h2 data-number="6.8" class="anchored" data-anchor-id="common-metadata-design"><span class="header-section-number">6.8</span> Common metadata design</h2>
+<p>The experimental utilities should be based on one shared experiment description.</p>
+<p>Conceptually:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> PrecisionNames <span class="op">{</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>string factor<span class="op">;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>string work<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>string residual<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>string measure<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> ExperimentDescription <span class="op">{</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    ExperimentKind kind<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    MatrixFamily matrix_family<span class="op">;</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>size_t dimension<span class="op">;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    PrecisionNames precisions<span class="op">;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The metadata writer should additionally receive:</p>
+<ul>
+<li><code>TestProblemOptions</code>;</li>
+<li><code>MixedIROptions&lt;T_work&gt;</code>;</li>
+<li>the condition number or condition-number grid;</li>
+<li>the variant name, such as <code>scaled</code> or <code>unscaled</code>.</li>
+</ul>
+<section id="experiment-identity" class="level3">
+<h3 class="anchored" data-anchor-id="experiment-identity">Experiment identity</h3>
+<p>Record:</p>
+<ul>
+<li>experiment kind;</li>
+<li>matrix family;</li>
+<li>dimension <span class="math inline">\(n\)</span>;</li>
+<li>factorization precision;</li>
+<li>working precision;</li>
+<li>residual precision;</li>
+<li>measurement precision;</li>
+<li>algorithm variant.</li>
+</ul>
+</section>
+<section id="test-problem-options" class="level3">
+<h3 class="anchored" data-anchor-id="test-problem-options">Test-problem options</h3>
+<p>Record:</p>
+<ul>
+<li>right-hand-side mode;</li>
+<li><code>matrix_seed_u</code>;</li>
+<li><code>matrix_seed_v</code>;</li>
+<li><code>vector_seed</code>;</li>
+<li><code>rotation_theta</code>;</li>
+<li>prescribed condition number;</li>
+<li>measured condition numbers.</li>
+</ul>
+<p>Recording the seeds is important even though they remain fixed. It makes the deterministic problem construction reproducible.</p>
+</section>
+<section id="algorithm-options" class="level3">
+<h3 class="anchored" data-anchor-id="algorithm-options">Algorithm options</h3>
+<p>Record:</p>
+<ul>
+<li><code>max_iterations</code>;</li>
+<li>effective relative-correction tolerance;</li>
+<li><code>detect_divergence</code>;</li>
+<li><code>divergence_growth_factor</code>;</li>
+<li><code>divergence_growth_steps</code>;</li>
+<li><code>store_iterates</code>;</li>
+<li><code>scale_residual</code>;</li>
+<li><code>record_residual_diagnostics</code>.</li>
+</ul>
+<p>The effective tolerance should be written, not merely a sentinel value such as a nonpositive number meaning “use the default.”</p>
+</section>
+<section id="results" class="level3">
+<h3 class="anchored" data-anchor-id="results">Results</h3>
+<p>Record:</p>
+<ul>
+<li>termination status;</li>
+<li>convergence flag, if retained;</li>
+<li>number of completed updates;</li>
+<li>final relative correction;</li>
+<li>final forward and backward errors;</li>
+<li>best forward and backward errors;</li>
+<li>iterations of the best errors.</li>
+</ul>
+</section>
+<section id="csv-representation" class="level3">
+<h3 class="anchored" data-anchor-id="csv-representation">CSV representation</h3>
+<p>I recommend repeating invariant metadata as ordinary columns in every CSV row. This is redundant but useful:</p>
+<ul>
+<li>every file remains self-contained;</li>
+<li><code>pandas.read_csv()</code> works without a custom parser;</li>
+<li>files can be concatenated directly;</li>
+<li>the experiment remains identifiable if the file is renamed.</li>
+</ul>
+<p>A JSON sidecar containing the Git revision, compiler information, timestamp, and build configuration could be added later, but it is not required for the first refactoring.</p>
+</section>
+</section>
+<section id="automatic-filenames" class="level2" data-number="6.9">
+<h2 data-number="6.9" class="anchored" data-anchor-id="automatic-filenames"><span class="header-section-number">6.9</span> Automatic filenames</h2>
+<p>The filename should encode the experiment identity, but not every option.</p>
+<p>A suitable pattern is:</p>
+<pre class="text"><code>&lt;experiment&gt;__&lt;matrix&gt;__&lt;rhs&gt;__uf-&lt;factor&gt;__u-&lt;work&gt;__ur-&lt;residual&gt;__&lt;variant&gt;.csv</code></pre>
+<p>Examples:</p>
+<pre class="text"><code>convergence__random-spd__random-normal__uf-fp32__u-fp64__ur-fp128.csv</code></pre>
+<pre class="text"><code>residual-precision__random-spd__random-normal__uf-fp32__u-fp64__ur-comparison.csv</code></pre>
+<pre class="text"><code>residual-scaling__random-spd__random-normal__uf-fp16__u-fp64__ur-fp128__comparison.csv</code></pre>
+<p>The filename generator and metadata writer should consume the same <code>ExperimentDescription</code>. This prevents the filename and CSV contents from disagreeing.</p>
+<p>Precision names can initially be supplied explicitly. They can later be generated through traits such as <code>precision_name&lt;T&gt;()</code>.</p>
+</section>
+<section id="output-directory-organization" class="level2" data-number="6.10">
+<h2 data-number="6.10" class="anchored" data-anchor-id="output-directory-organization"><span class="header-section-number">6.10</span> Output-directory organization</h2>
+<p>A moderate hierarchy is sufficient:</p>
+<pre class="text"><code>results/
+├── raw/
+│   ├── convergence/
+│   ├── condition_sweeps/
+│   ├── residual_precision/
+│   ├── direct_comparison/
+│   └── robustness/
+│       ├── residual_scaling/
+│       └── range_failures/
+└── plots/
+    ├── convergence/
+    ├── condition_sweeps/
+    ├── residual_precision/
+    ├── direct_comparison/
+    └── robustness/
+        ├── residual_scaling/
+        └── range_failures/</code></pre>
+<p>Plotting scripts should mirror the raw-data directory structure. This avoids accumulating many ambiguously named plots in one flat directory.</p>
+</section>
+<section id="recommended-implementation-order" class="level2" data-number="6.11">
+<h2 data-number="6.11" class="anchored" data-anchor-id="recommended-implementation-order"><span class="header-section-number">6.11</span> Recommended implementation order</h2>
+<ol type="1">
+<li>Define the experiment kinds, metadata schema, seed policy, filename convention, and directory layout.</li>
+<li>Implement <code>experiment_io.hpp</code> with:
+<ul>
+<li>enum-to-string conversions;</li>
+<li>metadata-header writing;</li>
+<li>metadata-value writing;</li>
+<li>filename generation;</li>
+<li>output-path construction.</li>
+</ul></li>
+<li>Refactor the residual-scaling comparison as the pilot experiment.</li>
+<li>Ensure residual diagnostics distinguish:
+<ul>
+<li>the original residual;</li>
+<li>the normalized residual actually passed to the conversion;</li>
+<li>values lost during conversion.</li>
+</ul></li>
+<li>Add a dedicated scaled-versus-unscaled plotting script.</li>
+<li>Refactor the existing convergence-history experiment.</li>
+<li>Implement the general condition-number sweep with fixed default seeds.</li>
+<li>Implement the targeted single–double–double versus single–double–quad sweep.</li>
+<li>Implement the direct-solve comparison.</li>
+<li>Run the broader fixed-seed FP16 scaling validation.</li>
+<li>Add multiple-seed tests only if they become scientifically useful and time permits.</li>
+</ol>
+<p>The immediate next step therefore remains the shared experiment-description and output utilities. The residual-scaling comparison is the best first script to refactor because it applies two algorithm configurations to exactly the same deterministic test problem.</p>
+<section id="implementation-plan" class="level3">
+<h3 class="anchored" data-anchor-id="implementation-plan">Implementation Plan</h3>
+<p>Start with one small vertical slice: build the shared output utility and use it only in the residual-scaling comparison. Once that works, extend it to the other experiments.</p>
+</section>
+<section id="create-the-branch" class="level3">
+<h3 class="anchored" data-anchor-id="create-the-branch">1. Create the branch</h3>
+<p>If you have not already done so:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> switch <span class="at">-c</span> feature/experiment-infrastructure</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="freeze-the-common-schema-first" class="level3">
+<h3 class="anchored" data-anchor-id="freeze-the-common-schema-first">2. Freeze the common schema first</h3>
+<p>Before implementing functions, decide which information every experimental row should contain.</p>
+<p>I suggest separating it into three groups.</p>
+<section id="experiment-identity-1" class="level4">
+<h4 class="anchored" data-anchor-id="experiment-identity-1">Experiment identity</h4>
+<pre class="text"><code>experiment
+matrix_family
+dimension
+factor_precision
+work_precision
+residual_precision
+measure_precision
+variant</code></pre>
+</section>
+<section id="problem-and-algorithm-configuration" class="level4">
+<h4 class="anchored" data-anchor-id="problem-and-algorithm-configuration">Problem and algorithm configuration</h4>
+<pre class="text"><code>rhs_mode
+matrix_seed_u
+matrix_seed_v
+vector_seed
+rotation_theta
+requested_kappa
+max_iterations
+effective_rel_correction_tol
+detect_divergence
+divergence_growth_factor
+divergence_growth_steps
+store_iterates
+scale_residual
+record_residual_diagnostics</code></pre>
+</section>
+<section id="run-result" class="level4">
+<h4 class="anchored" data-anchor-id="run-result">Run result</h4>
+<pre class="text"><code>status
+converged
+total_iterations
+final_rel_correction</code></pre>
+<p>Experiment-specific columns—such as <code>iteration</code>, <code>forward_error_inf</code>, or <code>zeroed_by_conversion</code>—come after these common columns.</p>
+<p>The important distinction is:</p>
+<ul>
+<li>metadata describes how the run was configured;</li>
+<li>result fields describe how it terminated;</li>
+<li>measurement fields depend on the experiment.</li>
+</ul>
+</section>
+</section>
+<section id="create-experiment_io.hpp" class="level3">
+<h3 class="anchored" data-anchor-id="create-experiment_io.hpp">3. Create <code>experiment_io.hpp</code></h3>
+<p>The first version only needs the following components:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">enum</span> <span class="kw">class</span> ExperimentKind <span class="op">{</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    convergence_history<span class="op">,</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    condition_sweep<span class="op">,</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    residual_precision<span class="op">,</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    direct_solve_comparison<span class="op">,</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    residual_scaling<span class="op">,</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    range_failure</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="kw">enum</span> <span class="kw">class</span> MatrixFamily <span class="op">{</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    random_spd<span class="op">,</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    rotated_spd<span class="op">,</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    random_svd</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> PrecisionNames <span class="op">{</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>string factor<span class="op">;</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>string work<span class="op">;</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>string residual<span class="op">;</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>string measure<span class="op">;</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="kw">struct</span> ExperimentDescription <span class="op">{</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>    ExperimentKind kind<span class="op">;</span></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>    MatrixFamily matrix_family<span class="op">;</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>size_t dimension<span class="op">;</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>    PrecisionNames precisions<span class="op">;</span></span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Then implement these utility groups:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>string_view to_string<span class="op">(</span>ExperimentKind kind<span class="op">);</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>string_view to_string<span class="op">(</span>MatrixFamily family<span class="op">);</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>string_view to_string<span class="op">(</span>RightHandSideMode mode<span class="op">);</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>string_view to_string<span class="op">(</span>MixedIRStatus status<span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>filesystem::path make_output_directory<span class="op">(</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> <span class="bu">std::</span>filesystem::path<span class="op">&amp;</span> raw_results_root<span class="op">,</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    ExperimentKind kind</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>string make_experiment_filename<span class="op">(</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> ExperimentDescription<span class="op">&amp;</span> experiment<span class="op">,</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> TestProblemOptions<span class="op">&amp;</span> problem_options<span class="op">,</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>string_view tag <span class="op">=</span> <span class="op">{}</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> write_common_csv_header<span class="op">(</span><span class="bu">std::</span>ostream<span class="op">&amp;</span> out<span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_work<span class="op">&gt;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> write_common_csv_fields<span class="op">(</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>ostream<span class="op">&amp;</span> out<span class="op">,</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> ExperimentDescription<span class="op">&amp;</span> experiment<span class="op">,</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> TestProblemOptions<span class="op">&amp;</span> problem_options<span class="op">,</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> MixedIROptions<span class="op">&lt;</span>T_work<span class="op">&gt;&amp;</span> algorithm_options<span class="op">,</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> requested_kappa<span class="op">,</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>string_view variant<span class="op">,</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> MixedIRResult<span class="op">&lt;</span>T_work<span class="op">&gt;&amp;</span> result</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The last function should write the values in exactly the same order as <code>write_common_csv_header()</code>.</p>
+</section>
+<section id="use-the-residual-scaling-experiment-as-the-pilot" class="level3">
+<h3 class="anchored" data-anchor-id="use-the-residual-scaling-experiment-as-the-pilot">4. Use the residual-scaling experiment as the pilot</h3>
+<p>Refactor <a href="sandbox:/workspace/scratch/47115038590b/upload/exp_residual_scaling_fp16_fp64_fp128%281%29.cc">exp_residual_scaling_fp16_fp64_fp128(1).cc</a> first.</p>
+<p>Define its identity once:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> mpir<span class="op">::</span>ExperimentDescription experiment<span class="op">{</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>ExperimentKind<span class="op">::</span>residual_scaling<span class="op">,</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>MatrixFamily<span class="op">::</span>random_spd<span class="op">,</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    n<span class="op">,</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">{</span><span class="st">"fp16"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp128"</span><span class="op">,</span> <span class="st">"fp256"</span><span class="op">}</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Generate its path rather than hard-coding it:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="kw">auto</span> output_dir <span class="op">=</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>make_output_directory<span class="op">(</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>        MPIR_RESULTS_RAW_DIR<span class="op">,</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>        experiment<span class="op">.</span>kind</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="kw">auto</span> output_file <span class="op">=</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    output_dir <span class="op">/</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>make_experiment_filename<span class="op">(</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>        experiment<span class="op">,</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>        problem_options<span class="op">,</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>        <span class="st">"comparison"</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The expected result would be something like:</p>
+<pre class="text"><code>results/raw/robustness/residual_scaling/
+residual-scaling__random-spd__random-normal__uf-fp16__u-fp64__ur-fp128__comparison.csv</code></pre>
+<p>Inside the two runs, set:</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>run<span class="op">(</span><span class="st">"unscaled"</span><span class="op">,</span> <span class="kw">false</span><span class="op">);</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>run<span class="op">(</span><span class="st">"scaled"</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The metadata should then show that every option is identical except:</p>
+<pre class="text"><code>variant
+scale_residual</code></pre>
+<p>This makes the controlled nature of the comparison explicit.</p>
+</section>
+<section id="verify-the-pilot-carefully" class="level3">
+<h3 class="anchored" data-anchor-id="verify-the-pilot-carefully">5. Verify the pilot carefully</h3>
+<p>Check four things:</p>
+<ol type="1">
+<li>The automatically generated directory exists.</li>
+<li>The generated filename matches the actual precision types.</li>
+<li>Every CSV row contains the complete configuration.</li>
+<li>The numerical results are unchanged from the old experiment.</li>
+</ol>
+<p>That final check is important: this refactoring should change only output organization, not algorithm behaviour.</p>
+<p>The current convergence experiment demonstrates exactly why automatic naming is useful: <a href="sandbox:/workspace/scratch/47115038590b/upload/exp_convergence_random_spd%283%29.cc">exp_convergence_random_spd(3).cc</a> declares <code>T_factor = FP32</code>, but its hard-coded filename says <code>fp16</code>.</p>
+</section>
+<section id="keep-the-first-milestone-narrow" class="level3">
+<h3 class="anchored" data-anchor-id="keep-the-first-milestone-narrow">6. Keep the first milestone narrow</h3>
+<p>For the first milestone, do only:</p>
+<ul>
+<li><code>experiment_io.hpp</code>;</li>
+<li>common enum-to-string functions;</li>
+<li>common metadata columns;</li>
+<li>filename generation;</li>
+<li>output-directory generation;</li>
+<li>refactoring of the residual-scaling experiment.</li>
+</ul>
+<p>Leave these for the following commits:</p>
+<ul>
+<li>refining <code>ResidualDiagnostic</code>;</li>
+<li>plotting scaled versus unscaled histories;</li>
+<li>refactoring all other experiments;</li>
+<li>implementing the condition-number sweeps.</li>
+</ul>
+<p>A suitable first commit sequence would be:</p>
+<pre class="text"><code>Add common experiment metadata and naming utilities
+Refactor residual-scaling experiment to use shared output utilities</code></pre>
+<p>So the immediate next action is to create <code>experiment_io.hpp</code> and define the two enums, <code>PrecisionNames</code>, and <code>ExperimentDescription</code>. That gives us the vocabulary on which all subsequent output functions will depend.</p>
+</section>
+<section id="condition-grids" class="level3">
+<h3 class="anchored" data-anchor-id="condition-grids">Condition Grids</h3>
+<p>. The two groups need related but distinct condition-number grids:</p>
+<ul>
+<li>Group A needs a small representative set: clearly below, near, and above the theoretical boundary.</li>
+<li>Group B needs a denser logarithmic sweep to observe where convergence actually breaks down.</li>
+</ul>
+<p>The reference boundary should be computed from the factorization precision:</p>
+<p><span class="math display">\[
+\kappa_*=\frac{1}{u_f},
+\]</span></p>
+<p>not from the working precision <span class="math inline">\(u\)</span>. The condition <span class="math inline">\(\kappa(A)u_f&lt;1\)</span> is the approximate convergence condition for standard iterative refinement.</p>
+<p>I would introduce two utilities rather than manually listing condition numbers.</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_factor<span class="op">&gt;</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>vector<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span> representative_kappas<span class="op">();</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span><span class="kw">class</span> T_factor<span class="op">&gt;</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>vector<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span> kappa_sweep<span class="op">(</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> min_kappa <span class="op">=</span> <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">double</span> upper_boundary_factor <span class="op">=</span> <span class="fl">10.0</span><span class="op">,</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    <span class="bu">std::</span>size_t points_per_decade <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The first could generate condition numbers relative to <span class="math inline">\(\kappa_*\)</span>, for example:</p>
+<pre class="text"><code>1,
+0.01 κ*,
+0.1 κ*,
+0.5 κ*,
+κ*,
+2 κ*,
+10 κ*</code></pre>
+<p>after sorting and removing duplicates. This provides:</p>
+<ul>
+<li>a well-conditioned baseline;</li>
+<li>points clearly inside the theoretical region;</li>
+<li>points close to the boundary;</li>
+<li>several points outside it.</li>
+</ul>
+<p>The dense sweep could logarithmically cover</p>
+<p><span class="math display">\[
+1\leq \kappa(A)\leq 10\kappa_*,
+\]</span></p>
+<p>with perhaps 8–12 points per decade. We may later add extra points around <span class="math inline">\(\kappa_*\)</span>, such as</p>
+<p><span class="math display">\[
+0.5\kappa_*,\quad
+0.8\kappa_*,\quad
+\kappa_*,\quad
+1.25\kappa_*,\quad
+2\kappa_*,
+\]</span></p>
+<p>if the ordinary logarithmic grid is not sufficiently dense there.</p>
+<p>One important qualification is that this boundary is approximate:</p>
+<ol type="1">
+<li>Our generator may prescribe <span class="math inline">\(\kappa_2(A)\)</span>, whereas the theoretical result may use <span class="math inline">\(\kappa_\infty(A)\)</span>.</li>
+<li>The actual convergence boundary also depends on the computed LU factors and their stability.</li>
+<li>A generated point satisfying <span class="math inline">\(\kappa u_f&lt;1\)</span> is therefore not guaranteed to converge, and a point slightly above it is not guaranteed to fail.</li>
+</ol>
+<p>That is precisely why the larger sweep is useful: the utility centers the experiment around the theoretical prediction, while the experiment identifies the empirical transition.</p>
+<p>I would place these functions in a separate shared header such as:</p>
+<pre class="text"><code>code/include/condition_grids.hpp</code></pre>
+<p>They are numerical experiment-design utilities, whereas <code>experiment_io.hpp</code> should remain concerned with filenames, directories, metadata, and CSV output. Keeping those responsibilities separate will make the structure clearer.</p>
+<p>We should use one source file for Group A, not one file per precision triple.</p>
+<p>Each precision triple is a compile-time type combination, so the Group A driver will define one templated runner and instantiate it for each selected triple. Each instantiation writes a separate CSV containing all representative condition numbers and all iterations.</p>
+</section>
+<section id="further-details" class="level3">
+<h3 class="anchored" data-anchor-id="further-details">Further Details</h3>
+<pre class="text"><code>code/
+├── CMakeLists.txt
+├── include/
+│   ├── mixed_ir.hpp
+│   ├── experiment_io.hpp
+│   ├── condition_grids.hpp
+│   └── ...
+├── experiments/
+│   ├── CMakeLists.txt
+│   ├── convergence/
+│   │   ├── CMakeLists.txt
+│   │   └── exp_convergence_histories.cc
+│   ├── condition_sweeps/
+│   │   ├── CMakeLists.txt
+│   │   └── exp_condition_sweeps.cc
+│   ├── residual_precision/
+│   ├── direct_comparison/
+│   └── robustness/
+│       ├── CMakeLists.txt
+│       ├── exp_residual_scaling.cc
+│       └── exp_range_failure.cc
+├── scripts/
+│   └── convergence/
+│       └── plot_convergence_histories.py
+└── results/
+    ├── raw/
+    │   └── convergence/
+    └── plots/
+        └── convergence/</code></pre>
+<p>Descriptive directory names are preferable to <code>group_a</code>, <code>group_b</code>, and so on. The letters belong to our current report plan; the experiment purposes are more stable.</p>
+<p>The existing residual-scaling driver can eventually be moved into <code>experiments/robustness/</code>.</p>
+</section>
+<section id="one-template-several-precision-triples" class="level3">
+<h3 class="anchored" data-anchor-id="one-template-several-precision-triples">One template, several precision triples</h3>
+<p>The central function will have approximately this interface:</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="kw">template</span><span class="op">&lt;</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">class</span> T_factor<span class="op">,</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">class</span> T_work<span class="op">,</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">class</span> T_residual<span class="op">,</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">class</span> T_measure</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="op">&gt;</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="dt">void</span> run_convergence_histories<span class="op">(</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> mpir<span class="op">::</span>PrecisionNames<span class="op">&amp;</span> precision_names<span class="op">,</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> <span class="bu">std::</span>vector<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;&amp;</span> kappas</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>It will perform the complete experiment for one precision triple:</p>
+<ol type="1">
+<li>Construct its <code>ExperimentDescription</code>.</li>
+<li>Generate its output directory and filename.</li>
+<li>Write the CSV header.</li>
+<li>Loop over the supplied condition numbers.</li>
+<li>Generate the test problem with fixed seeds.</li>
+<li>Run iterative refinement with <code>store_iterates = true</code>.</li>
+<li>Measure forward and backward error at every stored iterate.</li>
+<li>Write one CSV row per iterate.</li>
+</ol>
+<p>Then <code>main()</code> invokes it explicitly:</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> hdnum<span class="op">::</span>FP8<span class="op">;</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> hdnum<span class="op">::</span>FP16<span class="op">;</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> hdnum<span class="op">::</span>FP32<span class="op">;</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> hdnum<span class="op">::</span>FP64<span class="op">;</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> hdnum<span class="op">::</span>FP128<span class="op">;</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> hdnum<span class="op">::</span>FP256<span class="op">;</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">using</span> hdnum<span class="op">::</span>bfloat16<span class="op">;</span></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>    run_convergence_histories<span class="op">&lt;</span></span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>        FP64<span class="op">,</span> FP64<span class="op">,</span> FP64<span class="op">,</span> FP256</span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;(</span></span>
+<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span><span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp256"</span><span class="op">},</span></span>
+<span id="cb28-15"><a href="#cb28-15" aria-hidden="true" tabindex="-1"></a>        fp64_baseline_kappas</span>
+<span id="cb28-16"><a href="#cb28-16" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb28-17"><a href="#cb28-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-18"><a href="#cb28-18" aria-hidden="true" tabindex="-1"></a>    run_convergence_histories<span class="op">&lt;</span></span>
+<span id="cb28-19"><a href="#cb28-19" aria-hidden="true" tabindex="-1"></a>        FP32<span class="op">,</span> FP64<span class="op">,</span> FP64<span class="op">,</span> FP256</span>
+<span id="cb28-20"><a href="#cb28-20" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;(</span></span>
+<span id="cb28-21"><a href="#cb28-21" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span><span class="st">"fp32"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp256"</span><span class="op">},</span></span>
+<span id="cb28-22"><a href="#cb28-22" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>representative_kappas<span class="op">&lt;</span>FP32<span class="op">&gt;()</span></span>
+<span id="cb28-23"><a href="#cb28-23" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb28-24"><a href="#cb28-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-25"><a href="#cb28-25" aria-hidden="true" tabindex="-1"></a>    run_convergence_histories<span class="op">&lt;</span></span>
+<span id="cb28-26"><a href="#cb28-26" aria-hidden="true" tabindex="-1"></a>        FP32<span class="op">,</span> FP64<span class="op">,</span> FP128<span class="op">,</span> FP256</span>
+<span id="cb28-27"><a href="#cb28-27" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;(</span></span>
+<span id="cb28-28"><a href="#cb28-28" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span><span class="st">"fp32"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp128"</span><span class="op">,</span> <span class="st">"fp256"</span><span class="op">},</span></span>
+<span id="cb28-29"><a href="#cb28-29" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>representative_kappas<span class="op">&lt;</span>FP32<span class="op">&gt;()</span></span>
+<span id="cb28-30"><a href="#cb28-30" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb28-31"><a href="#cb28-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-32"><a href="#cb28-32" aria-hidden="true" tabindex="-1"></a>    run_convergence_histories<span class="op">&lt;</span></span>
+<span id="cb28-33"><a href="#cb28-33" aria-hidden="true" tabindex="-1"></a>        FP16<span class="op">,</span> FP64<span class="op">,</span> FP64<span class="op">,</span> FP256</span>
+<span id="cb28-34"><a href="#cb28-34" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;(</span></span>
+<span id="cb28-35"><a href="#cb28-35" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span><span class="st">"fp16"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp256"</span><span class="op">},</span></span>
+<span id="cb28-36"><a href="#cb28-36" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>representative_kappas<span class="op">&lt;</span>FP16<span class="op">&gt;()</span></span>
+<span id="cb28-37"><a href="#cb28-37" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb28-38"><a href="#cb28-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-39"><a href="#cb28-39" aria-hidden="true" tabindex="-1"></a>    run_convergence_histories<span class="op">&lt;</span></span>
+<span id="cb28-40"><a href="#cb28-40" aria-hidden="true" tabindex="-1"></a>        FP16<span class="op">,</span> FP64<span class="op">,</span> FP128<span class="op">,</span> FP256</span>
+<span id="cb28-41"><a href="#cb28-41" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;(</span></span>
+<span id="cb28-42"><a href="#cb28-42" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span><span class="st">"fp16"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp128"</span><span class="op">,</span> <span class="st">"fp256"</span><span class="op">},</span></span>
+<span id="cb28-43"><a href="#cb28-43" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>representative_kappas<span class="op">&lt;</span>FP16<span class="op">&gt;()</span></span>
+<span id="cb28-44"><a href="#cb28-44" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb28-45"><a href="#cb28-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-46"><a href="#cb28-46" aria-hidden="true" tabindex="-1"></a>    run_convergence_histories<span class="op">&lt;</span></span>
+<span id="cb28-47"><a href="#cb28-47" aria-hidden="true" tabindex="-1"></a>        bfloat16<span class="op">,</span> FP64<span class="op">,</span> FP128<span class="op">,</span> FP256</span>
+<span id="cb28-48"><a href="#cb28-48" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;(</span></span>
+<span id="cb28-49"><a href="#cb28-49" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span><span class="st">"bfloat16"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp128"</span><span class="op">,</span> <span class="st">"fp256"</span><span class="op">},</span></span>
+<span id="cb28-50"><a href="#cb28-50" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>representative_kappas<span class="op">&lt;</span>bfloat16<span class="op">&gt;()</span></span>
+<span id="cb28-51"><a href="#cb28-51" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb28-52"><a href="#cb28-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-53"><a href="#cb28-53" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Optional stress test.</span></span>
+<span id="cb28-54"><a href="#cb28-54" aria-hidden="true" tabindex="-1"></a>    run_convergence_histories<span class="op">&lt;</span></span>
+<span id="cb28-55"><a href="#cb28-55" aria-hidden="true" tabindex="-1"></a>        FP8<span class="op">,</span> FP64<span class="op">,</span> FP128<span class="op">,</span> FP256</span>
+<span id="cb28-56"><a href="#cb28-56" aria-hidden="true" tabindex="-1"></a>    <span class="op">&gt;(</span></span>
+<span id="cb28-57"><a href="#cb28-57" aria-hidden="true" tabindex="-1"></a>        <span class="op">{</span><span class="st">"fp8"</span><span class="op">,</span> <span class="st">"fp64"</span><span class="op">,</span> <span class="st">"fp128"</span><span class="op">,</span> <span class="st">"fp256"</span><span class="op">},</span></span>
+<span id="cb28-58"><a href="#cb28-58" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>representative_kappas<span class="op">&lt;</span>FP8<span class="op">&gt;()</span></span>
+<span id="cb28-59"><a href="#cb28-59" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb28-60"><a href="#cb28-60" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The precise implementation will use the actual HDNUM aliases, but this is the intended structure.</p>
+</section>
+<section id="condition-number-selection" class="level3">
+<h3 class="anchored" data-anchor-id="condition-number-selection">Condition-number selection</h3>
+<p>For FP8, bfloat16, FP16, and FP32, we can use:</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>representative_kappas<span class="op">&lt;</span>T_factor<span class="op">&gt;()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This produces points clearly below, near, and above</p>
+<p><span class="math display">\[
+\kappa_*=\frac{1}{u_f}.
+\]</span></p>
+<p>Configurations with the same factorization precision automatically receive the same condition numbers. For example, FP32–FP64–FP64 and FP32–FP64–FP128 will solve identical problems, allowing a direct residual-precision comparison.</p>
+<p>The FP64 baseline requires special treatment. Its boundary is approximately</p>
+<p><span class="math display">\[
+\frac{1}{u_{\mathrm{FP64}}}\approx 9\times10^{15},
+\]</span></p>
+<p>which is too close to the numerical resolution limit of an FP64-stored test matrix. We should therefore use a moderate baseline grid, for example:</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="bu">std::</span>vector<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span> fp64_baseline_kappas<span class="op">{</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    <span class="fl">1.0</span><span class="op">,</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>    <span class="fl">1.0e4</span><span class="op">,</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    <span class="fl">1.0e8</span><span class="op">,</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>    <span class="fl">1.0e12</span></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The FP64 run is a same-precision accuracy baseline, not an attempt to locate its full convergence boundary.</p>
+</section>
+<section id="experiment-settings" class="level3">
+<h3 class="anchored" data-anchor-id="experiment-settings">Experiment settings</h3>
+<p>The initial Group A dataset should use:</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="bu">std::</span>size_t n <span class="op">=</span> <span class="dv">100</span><span class="op">;</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>TestProblemOptions problem_options<span class="op">;</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>problem_options<span class="op">.</span>rhs_mode <span class="op">=</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>RightHandSideMode<span class="op">::</span>random_normal_rhs<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The default seeds remain unchanged, ensuring that a given <span class="math inline">\(\kappa\)</span> produces the same matrix and right-hand side for every precision triple.</p>
+<p>The algorithm options should be fixed:</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>MixedIROptions<span class="op">&lt;</span>T_work<span class="op">&gt;</span> options<span class="op">;</span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>options<span class="op">.</span>max_iterations <span class="op">=</span> <span class="dv">20</span><span class="op">;</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>options<span class="op">.</span>store_iterates <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>options<span class="op">.</span>detect_divergence <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>options<span class="op">.</span>record_residual_diagnostics <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>options<span class="op">.</span>scale_residual <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>I recommend enabling residual scaling in the main Group A experiments because it is now part of our robust implementation. Group E retains the controlled scaled-versus-unscaled comparison that demonstrates why it is needed. The CSV metadata records this choice explicitly.</p>
+</section>
+<section id="csv-organization" class="level3">
+<h3 class="anchored" data-anchor-id="csv-organization">CSV organization</h3>
+<p>Each precision triple gets one CSV containing all its condition numbers and iteration histories.</p>
+<p>For example:</p>
+<pre class="text"><code>results/raw/convergence/
+├── convergence-history__random-spd__n-100__random-normal__uf-fp64__u-fp64__ur-fp64__um-fp256.csv
+├── convergence-history__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp64__um-fp256.csv
+├── convergence-history__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp128__um-fp256.csv
+└── ...</code></pre>
+<p>Each file will have the common columns followed by:</p>
+<pre class="csv"><code>iteration,forward_error_inf,backward_error_inf,rel_correction</code></pre>
+<p>For iteration zero, <code>rel_correction</code> should preferably be empty rather than <code>0</code>, because no correction precedes the initial solution. Writing zero would create an artificial value that is problematic on a logarithmic plot.</p>
+</section>
+<section id="plot-organization" class="level3">
+<h3 class="anchored" data-anchor-id="plot-organization">Plot organization</h3>
+<p>For each precision triple, the plotting script should produce one figure with three panels:</p>
+<ol type="1">
+<li>relative forward error versus iteration;</li>
+<li>normwise backward error versus iteration;</li>
+<li>relative correction versus iteration.</li>
+</ol>
+<p>Each condition number appears as a separate curve. We can later select the clearest subset of precision triples and condition numbers for the report without rerunning the experiments.</p>
+</section>
+<section id="cmake-organization" class="level3">
+<h3 class="anchored" data-anchor-id="cmake-organization">CMake organization</h3>
+<p>The parent file becomes:</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode cmake code-with-copy"><code class="sourceCode cmake"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co">## code/experiments/CMakeLists.txt</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="kw">add_subdirectory</span>(convergence)</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a><span class="kw">add_subdirectory</span>(condition_sweeps)</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a><span class="kw">add_subdirectory</span>(residual_precision)</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a><span class="kw">add_subdirectory</span>(direct_comparison)</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a><span class="kw">add_subdirectory</span>(robustness)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>For Group A:</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode cmake code-with-copy"><code class="sourceCode cmake"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="co">## code/experiments/convergence/CMakeLists.txt</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="kw">add_executable</span>(</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>    <span class="bn">exp_convergence_histories</span></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>    exp_convergence_histories.cc</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a><span class="kw">target_link_libraries</span>(</span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>    <span class="bn">exp_convergence_histories</span></span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>    <span class="ot">PRIVATE</span></span>
+<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>        mixed_precision_core</span>
+<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>        mixed_precision_warnings</span>
+<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The top-level <code>code/CMakeLists.txt</code> only needs:</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode cmake code-with-copy"><code class="sourceCode cmake"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="kw">add_subdirectory</span>(experiments)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>We can keep <code>mixed_precision_core</code> as an <code>INTERFACE</code> library: adding experiment <code>.cc</code> files does not require converting the core into a compiled library.</p>
+<p>So the next concrete step is to refactor the old <code>exp_convergence_random_spd.cc</code> into <code>exp_convergence_histories.cc</code> with the templated runner above.</p>
+</section>
+<section id="how-to-run" class="level3">
+<h3 class="anchored" data-anchor-id="how-to-run">How to run</h3>
+<p>Implemented and verified the new plotting script:</p>
+<p><a href="sandbox:/workspace/scratch/47115038590b/plot_convergence_histories.py">plot_convergence_histories.py</a></p>
+<p>Place it under <code>code/scripts/</code>, then run from <code>code/</code>:</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scripts/plot_convergence_histories.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>It automatically:</p>
+<ul>
+<li>Finds all <code>convergence-history__*.csv</code> files under <code>results/raw/convergence/</code>.</li>
+<li>Generates one three-panel figure per precision configuration.</li>
+<li>Plots each condition number as a separate curve.</li>
+<li>Uses logarithmic vertical axes.</li>
+<li>Handles the empty iteration-0 relative correction correctly.</li>
+<li>Writes figures to <code>results/plots/convergence/</code> using the corresponding CSV filename.</li>
+<li>Validates the CSV schema and warns about unplottable status-only runs.</li>
+</ul>
+<p>PNG is the default. Vector PDF output is available with:</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scripts/plot_convergence_histories.py <span class="at">--format</span> pdf</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>You can also plot a particular file:</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> scripts/plot_convergence_histories.py <span class="dt">\</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    results/raw/convergence/convergence-history__...csv</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="legends-codes" class="level3">
+<h3 class="anchored" data-anchor-id="legends-codes">Legends Codes</h3>
+<ul>
+<li><code>[C]</code> — converged</li>
+<li><code>[M]</code> — maximum iterations</li>
+<li><code>[D]</code> — diverged</li>
+<li><code>[N]</code> — non-finite value</li>
+<li><code>[F]</code> — non-finite factorization input</li>
+</ul>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../notes/experiments.html" class="pagination-link" aria-label="Implementing the Experiments &amp; Robustness Improvements">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments &amp; Robustness Improvements</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../report.html" class="pagination-link" aria-label="Report">
+        <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Report</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
