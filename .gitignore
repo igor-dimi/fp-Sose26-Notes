@@ -19,3 +19,4 @@ build/
 .vscode/&
 !.vscode/settings.json
 **/*.quarto_ipynb
+notes/conversions_files/figure-latex/mermaid-figure-1.png
