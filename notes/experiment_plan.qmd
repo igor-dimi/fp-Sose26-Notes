@@ -812,11 +812,11 @@ So the immediate next action is to create `experiment_io.hpp` and define the two
 
 The reference boundary should be computed from the factorization precision:
 
-[
+$$
 \kappa_*=\frac{1}{u_f},
-]
+$$
 
-not from the working precision (u). The condition (\kappa(A)u_f<1) is the approximate convergence condition for standard iterative refinement.
+not from the working precision $u$. The condition $\kappa(A)u_f<1$ is the approximate convergence condition for standard iterative refinement.
 
 I would introduce two utilities rather than manually listing condition numbers.
 
@@ -832,7 +832,7 @@ std::vector<double> kappa_sweep(
 );
 ```
 
-The first could generate condition numbers relative to (\kappa_*), for example:
+The first could generate condition numbers relative to $\kappa_*$, for example:
 
 ```text
 1,
@@ -853,27 +853,27 @@ after sorting and removing duplicates. This provides:
 
 The dense sweep could logarithmically cover
 
-[
+$$
 1\leq \kappa(A)\leq 10\kappa_*,
-]
+$$
 
-with perhaps 8–12 points per decade. We may later add extra points around (\kappa_*), such as
+with perhaps 8–12 points per decade. We may later add extra points around $\kappa_*$, such as
 
-[
+$$
 0.5\kappa_*,\quad
 0.8\kappa_*,\quad
 \kappa_*,\quad
 1.25\kappa_*,\quad
 2\kappa_*,
-]
+$$
 
 if the ordinary logarithmic grid is not sufficiently dense there.
 
 One important qualification is that this boundary is approximate:
 
-1. Our generator may prescribe (\kappa_2(A)), whereas the theoretical result may use (\kappa_\infty(A)).
+1. Our generator may prescribe $\kappa_2(A)$, whereas the theoretical result may use $\kappa_\infty(A)$.
 2. The actual convergence boundary also depends on the computed LU factors and their stability.
-3. A generated point satisfying (\kappa u_f<1) is therefore not guaranteed to converge, and a point slightly above it is not guaranteed to fail.
+3. A generated point satisfying $\kappa u_f<1$ is therefore not guaranteed to converge, and a point slightly above it is not guaranteed to fail.
 
 That is precisely why the larger sweep is useful: the utility centers the experiment around the theoretical prediction, while the experiment identifies the empirical transition.
 
