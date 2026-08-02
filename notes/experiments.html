@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>5&nbsp; Implementing the Experiments – Advanced Praktika SoSe 26 Notes</title>
+<title>5&nbsp; Implementing the Experiments &amp; Robustness Improvements – Advanced Praktika SoSe 26 Notes</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -156,7 +156,7 @@ window.Quarto = {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../notes/project_setup.html">Notes</a></li><li class="breadcrumb-item"><a href="../notes/experiments.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../notes/project_setup.html">Notes</a></li><li class="breadcrumb-item"><a href="../notes/experiments.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments &amp; Robustness Improvements</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -226,7 +226,7 @@ window.Quarto = {
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../notes/experiments.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments</span></span></a>
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments &amp; Robustness Improvements</span></span></a>
   </div>
 </li>
       </ul>
@@ -237,6 +237,23 @@ window.Quarto = {
  <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Report</span></span></a>
   </div>
 </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/gdb.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">GDB usage Notes</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
     </ul>
     </div>
 </nav>
@@ -264,7 +281,15 @@ window.Quarto = {
   </ul></li>
   <li><a href="#error-metrics-helper" id="toc-error-metrics-helper" class="nav-link" data-scroll-target="#error-metrics-helper"><span class="header-section-number">5.4</span> Error Metrics Helper</a></li>
   <li><a href="#first-convergence-test" id="toc-first-convergence-test" class="nav-link" data-scroll-target="#first-convergence-test"><span class="header-section-number">5.5</span> First Convergence Test</a></li>
-  <li><a href="#plotting-convergence-experiments" id="toc-plotting-convergence-experiments" class="nav-link" data-scroll-target="#plotting-convergence-experiments"><span class="header-section-number">5.6</span> Plotting Convergence Experiments</a>
+  <li><a href="#robustness-improvements-to-mixed_ir" id="toc-robustness-improvements-to-mixed_ir" class="nav-link" data-scroll-target="#robustness-improvements-to-mixed_ir"><span class="header-section-number">5.6</span> Robustness Improvements to <code>mixed_ir</code></a>
+  <ul class="collapse">
+  <li><a href="#fp16fp64fp128-overflow-during-input-conversion" id="toc-fp16fp64fp128-overflow-during-input-conversion" class="nav-link" data-scroll-target="#fp16fp64fp128-overflow-during-input-conversion">1. FP16–FP64–FP128: overflow during input conversion</a></li>
+  <li><a href="#fp32fp64fp128-divergence-of-iterative-refinement" id="toc-fp32fp64fp128-divergence-of-iterative-refinement" class="nav-link" data-scroll-target="#fp32fp64fp128-divergence-of-iterative-refinement">2. FP32–FP64–FP128: divergence of iterative refinement</a></li>
+  <li><a href="#source-code-changes" id="toc-source-code-changes" class="nav-link" data-scroll-target="#source-code-changes">Source-Code Changes</a></li>
+  <li><a href="#result" id="toc-result" class="nav-link" data-scroll-target="#result">Result</a></li>
+  <li><a href="#fp16-residual-underflow-and-stagnation-problem" id="toc-fp16-residual-underflow-and-stagnation-problem" class="nav-link" data-scroll-target="#fp16-residual-underflow-and-stagnation-problem">FP16 residual underflow and stagnation problem</a></li>
+  </ul></li>
+  <li><a href="#plotting-convergence-experiments" id="toc-plotting-convergence-experiments" class="nav-link" data-scroll-target="#plotting-convergence-experiments"><span class="header-section-number">5.7</span> Plotting Convergence Experiments</a>
   <ul class="collapse">
   <li><a href="#expected-csv-format" id="toc-expected-csv-format" class="nav-link" data-scroll-target="#expected-csv-format">Expected CSV format</a></li>
   <li><a href="#generated-plots" id="toc-generated-plots" class="nav-link" data-scroll-target="#generated-plots">Generated plots</a></li>
@@ -286,9 +311,9 @@ window.Quarto = {
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../notes/project_setup.html">Notes</a></li><li class="breadcrumb-item"><a href="../notes/experiments.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments</span></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../notes/project_setup.html">Notes</a></li><li class="breadcrumb-item"><a href="../notes/experiments.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments &amp; Robustness Improvements</span></a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments</span></h1>
+<h1 class="title"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments &amp; Robustness Improvements</span></h1>
 </div>
 
 
@@ -744,8 +769,708 @@ b = \text{fl}(Ax_{\text{constructed}})
 10000,3,9.53674e-07,1.29324e-10,1.03238e-08
 10000,4,9.53674e-07,1.29324e-10,0</code></pre>
 </section>
-<section id="plotting-convergence-experiments" class="level2" data-number="5.6">
-<h2 data-number="5.6" class="anchored" data-anchor-id="plotting-convergence-experiments"><span class="header-section-number">5.6</span> Plotting Convergence Experiments</h2>
+<section id="robustness-improvements-to-mixed_ir" class="level2" data-number="5.6">
+<h2 data-number="5.6" class="anchored" data-anchor-id="robustness-improvements-to-mixed_ir"><span class="header-section-number">5.6</span> Robustness Improvements to <code>mixed_ir</code></h2>
+<p>We encountered two failures at <span class="math inline">\(\kappa(A)=10^9\)</span>. Both caused a floating-point exception, but for different reasons.</p>
+<section id="fp16fp64fp128-overflow-during-input-conversion" class="level3">
+<h3 class="anchored" data-anchor-id="fp16fp64fp128-overflow-during-input-conversion">1. FP16–FP64–FP128: overflow during input conversion</h3>
+<section id="problem" class="level4">
+<h4 class="anchored" data-anchor-id="problem">Problem</h4>
+<p>We converted <span class="math inline">\(A\)</span> and <span class="math inline">\(b\)</span> from FP64 to the FP16 factorization precision. FP16 has a maximum finite value of approximately</p>
+<p><span class="math display">\[
+65504.
+\]</span></p>
+<p>Some entries exceeded this limit. The converted data therefore contained non-finite values. LU factorization and the initial solve propagated these values into <span class="math inline">\(x_0\)</span>.</p>
+<p>The program crashed when <code>compute_residual</code> attempted to convert the non-finite iterate to the GMP-backed FP128 type. This type cannot represent <code>NaN</code> or infinity.</p>
+</section>
+<section id="detection" class="level4">
+<h4 class="anchored" data-anchor-id="detection">Detection</h4>
+<p>The GDB backtrace located the crash in the GMP conversion performed by <code>compute_residual</code>.</p>
+<p>We traced the invalid values backward:</p>
+<p><span class="math display">\[
+A_f,b_f
+\longrightarrow LU_f
+\longrightarrow x_{0,f}
+\longrightarrow x_0
+\longrightarrow \text{GMP conversion}.
+\]</span></p>
+<p>Inspection showed that the first non-finite values appeared during conversion to FP16.</p>
+<p>The bfloat16 experiment supported this conclusion. Bfloat16 has a wider exponent range and did not overflow at the same point.</p>
+</section>
+<section id="solution" class="level4">
+<h4 class="anchored" data-anchor-id="solution">Solution</h4>
+<p>We chose to detect the overflow and terminate safely. We did not implement scaling or equilibration.</p>
+<p>The algorithm now terminates with <code>factorization_input_non_finite</code> if <span class="math inline">\(A_f\)</span> or <span class="math inline">\(b_f\)</span> contains a non-finite value.</p>
+<p>Scaling could prevent this specific overflow, but it would not change <span class="math inline">\(\kappa(A)\)</span>. It would therefore not make FP16 iterative refinement reliable at <span class="math inline">\(\kappa(A)=10^9\)</span>.</p>
+<hr>
+</section>
+</section>
+<section id="fp32fp64fp128-divergence-of-iterative-refinement" class="level3">
+<h3 class="anchored" data-anchor-id="fp32fp64fp128-divergence-of-iterative-refinement">2. FP32–FP64–FP128: divergence of iterative refinement</h3>
+<section id="problem-1" class="level4">
+<h4 class="anchored" data-anchor-id="problem-1">Problem</h4>
+<p>FP32 could represent the matrix entries, so the initial conversion succeeded. The refinement process nevertheless diverged because</p>
+<p><span class="math display">\[
+\kappa(A)u_f
+\approx 10^9\cdot 6\times 10^{-8}
+\approx 60&gt;1.
+\]</span></p>
+<p>The absolute correction norms grew by a factor of approximately <span class="math inline">\(36\)</span> per iteration.</p>
+<p>The existing stopping quantity,</p>
+<p><span class="math display">\[
+\frac{\lVert d_k\rVert_2}{\lVert x_k\rVert_2},
+\]</span></p>
+<p>did not detect this behavior. Both <span class="math inline">\(d_k\)</span> and <span class="math inline">\(x_k\)</span> grew at similar rates, so the ratio remained approximately constant at <span class="math inline">\(37.29\)</span>.</p>
+<p>Without additional checks, the growth eventually produced non-finite values and another unsafe conversion to FP128.</p>
+</section>
+<section id="detection-1" class="level4">
+<h4 class="anchored" data-anchor-id="detection-1">Detection</h4>
+<p>We examined the ratio of consecutive correction norms:</p>
+<p><span class="math display">\[
+\frac{\lVert d_k\rVert_2}
+     {\lVert d_{k-1}\rVert_2}
+\approx 36.
+\]</span></p>
+<p>This showed persistent, rapid growth. We therefore decided to monitor absolute correction norms instead of relying only on relative corrections.</p>
+</section>
+<section id="solution-1" class="level4">
+<h4 class="anchored" data-anchor-id="solution-1">Solution</h4>
+<p>We added a divergence detector based on</p>
+<p><span class="math display">\[
+\lVert d_k\rVert_2
+&gt;
+\gamma\lVert d_{k-1}\rVert_2.
+\]</span></p>
+<p>The default parameters are</p>
+<p><span class="math display">\[
+\gamma=10,
+\qquad
+\text{required growth steps}=3.
+\]</span></p>
+<p>The algorithm reports divergence after three consecutive excessive-growth comparisons. It rejects the correction that triggers termination and preserves the last accepted iterate.</p>
+</section>
+</section>
+<section id="source-code-changes" class="level3">
+<h3 class="anchored" data-anchor-id="source-code-changes">Source-Code Changes</h3>
+<section id="termination-statuses" class="level4">
+<h4 class="anchored" data-anchor-id="termination-statuses">Termination statuses</h4>
+<p>We introduced statuses that distinguish the main outcomes:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="kw">enum</span> <span class="kw">class</span> MixedIRStatus <span class="op">{</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    converged<span class="op">,</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    max_iterations<span class="op">,</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    factorization_input_non_finite<span class="op">,</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    non_finite<span class="op">,</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    diverged</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>These represent:</p>
+<ul>
+<li>successful convergence;</li>
+<li>reaching the iteration limit;</li>
+<li>non-finite factorization input;</li>
+<li>a non-finite value produced later;</li>
+<li>detected divergence.</li>
+</ul>
+</section>
+<section id="finite-value-checks" class="level4">
+<h4 class="anchored" data-anchor-id="finite-value-checks">Finite-value checks</h4>
+<p>We added <code>all_finite</code> helpers for vectors and matrices.</p>
+<p>IEEE-like types and CPFloat values are checked with <code>std::isfinite</code>. GMP-backed <code>hdnum::FP&lt;m&gt;</code> values require separate handling because they cannot represent <code>NaN</code> or infinity.</p>
+<p>The main rule is:</p>
+<blockquote class="blockquote">
+<p>Check IEEE-like values before converting them to a GMP-backed type.</p>
+</blockquote>
+<p>We kept all checks inside <code>mixed_ir</code>. We did not modify HDNUM, <code>lowprec_cpfloat.hh</code>, <code>compute_residual</code>, or the triangular solvers.</p>
+</section>
+<section id="guard-placement" class="level4">
+<h4 class="anchored" data-anchor-id="guard-placement">Guard placement</h4>
+<p>We added finite-value checks at the following points:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Location</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>After converting <span class="math inline">\(A,b\)</span> to <span class="math inline">\(A_f,b_f\)</span></td>
+<td>Detect factorization-input overflow</td>
+</tr>
+<tr class="even">
+<td>After the initial solve</td>
+<td>Detect an invalid initial solution</td>
+</tr>
+<tr class="odd">
+<td>After converting <span class="math inline">\(x_{0,f}\)</span> to working precision</td>
+<td>Validate the initial iterate</td>
+</tr>
+<tr class="even">
+<td>Before <code>compute_residual</code></td>
+<td>Protect the GMP conversion</td>
+</tr>
+<tr class="odd">
+<td>After computing <span class="math inline">\(r_r\)</span></td>
+<td>Support generic residual types</td>
+</tr>
+<tr class="even">
+<td>After converting <span class="math inline">\(r_r\)</span> to <span class="math inline">\(r_f\)</span></td>
+<td>Detect narrowing overflow</td>
+</tr>
+<tr class="odd">
+<td>After solving for <span class="math inline">\(d_f\)</span></td>
+<td>Detect an invalid correction</td>
+</tr>
+<tr class="even">
+<td>After converting <span class="math inline">\(d_f\)</span> to <span class="math inline">\(d_w\)</span></td>
+<td>Validate the working-precision correction</td>
+</tr>
+<tr class="odd">
+<td>After converting the relative correction to <code>double</code></td>
+<td>Detect norm or conversion overflow</td>
+</tr>
+<tr class="even">
+<td>After forming <span class="math inline">\(x_{k+1}\)</span></td>
+<td>Detect overflow during the update</td>
+</tr>
+</tbody>
+</table>
+<p>We now form the new iterate as a candidate:</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_work<span class="op">&gt;</span> x_next<span class="op">(</span>result<span class="op">.</span>x<span class="op">);</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span><span class="bu">std::</span>size_t i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> n<span class="op">;</span> <span class="op">++</span>i<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    x_next<span class="op">[</span>i<span class="op">]</span> <span class="op">+=</span> d_w<span class="op">[</span>i<span class="op">];</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(!</span>all_finite<span class="op">(</span>x_next<span class="op">))</span> <span class="op">{</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>    result<span class="op">.</span>status <span class="op">=</span> MixedIRStatus<span class="op">::</span>non_finite<span class="op">;</span></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> result<span class="op">;</span></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>result<span class="op">.</span>x <span class="op">=</span> x_next<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This preserves the last valid iterate if the update fails. We increment <code>result.iterations</code> only after accepting the update.</p>
+</section>
+<section id="divergence-options" class="level4">
+<h4 class="anchored" data-anchor-id="divergence-options">Divergence options</h4>
+<p>We added three options:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> detect_divergence <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>T_work divergence_growth_factor <span class="op">=</span> T_work<span class="op">(</span><span class="dv">10</span><span class="op">);</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>size_t divergence_growth_steps <span class="op">=</span> <span class="dv">3</span><span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>They control:</p>
+<ul>
+<li>whether divergence detection is enabled;</li>
+<li>the minimum excessive-growth factor;</li>
+<li>the required number of consecutive growth steps.</li>
+</ul>
+<p>Valid user-supplied values should satisfy:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>divergence_growth_factor <span class="op">&gt;</span> T_work<span class="op">(</span><span class="dv">1</span><span class="op">)</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>divergence_growth_steps <span class="op">&gt;</span> <span class="dv">0</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="correction-norm-history" class="level4">
+<h4 class="anchored" data-anchor-id="correction-norm-history">Correction-norm history</h4>
+<p>We added diagnostic storage to <code>MixedIRResult</code>:</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>vector<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;</span> correction_norms<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>It stores each finite value of <span class="math inline">\(\lVert d_k\rVert_2\)</span>.</p>
+<p>The history also includes a correction that triggers divergence but is not applied. We store the norms even when divergence detection is disabled.</p>
+</section>
+<section id="detector-state-and-comparison" class="level4">
+<h4 class="anchored" data-anchor-id="detector-state-and-comparison">Detector state and comparison</h4>
+<p>Before the refinement loop, we introduced:</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>T_work previous_correction_norm <span class="op">=</span> T_work<span class="op">(</span><span class="dv">0</span><span class="op">);</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> have_previous_correction_norm <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>size_t consecutive_growth_steps <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>After computing and validating <span class="math inline">\(d_w\)</span>, we calculate:</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> T_work correction_norm_w <span class="op">=</span> hdnum<span class="op">::</span>norm<span class="op">(</span>d_w<span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>We then test for excessive growth:</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">bool</span> excessive_growth <span class="op">=</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>    previous_correction_norm <span class="op">&gt;</span> T_work<span class="op">(</span><span class="dv">0</span><span class="op">)</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">&amp;&amp;</span></span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    correction_norm_w</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>        <span class="op">&gt;</span> options<span class="op">.</span>divergence_growth_factor</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>            <span class="op">*</span> previous_correction_norm<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Excessive growth increments the counter. Any other result resets it. Once the counter reaches the configured limit, the algorithm returns</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>result<span class="op">.</span>status <span class="op">=</span> MixedIRStatus<span class="op">::</span>diverged<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>before applying the correction.</p>
+</section>
+</section>
+<section id="result" class="level3">
+<h3 class="anchored" data-anchor-id="result">Result</h3>
+<p>With divergence detection enabled, the FP32–FP64–FP128 experiment terminates early with <code>diverged</code>.</p>
+<p>With divergence detection disabled, the finite-value guards still prevent a crash. In our test, the algorithm completed 19 updates before detecting a non-finite value:</p>
+<pre class="text"><code>kappa = 1e+09
+converged = 0
+iterations = 19
+final_rel_correction = 37.2908</code></pre>
+<p>The two safeguards have separate roles:</p>
+<ul>
+<li>The divergence detector stops persistent growth early.</li>
+<li>The finite-value checks prevent unsafe operations and crashes.</li>
+</ul>
+</section>
+<section id="fp16-residual-underflow-and-stagnation-problem" class="level3">
+<h3 class="anchored" data-anchor-id="fp16-residual-underflow-and-stagnation-problem">FP16 residual underflow and stagnation problem</h3>
+<p>We tested three-precision iterative refinement with</p>
+<p><span class="math display">\[
+T_{\mathrm{factor}}=\mathrm{FP16},\qquad
+T_{\mathrm{work}}=\mathrm{FP64},\qquad
+T_{\mathrm{residual}}=\mathrm{FP128}.
+\]</span></p>
+<p>The LU factorization and correction solve used FP16. Iterates were stored and updated in FP64. Residuals were computed in FP128.</p>
+<p>For <span class="math inline">\(n=100\)</span>, the convergence sweep produced unexpected results:</p>
+<ul>
+<li><p>For <span class="math inline">\(\kappa=10\)</span>, the method did not converge after 20 iterations. The forward error stagnated near <span class="math inline">\(5.96\times10^{-8}\)</span>, and the relative correction stagnated near <span class="math inline">\(1.69\times10^{-8}\)</span>.</p></li>
+<li><p>For <span class="math inline">\(\kappa=100\)</span>, the method appeared to converge after only three iterations because the computed correction became exactly zero.</p></li>
+<li><p>Similar nonmonotone behavior occurred for larger condition numbers.</p></li>
+</ul>
+<p>This was inconsistent with the usual refinement condition. Since</p>
+<p><span class="math display">\[
+u_{\mathrm{FP16}}=2^{-11}\approx4.88\times10^{-4},
+\]</span></p>
+<p>we have, for <span class="math inline">\(\kappa=10\)</span>,</p>
+<p><span class="math display">\[
+\kappa u_{\mathrm{FP16}}
+\approx4.88\times10^{-3}\ll1.
+\]</span></p>
+<p>The <span class="math inline">\(\kappa=10\)</span> problem should therefore have been favorable for iterative refinement.</p>
+<p>The repeated values</p>
+<p><span class="math display">\[
+5.96046\times10^{-8}
+\quad\text{and}\quad
+1.19209\times10^{-7}
+\]</span></p>
+<p>were an important clue. These are respectively the smallest positive FP16 subnormal number and twice that number.</p>
+<section id="empirical-diagnosis" class="level4">
+<h4 class="anchored" data-anchor-id="empirical-diagnosis">Empirical diagnosis</h4>
+<section id="comparison-with-bfloat16" class="level5">
+<h5 class="anchored" data-anchor-id="comparison-with-bfloat16">Comparison with bfloat16</h5>
+<p>We replaced FP16 with bfloat16. Bfloat16 has fewer significand bits than FP16 but a much larger exponent range.</p>
+<p>The relevant results were:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: right;"><span class="math inline">\(\kappa\)</span></th>
+<th style="text-align: center;">Converged</th>
+<th style="text-align: right;">Iterations</th>
+<th style="text-align: right;">Final relative correction</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">1</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;"><span class="math inline">\(5.07389\times10^{-17}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">10</td>
+<td style="text-align: center;">Yes</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;"><span class="math inline">\(4.71855\times10^{-17}\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">100</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;"><span class="math inline">\(6.68688\times10^{-15}\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1000</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;"><span class="math inline">\(2.24847\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">10000</td>
+<td style="text-align: center;">No</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;"><span class="math inline">\(12.5079\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>In particular, bfloat16 converged for <span class="math inline">\(\kappa=10\)</span>, while FP16 did not. Because bfloat16 has lower precision but greater range, this supported the hypothesis that the FP16 failure was caused by its restricted exponent range, not by insufficient significand precision alone.</p>
+</section>
+<section id="conceptual-hypothesis" class="level5">
+<h5 class="anchored" data-anchor-id="conceptual-hypothesis">Conceptual hypothesis</h5>
+<p>At iteration <span class="math inline">\(k\)</span>, the residual is computed accurately in FP128:</p>
+<p><span class="math display">\[
+r_k=b-Ax_k.
+\]</span></p>
+<p>The original implementation then converted it directly to FP16:</p>
+<p><span class="math display">\[
+r_k^{(128)}
+\longrightarrow
+r_k^{(16)}.
+\]</span></p>
+<p>For FP16,</p>
+<p><span class="math display">\[
+x_{\min,\mathrm{normal}}
+=
+2^{-14}
+\approx6.1035\times10^{-5},
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+x_{\min,\mathrm{subnormal}}
+=
+2^{-24}
+\approx5.9605\times10^{-8}.
+\]</span></p>
+<p>Under round-to-nearest, values below approximately</p>
+<p><span class="math display">\[
+2^{-25}\approx2.9802\times10^{-8}
+\]</span></p>
+<p>round to zero.</p>
+<p>We therefore hypothesized that, as refinement reduced the residual:</p>
+<ol type="1">
+<li><p>Some FP128 residual components became zero when converted to FP16.</p></li>
+<li><p>Surviving components were rounded to a small number of FP16 subnormal values.</p></li>
+<li><p>The FP16 correction solve received an increasingly inaccurate right-hand side.</p></li>
+<li><p>The correction eventually stagnated or became exactly zero.</p></li>
+</ol>
+<p>An exactly zero correction could also cause false convergence because the relative-correction stopping criterion would evaluate to zero.</p>
+</section>
+<section id="diagnostic-implementation" class="level5">
+<h5 class="anchored" data-anchor-id="diagnostic-implementation">Diagnostic implementation</h5>
+<p>We added per-iteration residual-conversion diagnostics to <code>mixed_ir</code>:</p>
+<ul>
+<li><p><span class="math inline">\(\lVert r_k\rVert_\infty\)</span>, computed in residual precision;</p></li>
+<li><p>the smallest nonzero component of <span class="math inline">\(r_k\)</span>;</p></li>
+<li><p>the number of nonzero FP128 residual components;</p></li>
+<li><p>the number of nonzero components that became exactly zero during FP128-to-FP16 conversion.</p></li>
+</ul>
+<p>The important distinction was:</p>
+<ul>
+<li><p><code>nonzero_components</code> described the original FP128 residual;</p></li>
+<li><p><code>zeroed_by_conversion</code> described information lost in the FP16 copy.</p></li>
+</ul>
+<p>Thus,</p>
+<pre class="text"><code>nonzero_components = 100
+zeroed_by_conversion = 20</code></pre>
+<p>meant that all 100 components were nonzero in FP128, but only 80 remained nonzero after conversion to FP16.</p>
+</section>
+<section id="diagnostic-experiment" class="level5">
+<h5 class="anchored" data-anchor-id="diagnostic-experiment">Diagnostic experiment</h5>
+<p>We tested one fixed random symmetric positive-definite system with</p>
+<p><span class="math display">\[
+n=100,qquad \kappa(A)=10,
+\]</span></p>
+<p>using FP16–FP64–FP128 refinement.</p>
+<p>The initial diagnostic results were:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">Iteration</th>
+<th style="text-align: right;"><span class="math inline">\(\lVert r_k\rVert_\infty\)</span></th>
+<th style="text-align: right;">Smallest nonzero component</th>
+<th style="text-align: right;">Zeroed by FP16 conversion</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><span class="math inline">\(1.3474\times10^{-2}\)</span></td>
+<td style="text-align: right;"><span class="math inline">\(3.3279\times10^{-5}\)</span></td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1</td>
+<td style="text-align: right;"><span class="math inline">\(5.4754\times10^{-5}\)</span></td>
+<td style="text-align: right;"><span class="math inline">\(3.4203\times10^{-8}\)</span></td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2</td>
+<td style="text-align: right;"><span class="math inline">\(4.8336\times10^{-7}\)</span></td>
+<td style="text-align: right;"><span class="math inline">\(3.0833\times10^{-9}\)</span></td>
+<td style="text-align: right;">9</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">3</td>
+<td style="text-align: right;"><span class="math inline">\(4.1084\times10^{-7}\)</span></td>
+<td style="text-align: right;"><span class="math inline">\(2.0158\times10^{-9}\)</span></td>
+<td style="text-align: right;">20</td>
+</tr>
+</tbody>
+</table>
+<p>The first two refinement steps reduced the residual substantially:</p>
+<p><span class="math display">\[
+\frac{\lVert r_0\rVert_\infty}
+     {\lVert r_1\rVert_\infty}
+\approx246,
+\qquad
+\frac{\lVert r_1\rVert_\infty}
+     {\lVert r_2\rVert_\infty}
+\approx113.
+\]</span></p>
+<p>At iteration 2, residual components first became zero during conversion. At essentially the same point, residual reduction stopped.</p>
+<p>For <span class="math inline">\(k\ge2\)</span>,</p>
+<p><span class="math display">\[
+2.97\times10^{-7}
+\le
+\lVert r_k\rVert_\infty
+\le
+5.00\times10^{-7},
+\]</span></p>
+<p>with mean approximately</p>
+<p><span class="math display">\[
+4.17\times10^{-7}.
+\]</span></p>
+<p>Between 9 and 20 components were lost per iteration, with an average of approximately 14.5.</p>
+<p>Even before components became zero, conversion was already inaccurate. At iteration 1, the smallest component was</p>
+<p><span class="math display">\[
+3.4203\times10^{-8}.
+\]</span></p>
+<p>It was above the rounding-to-zero threshold but below the smallest FP16 subnormal, so it was rounded to approximately</p>
+<p><span class="math display">\[
+5.9605\times10^{-8}.
+\]</span></p>
+<p>Therefore, <code>zeroed_by_conversion = 0</code> did not imply an accurate conversion.</p>
+<p>After iteration 2, the entire residual was only several FP16 subnormal increments away from zero. The residual was consequently represented by a very small set of possible FP16 values. This produced severe quantization even for components that remained nonzero.</p>
+<p>The experiment confirmed the hypothesis:</p>
+<blockquote class="blockquote">
+<p>The FP128 residual remained fully nonzero, but conversion to unscaled FP16 discarded or severely quantized its components. This information loss began at the same point as residual stagnation.</p>
+</blockquote>
+</section>
+</section>
+<section id="implemented-solution" class="level4">
+<h4 class="anchored" data-anchor-id="implemented-solution">Implemented solution</h4>
+<section id="conceptual-solution" class="level5">
+<h5 class="anchored" data-anchor-id="conceptual-solution">Conceptual solution</h5>
+<p>We introduced infinity-norm residual scaling:</p>
+<p><span class="math display">\[
+\theta_k=\lVert r_k\rVert_\infty,
+\qquad
+\widehat r_k=\frac{r_k}{\theta_k}.
+\]</span></p>
+<p>Instead of solving directly with the small residual, we solve</p>
+<p><span class="math display">\[
+A\widehat d_k=\widehat r_k
+\]</span></p>
+<p>in factor precision and then recover the actual correction:</p>
+<p><span class="math display">\[
+d_k=\theta_k\widehat d_k.
+\]</span></p>
+<p>In exact arithmetic, this is equivalent to</p>
+<p><span class="math display">\[
+Ad_k=r_k.
+\]</span></p>
+<p>The normalization ensures</p>
+<p><span class="math display">\[
+\lVert\widehat r_k\rVert_\infty=1.
+\]</span></p>
+<p>The residual conversion therefore uses the available FP16 range effectively rather than placing the entire vector near zero.</p>
+<p>Scaling does not increase FP16 precision. It removes the irrelevant absolute magnitude of the residual before conversion.</p>
+</section>
+<section id="implementation-in-mixed_ir" class="level5">
+<h5 class="anchored" data-anchor-id="implementation-in-mixed_ir">Implementation in <code>mixed_ir</code></h5>
+<p>We added an optional setting:</p>
+<div class="sourceCode" id="cb34"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="dt">bool</span> scale_residual <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The default preserves the original algorithm.</p>
+<p>When scaling is enabled, the implementation:</p>
+<ol type="1">
+<li><p>Computes <span class="math inline">\(\lVert r_k\rVert_\infty\)</span> in <code>T_residual</code>.</p></li>
+<li><p>Preserves the original residual <code>r_r</code> for diagnostics.</p></li>
+<li><p>Creates a separate correction right-hand side:</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>hdnum<span class="op">::</span>Vector<span class="op">&lt;</span>T_residual<span class="op">&gt;</span> correction_rhs_r<span class="op">(</span>r_r<span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div></li>
+<li><p>Normalizes it when the residual is nonzero:</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>correction_rhs_r<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>    correction_rhs_r<span class="op">[</span>i<span class="op">]</span> <span class="op">/</span> residual_scale_r<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div></li>
+<li><p>Converts the normalized vector, rather than the original residual, to factor precision:</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>convert<span class="op">(</span>r_f<span class="op">,</span> correction_rhs_r<span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div></li>
+<li><p>Performs the existing FP16 LU solve without changing the factors or solve routine.</p></li>
+<li><p>Converts the normalized correction to working precision.</p></li>
+<li><p>Rescales it in FP64:</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>d_w<span class="op">[</span>i<span class="op">]</span> <span class="op">=</span> residual_scale_w <span class="op">*</span> d_w<span class="op">[</span>i<span class="op">];</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div></li>
+<li><p>Performs the original update:</p>
+<p><span class="math display">\[
+x_{k+1}=x_k+d_k.
+\]</span></p></li>
+</ol>
+<p>The scale is applied in working precision, not factor precision. Thus, the small value <span class="math inline">\(\theta_k\)</span> never needs to be represented in FP16.</p>
+<p>The zero-residual case skips normalization, preventing division by zero. We also retained the existing finite-value checks after rescaling.</p>
+<p>The diagnostic semantics were updated accordingly:</p>
+<ul>
+<li><p>residual magnitudes still describe the original <span class="math inline">\(r_k\)</span>;</p></li>
+<li><p><code>zeroed_by_conversion</code> describes conversion of the actual correction right-hand side:</p>
+<ul>
+<li><p><span class="math inline">\(r_k\)</span> in unscaled mode;</p></li>
+<li><p><span class="math inline">\(\widehat r_k\)</span> in scaled mode.</p></li>
+</ul></li>
+</ul>
+</section>
+</section>
+<section id="validation-experiment" class="level4">
+<h4 class="anchored" data-anchor-id="validation-experiment">Validation experiment</h4>
+<section id="experimental-design" class="level5">
+<h5 class="anchored" data-anchor-id="experimental-design">Experimental design</h5>
+<p>We generated the problem once and ran:</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>run<span class="op">(</span><span class="st">"unscaled"</span><span class="op">,</span> <span class="kw">false</span><span class="op">);</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>run<span class="op">(</span><span class="st">"scaled"</span><span class="op">,</span> <span class="kw">true</span><span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Both runs used exactly the same:</p>
+<ul>
+<li><p>matrix;</p></li>
+<li><p>right-hand side;</p></li>
+<li><p>random seed;</p></li>
+<li><p>dimension <span class="math inline">\(n=100\)</span>;</p></li>
+<li><p>condition number <span class="math inline">\(\kappa(A)=10\)</span>;</p></li>
+<li><p>precision triple FP16–FP64–FP128;</p></li>
+<li><p>stopping criterion and iteration limit.</p></li>
+</ul>
+<p>The identical initial residual,</p>
+<p><span class="math display">\[
+\lVert r_0\rVert_\infty
+=
+1.34744462924774981\times10^{-2},
+\]</span></p>
+<p>confirmed that scaling did not alter the matrix factorization or initial solution.</p>
+<p>The unscaled results also reproduced the previous baseline. Therefore, adding the optional scaling path did not change the original behavior when scaling was disabled.</p>
+</section>
+<section id="unscaled-result" class="level5">
+<h5 class="anchored" data-anchor-id="unscaled-result">Unscaled result</h5>
+<p>The unscaled method:</p>
+<ul>
+<li><p>first lost components at iteration 2;</p></li>
+<li><p>lost between 9 and 20 components per later iteration;</p></li>
+<li><p>stagnated near <span class="math inline">\(4.17\times10^{-7}\)</span>;</p></li>
+<li><p>failed to converge after 20 updates;</p></li>
+<li><p>ended with</p></li>
+</ul>
+<p><span class="math display">\[
+\text{final relative correction}
+=
+1.1685\times10^{-7}.
+\]</span></p>
+</section>
+<section id="scaled-result" class="level5">
+<h5 class="anchored" data-anchor-id="scaled-result">Scaled result</h5>
+<p>The scaled run produced:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">Iteration</th>
+<th style="text-align: right;"><span class="math inline">\(\lVert r_k\rVert_\infty\)</span></th>
+<th style="text-align: right;">Zeroed by conversion</th>
+<th style="text-align: right;">Reduction factor</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><span class="math inline">\(1.3474\times10^{-2}\)</span></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">–</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">1</td>
+<td style="text-align: right;"><span class="math inline">\(5.3874\times10^{-5}\)</span></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><span class="math inline">\(250.1\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2</td>
+<td style="text-align: right;"><span class="math inline">\(2.8349\times10^{-7}\)</span></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><span class="math inline">\(190.0\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">3</td>
+<td style="text-align: right;"><span class="math inline">\(2.1471\times10^{-9}\)</span></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><span class="math inline">\(132.0\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">4</td>
+<td style="text-align: right;"><span class="math inline">\(1.1636\times10^{-11}\)</span></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><span class="math inline">\(184.5\)</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">5</td>
+<td style="text-align: right;"><span class="math inline">\(7.5515\times10^{-14}\)</span></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><span class="math inline">\(154.1\)</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">6</td>
+<td style="text-align: right;"><span class="math inline">\(4.3479\times10^{-16}\)</span></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><span class="math inline">\(173.7\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>No normalized residual component became zero during FP16 conversion.</p>
+<p>The residual decreased by</p>
+<p><span class="math display">\[
+\frac{\lVert r_0\rVert_\infty}
+     {\lVert r_6\rVert_\infty}
+\approx3.10\times10^{13},
+\]</span></p>
+<p>or approximately 13.5 decimal orders.</p>
+<p>The method converged after seven updates with</p>
+<p><span class="math display">\[
+\text{final relative correction}
+=
+9.7687\times10^{-17}.
+\]</span></p>
+<p>This was below FP64 unit roundoff:</p>
+<p><span class="math display">\[
+u_{\mathrm{FP64}}
+=
+2^{-53}
+\approx1.1102\times10^{-16}.
+\]</span></p>
+</section>
+<section id="interpretation" class="level5">
+<h5 class="anchored" data-anchor-id="interpretation">Interpretation</h5>
+<p>The observed reduction factors, between approximately 132 and 250, correspond to contraction factors between roughly</p>
+<p><span class="math display">\[
+4.0\times10^{-3}
+\quad\text{and}\quad
+7.6\times10^{-3}.
+\]</span></p>
+<p>This agrees well with the theoretical scale</p>
+<p><span class="math display">\[
+\kappa(A)u_{\mathrm{FP16}}
+\approx4.88\times10^{-3}.
+\]</span></p>
+<p>Once the residual-range problem was removed, the algorithm behaved as expected from mixed-precision iterative-refinement theory.</p>
+</section>
+</section>
+<section id="conclusion" class="level4">
+<h4 class="anchored" data-anchor-id="conclusion">Conclusion</h4>
+<p>The investigation established the following sequence:</p>
+<ol type="1">
+<li><p>FP16 refinement failed unexpectedly for a well-conditioned problem.</p></li>
+<li><p>Bfloat16 succeeded despite having lower significand precision, pointing to an exponent-range problem.</p></li>
+<li><p>Direct diagnostics showed that nonzero FP128 residual components were zeroed or severely quantized during FP16 conversion.</p></li>
+<li><p>Conversion loss began at the same point as residual stagnation.</p></li>
+<li><p>Infinity-norm scaling removed the irrelevant absolute residual magnitude before conversion.</p></li>
+<li><p>A controlled scaled-versus-unscaled experiment eliminated all observed conversion-to-zero events.</p></li>
+<li><p>The scaled method restored regular convergence and reached FP64 accuracy in seven iterations.</p></li>
+</ol>
+<p>This is strong validation for the tested system. Broader validation should repeat the comparison over multiple dimensions, condition numbers, and random seeds. Residual scaling addresses residual underflow only; it does not address separate FP16 overflow caused by matrix entries exceeding the FP16 range.</p>
+</section>
+</section>
+</section>
+<section id="plotting-convergence-experiments" class="level2" data-number="5.7">
+<h2 data-number="5.7" class="anchored" data-anchor-id="plotting-convergence-experiments"><span class="header-section-number">5.7</span> Plotting Convergence Experiments</h2>
 <p>The script</p>
 <pre class="text"><code>code/scripts/plot_convergence.py</code></pre>
 <p>generates convergence-history and summary plots from one mixed-precision iterative-refinement CSV file.</p>
@@ -816,11 +1541,11 @@ iteration 2  → solution x2 after the second correction
 <section id="command-line-interface" class="level3">
 <h3 class="anchored" data-anchor-id="command-line-interface">Command-line interface</h3>
 <p>The general invocation is:</p>
-<div class="sourceCode" id="cb26"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py CSV_FILE <span class="dt">\</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Description of experiment"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb43"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py CSV_FILE <span class="dt">\</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Description of experiment"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>If the terminal is already inside <code>code/</code>, use:</p>
-<div class="sourceCode" id="cb27"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/plot_convergence.py CSV_FILE <span class="dt">\</span></span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Description of experiment"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb44"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/plot_convergence.py CSV_FILE <span class="dt">\</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Description of experiment"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>The script first checks whether <code>CSV_FILE</code> is a direct path. If it is not found there, it looks under:</p>
 <pre class="text"><code>code/results/raw/</code></pre>
 <p>The plots are written to:</p>
@@ -831,10 +1556,10 @@ iteration 2  → solution x2 after the second correction
 <p>The CSV argument is optional. If no filename is provided, the script uses:</p>
 <pre class="text"><code>convergence_fp16_fp64_fp128.csv</code></pre>
 <p>Therefore:</p>
-<div class="sourceCode" id="cb31"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb48"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>is equivalent to:</p>
-<div class="sourceCode" id="cb32"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    convergence_fp16_fp64_fp128.csv</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb49"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>    convergence_fp16_fp64_fp128.csv</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="output-tags" class="level3">
 <h3 class="anchored" data-anchor-id="output-tags">Output tags</h3>
@@ -851,16 +1576,16 @@ summary_final_errors_random_spd_fp16_fp64_fp128.png
 summary_best_errors_random_spd_fp16_fp64_fp128.png
 summary_iterations_random_spd_fp16_fp64_fp128.png</code></pre>
 <p>A custom output tag can be supplied with:</p>
-<div class="sourceCode" id="cb36"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="ex">--tag</span> custom_name</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb53"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="ex">--tag</span> custom_name</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>For example:</p>
-<div class="sourceCode" id="cb37"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_fp16_fp64_fp128.csv <span class="dt">\</span></span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--tag</span> random_spd_test</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb54"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--tag</span> random_spd_test</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="descriptive-plot-labels" class="level3">
 <h3 class="anchored" data-anchor-id="descriptive-plot-labels">Descriptive plot labels</h3>
 <p>The optional <code>--label</code> argument is added to plot titles:</p>
-<div class="sourceCode" id="cb38"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="ex">--label</span> <span class="st">"Random dense SPD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb55"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="ex">--label</span> <span class="st">"Random dense SPD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>This produces titles such as:</p>
 <pre class="text"><code>Random dense SPD: relative forward error, infinity norm vs. refinement iteration</code></pre>
 <p>The label does not affect the output filenames.</p>
@@ -869,29 +1594,29 @@ summary_iterations_random_spd_fp16_fp64_fp128.png</code></pre>
 <h3 class="anchored" data-anchor-id="matrix-family-examples">Matrix-family examples</h3>
 <section id="block-rotated-spd" class="level4">
 <h4 class="anchored" data-anchor-id="block-rotated-spd">Block-rotated SPD</h4>
-<div class="sourceCode" id="cb40"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    convergence_fp16_fp64_fp128.csv <span class="dt">\</span></span>
-<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Block-rotated SPD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb57"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>    convergence_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Block-rotated SPD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="random-dense-spd" class="level4">
 <h4 class="anchored" data-anchor-id="random-dense-spd">Random dense SPD</h4>
-<div class="sourceCode" id="cb41"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_fp16_fp64_fp128.csv <span class="dt">\</span></span>
-<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random dense SPD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb58"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random dense SPD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="random-svd" class="level4">
 <h4 class="anchored" data-anchor-id="random-svd">Random SVD</h4>
-<div class="sourceCode" id="cb42"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
-<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_svd_fp16_fp64_fp128.csv <span class="dt">\</span></span>
-<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SVD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb59"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_svd_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SVD"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
 <section id="encoding-the-solution-or-rhs-mode" class="level3">
 <h3 class="anchored" data-anchor-id="encoding-the-solution-or-rhs-mode">Encoding the solution or RHS mode</h3>
 <p>The test-problem infrastructure supports three modes:</p>
-<div class="sourceCode" id="cb43"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>RightHandSideMode<span class="op">::</span>ones_solution</span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>RightHandSideMode<span class="op">::</span>random_sign_solution</span>
-<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>RightHandSideMode<span class="op">::</span>random_normal_rhs</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb60"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>RightHandSideMode<span class="op">::</span>ones_solution</span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>RightHandSideMode<span class="op">::</span>random_sign_solution</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>RightHandSideMode<span class="op">::</span>random_normal_rhs</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>These correspond to:</p>
 <ul>
 <li>construct (x=(1,,1)^T) and form (b=Ax);</li>
@@ -911,25 +1636,25 @@ convergence_random_spd_b_random_normal_fp16_fp64_fp128.csv</code></pre>
 <h3 class="anchored" data-anchor-id="examples-for-the-three-modes">Examples for the three modes</h3>
 <section id="all-ones-solution" class="level4">
 <h4 class="anchored" data-anchor-id="all-ones-solution">All-ones solution</h4>
-<div class="sourceCode" id="cb46"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_x_ones_fp16_fp64_fp128.csv <span class="dt">\</span></span>
-<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SPD, ones solution"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb63"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_x_ones_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SPD, ones solution"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>This produces files such as:</p>
 <pre class="text"><code>convergence_forward_error_random_spd_x_ones_fp16_fp64_fp128.png</code></pre>
 </section>
 <section id="random-sign-solution" class="level4">
 <h4 class="anchored" data-anchor-id="random-sign-solution">Random-sign solution</h4>
-<div class="sourceCode" id="cb48"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_x_random_signs_fp16_fp64_fp128.csv <span class="dt">\</span></span>
-<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SPD, random-sign solution"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb65"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_x_random_signs_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb65-3"><a href="#cb65-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SPD, random-sign solution"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>This produces files such as:</p>
 <pre class="text"><code>convergence_forward_error_random_spd_x_random_signs_fp16_fp64_fp128.png</code></pre>
 </section>
 <section id="random-normal-right-hand-side" class="level4">
 <h4 class="anchored" data-anchor-id="random-normal-right-hand-side">Random-normal right-hand side</h4>
-<div class="sourceCode" id="cb50"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
-<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_b_random_normal_fp16_fp64_fp128.csv <span class="dt">\</span></span>
-<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SPD, normally distributed right-hand side"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb67"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> code/scripts/plot_convergence.py <span class="dt">\</span></span>
+<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>    convergence_random_spd_b_random_normal_fp16_fp64_fp128.csv <span class="dt">\</span></span>
+<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--label</span> <span class="st">"Random SPD, normally distributed right-hand side"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>This produces files such as:</p>
 <pre class="text"><code>convergence_forward_error_random_spd_b_random_normal_fp16_fp64_fp128.png</code></pre>
 </section>
