@@ -87,6 +87,34 @@ STATUS_DESCRIPTIONS = {
     "F": "non-finite factorization input",
 }
 
+# Number of significand bits p used by each current factorization type.
+# The convergence-boundary convention in condition_grids.hpp is
+# kappa_* = 1 / u_f = 2**p.
+FACTOR_SIGNIFICAND_BITS = {
+    "fp8": 4,
+    "bfloat16": 8,
+    "fp16": 11,
+    "fp32": 24,
+    "fp64": 53,
+    "fp128": 128,
+    "fp256": 256,
+}
+
+REPRESENTATIVE_BOUNDARY_FACTORS = (
+    0.01,
+    0.1,
+    0.5,
+    1.0,
+    2.0,
+    10.0,
+    100.0
+)
+
+# Full decimal notation is easier to read for the FP8, bfloat16, FP16,
+# and FP32 representative grids. Scientific notation avoids excessively
+# wide labels for genuinely large values such as the FP64 baseline.
+DECIMAL_NOTATION_LIMIT = 1.0e9
+
 
 def parse_arguments() -> Namespace:
     """Parse command-line arguments."""
@@ -373,22 +401,122 @@ def read_history(csv_path: Path) -> pd.DataFrame:
     return history.sort_values(["requested_kappa", "iteration"])
 
 
-def kappa_label(kappa: float) -> str:
-    """Format a condition number compactly for a plot legend."""
-    if kappa <= 0.0 or not np.isfinite(kappa):
-        return fr"$\kappa={kappa:g}$"
+def factorization_boundary(dataframe: pd.DataFrame) -> float | None:
+    """Return kappa_* = 1 / u_f for a recognized factorization type."""
+    factor_precision = str(dataframe.iloc[0]["factor_precision"]).lower()
+    significand_bits = FACTOR_SIGNIFICAND_BITS.get(factor_precision)
 
-    exponent = int(np.floor(np.log10(kappa)))
+    if significand_bits is None:
+        warnings.warn(
+            "No factorization-boundary metadata is known for precision "
+            f"{factor_precision!r}; using plain kappa labels.",
+            stacklevel=1,
+        )
+        return None
 
-    if -2 <= exponent <= 2:
-        return fr"$\kappa={kappa:g}$"
+    boundary = float(2**significand_bits)
 
-    coefficient = kappa / 10.0**exponent
+    if not np.isfinite(boundary):
+        warnings.warn(
+            f"The boundary for precision {factor_precision!r} exceeds "
+            "the plotting range; using plain kappa labels.",
+            stacklevel=1,
+        )
+        return None
+
+    return boundary
+
+
+def decimal_math_text(value: float) -> str:
+    """Format a moderate finite value as readable decimal math text."""
+    text = np.format_float_positional(
+        value,
+        precision=12,
+        unique=False,
+        fractional=False,
+        trim="-",
+    )
+    integer_part, separator, fractional_part = text.partition(".")
+    grouped_integer = f"{int(integer_part):,}".replace(",", "{,}")
+
+    if not separator:
+        return grouped_integer
+
+    return f"{grouped_integer}.{fractional_part}"
+
+
+def scientific_math_text(value: float) -> str:
+    """Format a large finite value compactly as mathematical notation."""
+    exponent = int(np.floor(np.log10(abs(value))))
+    coefficient = value / 10.0**exponent
 
     if np.isclose(coefficient, 1.0, rtol=1.0e-12, atol=0.0):
-        return fr"$\kappa=10^{{{exponent}}}$"
+        return f"10^{{{exponent}}}"
 
-    return fr"$\kappa={coefficient:.3g}\times10^{{{exponent}}}$"
+    coefficient_text = np.format_float_positional(
+        coefficient,
+        precision=6,
+        unique=False,
+        fractional=False,
+        trim="-",
+    )
+    return fr"{coefficient_text}\times10^{{{exponent}}}"
+
+
+def number_math_text(value: float) -> str:
+    """Choose readable decimal or compact scientific notation."""
+    if not np.isfinite(value):
+        return f"{value:g}"
+
+    if abs(value) < DECIMAL_NOTATION_LIMIT:
+        return decimal_math_text(value)
+
+    return scientific_math_text(value)
+
+
+def representative_boundary_factor(
+    kappa: float,
+    boundary: float,
+) -> float | None:
+    """Recognize a representative-grid point as a multiple of kappa_*."""
+    if np.isclose(kappa, 1.0, rtol=1.0e-12, atol=1.0e-15):
+        return None
+
+    ratio = kappa / boundary
+
+    for factor in REPRESENTATIVE_BOUNDARY_FACTORS:
+        if np.isclose(ratio, factor, rtol=1.0e-10, atol=1.0e-14):
+            return factor
+
+    return None
+
+
+def boundary_factor_math_text(factor: float) -> str:
+    """Format a recognized multiple of the factorization boundary."""
+    if np.isclose(factor, 1.0):
+        return r"\kappa_*"
+
+    factor_text = decimal_math_text(factor)
+    return fr"{factor_text}\kappa_*"
+
+
+def kappa_label(kappa: float, boundary: float | None) -> str:
+    """Format one condition number and expose its boundary-grid role."""
+    value_text = number_math_text(kappa)
+
+    if boundary is None:
+        return fr"$\kappa={value_text}$"
+
+    factor = representative_boundary_factor(kappa, boundary)
+
+    if factor is not None:
+        factor_text = boundary_factor_math_text(factor)
+        return fr"${factor_text}={value_text}$"
+
+    if np.isclose(kappa, 1.0, rtol=1.0e-12, atol=1.0e-15):
+        return fr"$\kappa={value_text}$ (baseline)"
+
+    return fr"$\kappa={value_text}$"
 
 
 def status_code(group: pd.DataFrame) -> str:
@@ -412,6 +540,18 @@ def status_key(codes: Iterable[str]) -> str:
         if code in present_codes
     )
     return "Status: " + "; ".join(definitions)
+
+
+def legend_title(boundary: float | None, codes: Iterable[str]) -> str:
+    """Construct the boundary definition and status key for the legend."""
+    lines: list[str] = []
+
+    if boundary is not None:
+        boundary_text = number_math_text(boundary)
+        lines.append(fr"$\kappa_*=1/u_f={boundary_text}$")
+
+    lines.append(status_key(codes))
+    return "\n".join(lines)
 
 
 def figure_title(dataframe: pd.DataFrame) -> str:
@@ -448,6 +588,7 @@ def configure_axis(axis: Axes, title: str, ylabel: str) -> None:
 def plot_history(dataframe: pd.DataFrame) -> tuple[Figure, int]:
     """Create the three-panel convergence-history figure."""
     kappas = sorted(dataframe["requested_kappa"].unique())
+    boundary = factorization_boundary(dataframe)
     colors = plt.get_cmap("viridis")(
         np.linspace(0.05, 0.9, len(kappas))
     )
@@ -469,7 +610,7 @@ def plot_history(dataframe: pd.DataFrame) -> tuple[Figure, int]:
         ].sort_values("iteration")
         code = status_code(group)
         plotted_status_codes.append(code)
-        label = f"{kappa_label(float(kappa))} [{code}]"
+        label = f"{kappa_label(float(kappa), boundary)} [{code}]"
 
         for axis, (column, _, _) in zip(axes, METRICS):
             values = positive_log_values(group[column])
@@ -491,19 +632,25 @@ def plot_history(dataframe: pd.DataFrame) -> tuple[Figure, int]:
         configure_axis(axis, title, ylabel)
 
     handles, labels = axes[0].get_legend_handles_labels()
-    legend_columns = min(4, len(labels))
+    longest_label = max(map(len, labels), default=0)
+    legend_columns = min(
+        3 if longest_label > 28 else 4,
+        len(labels),
+    )
+    legend_rows = int(np.ceil(len(labels) / legend_columns))
+    bottom_margin = 0.18 + 0.055 * max(0, legend_rows - 2)
 
     figure.suptitle(figure_title(dataframe), fontsize=14)
     figure.legend(
         handles,
         labels,
         loc="lower center",
-        bbox_to_anchor=(0.5, 0.0),
+        bbox_to_anchor=(0.5, 0.01),
         ncol=legend_columns,
         frameon=False,
-        title=status_key(plotted_status_codes),
+        title=legend_title(boundary, plotted_status_codes),
     )
-    figure.tight_layout(rect=(0.0, 0.13, 1.0, 0.93))
+    figure.tight_layout(rect=(0.0, bottom_margin, 1.0, 0.93))
 
     return figure, omitted_nonpositive
 
