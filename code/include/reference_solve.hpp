@@ -8,7 +8,28 @@
 
 namespace mpir {
 
+/**
+ * @brief Solves `A x = b` by full-pivoting LU in `T_reference`.
+ *
+ * Converts `A` and `b` from `T_data` to `T_reference`, then performs the
+ * factorization, permutations, and triangular solves in `T_reference`.
+ * The inputs are unchanged. Use equal template types for a direct solve in the
+ * data precision.
+ *
+ * @tparam T_reference Arithmetic and result precision.
+ * @tparam T_data Input storage precision.
+ * @param A Nonempty square coefficient matrix.
+ * @param b Right-hand side of compatible size.
+ * @return Solution in `T_reference`.
+ *
+ * @throws std::invalid_argument If `A` is empty or nonsquare, or if its size
+ *         is incompatible with `b`.
+ *
+ * @note Finiteness and singularity are not checked explicitly; failures follow
+ *       the behavior of HDNUM's factorization and solve routines.
+ */
 template<class T_reference, class T_data>
+[[nodiscard]]
 hdnum::Vector<T_reference>
 high_precision_solve(
     const hdnum::DenseMatrix<T_data>& A,
@@ -34,43 +55,28 @@ high_precision_solve(
 
     const std::size_t n = A.rowsize();
 
-    // Convert the stored problem to reference precision.
+    // Convert the system to the arithmetic precision.
     hdnum::DenseMatrix<T_reference> A_reference =
         convert_matrix<T_reference>(A);
 
     hdnum::Vector<T_reference> rhs_reference =
         convert_vector<T_reference>(b);
 
-    // Full-pivoting LU:
-    //
-    //     P A Q = L U
-    //
-    // lr_fullpivot overwrites A_reference with the combined
-    // L and U factors.
+    // Compute P A Q = L U in place.
     hdnum::Vector<std::size_t> p(n);
     hdnum::Vector<std::size_t> q(n);
 
     hdnum::lr_fullpivot(A_reference, p, q);
 
-    // Apply the row permutation:
-    //
-    //     L U Q^{-1} x = P b
+    // Apply P and solve L y = P b in place.
     hdnum::permute_forward(p, rhs_reference);
-
-    // Solve:
-    //
-    //     L y = P b
-    //
-    // rhs_reference is overwritten with y.
     hdnum::solveL(
         A_reference,
         rhs_reference,
         rhs_reference
     );
 
-    // Solve:
-    //
-    //     U z = y
+    // Solve U z = y.
     hdnum::Vector<T_reference> x_reference(n);
 
     hdnum::solveR(
@@ -79,7 +85,7 @@ high_precision_solve(
         rhs_reference
     );
 
-    // Since z = Q^{-1}x, undo the column permutation.
+    // Recover x = Q z.
     hdnum::permute_backward(q, x_reference);
 
     return x_reference;
