@@ -2,8 +2,10 @@
 """Plot Group A mixed-precision iterative-refinement histories.
 
 By default, the script reads every convergence-history CSV from
-``results/raw/convergence`` and writes one three-panel figure per precision
-configuration to ``results/plots/convergence``.
+``results/raw/convergence`` and writes one two-panel figure per precision
+configuration to ``results/plots/convergence``.  Pass
+``--include-relative-correction`` to add the relative-correction history as a
+third panel.
 
 The intended location of this script is ``code/scripts``.  Input files or
 directories may also be supplied explicitly on the command line.
@@ -53,7 +55,7 @@ NUMERIC_COLUMNS = (
     "rel_correction",
 )
 
-METRICS = (
+DEFAULT_METRICS = (
     (
         "forward_error_inf",
         "(a) Relative forward error",
@@ -64,12 +66,15 @@ METRICS = (
         "(b) Normwise backward error",
         "Normwise backward error, infinity norm",
     ),
-    (
-        "rel_correction",
-        "(c) Relative correction",
-        "Relative correction norm",
-    ),
 )
+
+RELATIVE_CORRECTION_METRIC = (
+    "rel_correction",
+    "(c) Relative correction",
+    "Relative correction norm",
+)
+
+ALL_METRICS = DEFAULT_METRICS + (RELATIVE_CORRECTION_METRIC,)
 
 STATUS_CODES = {
     "converged": "C",
@@ -107,7 +112,6 @@ REPRESENTATIVE_BOUNDARY_FACTORS = (
     1.0,
     2.0,
     10.0,
-    100.0
 )
 
 # Full decimal notation is easier to read for the FP8, bfloat16, FP16,
@@ -120,8 +124,8 @@ def parse_arguments() -> Namespace:
     """Parse command-line arguments."""
     parser = ArgumentParser(
         description=(
-            "Plot all Group A convergence-history CSV files as three-panel "
-            "figures."
+            "Plot all Group A convergence-history CSV files as two-panel "
+            "figures, optionally including relative-correction histories."
         )
     )
 
@@ -164,6 +168,14 @@ def parse_arguments() -> Namespace:
         type=int,
         default=200,
         help="Raster resolution for PNG output (default: 200).",
+    )
+    parser.add_argument(
+        "--include-relative-correction",
+        action="store_true",
+        help=(
+            "Add relative correction as a third panel. By default, only "
+            "forward and backward errors are plotted."
+        ),
     )
 
     args = parser.parse_args()
@@ -362,7 +374,9 @@ def read_history(csv_path: Path) -> pd.DataFrame:
             "and iteration."
         )
 
-    missing_metrics = history[list(column for column, _, _ in METRICS)].isna()
+    missing_metrics = history[
+        list(column for column, _, _ in ALL_METRICS)
+    ].isna()
 
     if missing_metrics[["forward_error_inf", "backward_error_inf"]].any().any():
         raise ValueError(
@@ -585,10 +599,19 @@ def configure_axis(axis: Axes, title: str, ylabel: str) -> None:
     axis.xaxis.get_major_locator().set_params(integer=True)
 
 
-def plot_history(dataframe: pd.DataFrame) -> tuple[Figure, int]:
-    """Create the three-panel convergence-history figure."""
+def plot_history(
+    dataframe: pd.DataFrame,
+    include_relative_correction: bool = False,
+) -> tuple[Figure, int]:
+    """Create a two- or three-panel convergence-history figure."""
     kappas = sorted(dataframe["requested_kappa"].unique())
     boundary = factorization_boundary(dataframe)
+    metrics = (
+        ALL_METRICS
+        if include_relative_correction
+        else DEFAULT_METRICS
+    )
+    panel_count = len(metrics)
     colors = plt.get_cmap("viridis")(
         np.linspace(0.05, 0.9, len(kappas))
     )
@@ -596,10 +619,11 @@ def plot_history(dataframe: pd.DataFrame) -> tuple[Figure, int]:
 
     figure, axes = plt.subplots(
         1,
-        3,
-        figsize=(16.0, 5.2),
+        panel_count,
+        figsize=(16.0 if panel_count == 3 else 11.2, 5.2),
         sharex=True,
     )
+    axes = np.atleast_1d(axes)
 
     omitted_nonpositive = 0
     plotted_status_codes: list[str] = []
@@ -612,7 +636,7 @@ def plot_history(dataframe: pd.DataFrame) -> tuple[Figure, int]:
         plotted_status_codes.append(code)
         label = f"{kappa_label(float(kappa), boundary)} [{code}]"
 
-        for axis, (column, _, _) in zip(axes, METRICS):
+        for axis, (column, _, _) in zip(axes, metrics):
             values = positive_log_values(group[column])
             omitted_nonpositive += int(
                 (group[column].notna() & (group[column] <= 0.0)).sum()
@@ -628,7 +652,7 @@ def plot_history(dataframe: pd.DataFrame) -> tuple[Figure, int]:
                 label=label,
             )
 
-    for axis, (_, title, ylabel) in zip(axes, METRICS):
+    for axis, (_, title, ylabel) in zip(axes, metrics):
         configure_axis(axis, title, ylabel)
 
     handles, labels = axes[0].get_legend_handles_labels()
@@ -709,7 +733,10 @@ def main() -> None:
 
     for csv_path in csv_files:
         dataframe = read_history(csv_path)
-        figure, omitted_nonpositive = plot_history(dataframe)
+        figure, omitted_nonpositive = plot_history(
+            dataframe,
+            include_relative_correction=args.include_relative_correction,
+        )
         output_path = save_plot(
             figure,
             csv_path,
