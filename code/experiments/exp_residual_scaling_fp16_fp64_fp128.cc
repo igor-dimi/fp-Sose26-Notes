@@ -17,7 +17,7 @@
 namespace {
 
 constexpr std::size_t problem_dimension = 100;
-constexpr double requested_kappa = 10.0;
+constexpr double requested_kappa = 500.0;
 
 
 template<class T_work>
