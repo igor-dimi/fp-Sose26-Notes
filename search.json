@@ -384,13 +384,112 @@
     ]
   },
   {
+    "objectID": "notes/framework.html",
+    "href": "notes/framework.html",
+    "title": "7  Experimental Framework",
+    "section": "",
+    "text": "7.1 Where the current design stands\na modular, configurable, and reproducible experimental framework for mixed-precision iterative refinement.\nThe codebase now has several distinct layers:\nThe most important architectural property is separation of concerns:\n[ ;; ;; ;; ;; .]\nEach stage has a reasonably stable interface. Consequently, introducing a new experiment usually means composing existing components rather than constructing a new pipeline. This is what allowed us to implement convergence histories, condition-number sweeps, residual-precision comparisons, direct-solve comparisons, and residual-scaling diagnostics relatively efficiently.\nMy evaluation is that this is considerably stronger than a collection of ad hoc experiment programs. It has become small domain-specific research software with four particularly valuable properties:\nIt is still a research framework rather than a general-purpose production library. Some driver boilerplate remains, precision names are supplied separately from the C++ types, and the CSV schema is maintained manually. A larger project might introduce typed experiment records, automatic precision-name traits, configuration files, and more automated tests. For the scope of this practical project, however, the current level of abstraction is appropriate: it improves reliability and reproducibility without burying the numerical algorithm under excessive infrastructure.\nA succinct report-ready description would be:\nIntroducing only the record type would improve organization, but it would not automatically remove manual serialization. We need both parts.\nWe already have typed objects for the inputs and outputs of an experiment:\nBut a CSV row is not currently represented by one object. It exists only implicitly in code such as:\nand later:\nThis produces an important weakness: the header and the row are maintained separately. If a column is inserted, removed, or reordered in one place but not the other, the program still compiles and may silently produce a malformed dataset.\nSo we already have typed algorithm results, but we do not yet have typed serialized experiment records.",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Experimental Framework</span>"
+    ]
+  },
+  {
+    "objectID": "notes/framework.html#where-the-current-design-stands",
+    "href": "notes/framework.html#where-the-current-design-stands",
+    "title": "7  Experimental Framework",
+    "section": "",
+    "text": "ExperimentDescription\nTestProblemOptions\nMixedIROptions&lt;T_work&gt;\nMixedIRResult&lt;T_work&gt;\nResidualDiagnostic\n\n\nwrite_common_csv_header(out);\nout &lt;&lt; \",iteration,forward_error_inf,backward_error_inf,\"\n       \"rel_correction\\n\";\n\nwrite_common_csv_fields(...);\nout &lt;&lt; ',' &lt;&lt; iteration\n    &lt;&lt; ',' &lt;&lt; forward_error\n    &lt;&lt; ',' &lt;&lt; backward_error\n    &lt;&lt; ',' &lt;&lt; rel_correction\n    &lt;&lt; '\\n';",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Experimental Framework</span>"
+    ]
+  },
+  {
+    "objectID": "notes/framework.html#what-a-typed-experiment-record-would-be",
+    "href": "notes/framework.html#what-a-typed-experiment-record-would-be",
+    "title": "7  Experimental Framework",
+    "section": "7.2 What a typed experiment record would be",
+    "text": "7.2 What a typed experiment record would be\nFor example, the Group E error-history output could be represented explicitly:\nstruct RunRecord {\n    ExperimentKind experiment;\n    MatrixFamily matrix_family;\n    std::size_t dimension;\n\n    PrecisionNames precisions;\n    RightHandSideMode rhs_mode;\n\n    std::uint64_t matrix_seed_u;\n    std::uint64_t matrix_seed_v;\n    std::uint64_t vector_seed;\n\n    double requested_kappa;\n    std::string variant;\n\n    std::size_t max_iterations;\n    double effective_rel_correction_tol;\n    bool scale_residual;\n\n    MixedIRStatus status;\n    std::size_t total_iterations;\n    std::optional&lt;double&gt; final_rel_correction;\n};\n\nstruct ErrorHistoryRecord {\n    RunRecord run;\n\n    std::size_t iteration;\n    double forward_error_inf;\n    double backward_error_inf;\n    std::optional&lt;double&gt; rel_correction;\n};\nThe use of std::optional is valuable. For example:\n\niteration (0) has no associated correction;\na failed run may have no solution and therefore no forward error;\na direct solve has no refinement iteration count or stopping tolerance.\n\nCurrently these cases are represented by manually emitting empty commas. With typed records, missingness becomes explicit and checked by the type system.\nThe driver would construct records:\nrecords.push_back({\n    .run = make_run_record(\n        experiment,\n        problem_options,\n        algorithm_options,\n        requested_kappa,\n        variant,\n        result\n    ),\n    .iteration = iteration,\n    .forward_error_inf = forward_error,\n    .backward_error_inf = backward_error,\n    .rel_correction =\n        iteration == 0\n            ? std::nullopt\n            : std::optional{\n                  result.rel_corrections[iteration - 1]\n              }\n});\nThe experiment still decides which quantities to measure, but it no longer decides how CSV fields are ordered or escaped.",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Experimental Framework</span>"
+    ]
+  },
+  {
+    "objectID": "notes/framework.html#how-the-automatic-csv-schema-would-work",
+    "href": "notes/framework.html#how-the-automatic-csv-schema-would-work",
+    "title": "7  Experimental Framework",
+    "section": "7.3 How the automatic CSV schema would work",
+    "text": "7.3 How the automatic CSV schema would work\nC++ does not normally expose member names through ordinary language facilities, so a record alone cannot automatically produce meaningful column names. We would define a CSV schema once for each record type:\ntemplate&lt;&gt;\nstruct CsvSchema&lt;ErrorHistoryRecord&gt; {\n    static constexpr auto columns()\n    {\n        return std::tuple{\n            column(\n                \"iteration\",\n                &ErrorHistoryRecord::iteration\n            ),\n            column(\n                \"forward_error_inf\",\n                &ErrorHistoryRecord::forward_error_inf\n            ),\n            column(\n                \"backward_error_inf\",\n                &ErrorHistoryRecord::backward_error_inf\n            ),\n            column(\n                \"rel_correction\",\n                &ErrorHistoryRecord::rel_correction\n            )\n        };\n    }\n};\nA generic writer could then use the same list of column descriptors for both operations:\nwrite_csv_header&lt;ErrorHistoryRecord&gt;(out);\nwrite_csv_row(out, record);\nOr, preferably:\nwrite_csv(output_file, records);\nInternally, it would:\n\nobtain the column names from CsvSchema&lt;Record&gt;;\nwrite the header;\nobtain each value through the corresponding accessor;\nescape strings consistently;\nrepresent std::nullopt as an empty field;\napply uniform numeric formatting.\n\nBecause column names and value accessors come from the same descriptor list, they cannot become reordered independently.\nThe common run metadata could be flattened automatically before the experiment-specific fields:\nRunRecord columns\n    +\nErrorHistoryRecord columns\nThis would eliminate code such as:\nwrite_common_csv_header(...);\nwrite_common_csv_fields(...);\nwrite_direct_common_fields(...);\nand the repeated out &lt;&lt; ',' &lt;&lt; ... expressions in every driver.\nThe schema would still be declared manually once per record type, but not separately in every experiment driver.",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Experimental Framework</span>"
+    ]
+  },
+  {
+    "objectID": "notes/framework.html#recommended-record-types",
+    "href": "notes/framework.html#recommended-record-types",
+    "title": "7  Experimental Framework",
+    "section": "7.4 Recommended record types",
+    "text": "7.4 Recommended record types\nI would not create one enormous ExperimentRecord containing every possible measurement. That would produce many meaningless empty columns.\nInstead, use a small family of records:\nRunRecord\nSummaryRecord\nIterationRecord\nResidualDiagnosticRecord\nDirectComparisonRecord\nFor example:\n\nSummaryRecord: final errors and total iterations for condition sweeps;\nIterationRecord: forward error, backward error, and relative correction;\nResidualDiagnosticRecord: residual norm, minimum component, nonzero count, and conversion-loss count;\nDirectComparisonRecord: method name, final errors, and method-specific status.\n\nAll would embed the same RunRecord. This preserves uniform metadata without forcing every dataset into the same schema.",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Experimental Framework</span>"
+    ]
+  },
+  {
+    "objectID": "notes/framework.html#what-configuration-files-would-provide",
+    "href": "notes/framework.html#what-configuration-files-would-provide",
+    "title": "7  Experimental Framework",
+    "section": "7.5 What configuration files would provide",
+    "text": "7.5 What configuration files would provide\nAt present, experiment configuration is compiled into the drivers:\nconstexpr std::size_t problem_dimension = 100;\nconstexpr double requested_kappa = 500.0;\n\nalgorithm_options.max_iterations = 20;\nalgorithm_options.scale_residual = true;\nA configuration file would move these choices out of C++ source code. For example, a TOML configuration could look like:\nschema_version = 1\nexperiment = \"residual-scaling\"\nvariant = \"scaled\"\n\n[problem]\nmatrix_family = \"random-spd\"\ndimension = 100\nrhs_mode = \"random-normal\"\nrequested_kappa = 500.0\nmatrix_seed_u = 1234\nmatrix_seed_v = 5678\nvector_seed = 9012\n\n[precisions]\nfactor = \"fp16\"\nwork = \"fp64\"\nresidual = \"fp128\"\nmeasure = \"fp256\"\n\n[algorithm]\nmax_iterations = 20\nrel_correction_tol = \"default\"\ndetect_divergence = true\ndivergence_growth_factor = 10.0\ndivergence_growth_steps = 3\nscale_residual = true\nstore_iterates = true\nrecord_residual_diagnostics = true\n\n[output]\nrecord_type = \"error-history\"\ntag = \"scaled\"\nA single executable could then run:\nmpir-run experiments/residual_scaling_scaled.toml\nThe advantages would be:\n\nexperiments can be changed without recompilation;\nthe exact configuration can be archived with the results;\nrelated variants can be generated from nearly identical files;\nbatch sweeps can be described declaratively;\none generic runner can replace several narrowly specialized drivers.\n\nThe configuration should be parsed into strongly typed structures:\nstruct ProblemConfig;\nstruct PrecisionConfig;\nstruct AlgorithmConfig;\nstruct OutputConfig;\nstruct ExperimentConfig;\nStrings such as \"random-spd\" should be converted immediately into enums. The program should validate the complete configuration before starting the experiment.\n\nOne complication: precisions are compile-time types\nThe numerical call is templated:\nmixed_ir&lt;T_factor, T_work, T_residual&gt;(...)\nA configuration file is read at runtime. Therefore, it cannot create arbitrary C++ template types dynamically.\nThe runner would need a registry of supported, precompiled combinations:\ndispatch_precision_configuration(config, [&]&lt;class Tf, class Tw,\n                                            class Tr, class Tm&gt;() {\n    run_experiment&lt;Tf, Tw, Tr, Tm&gt;(config);\n});\nConceptually, the dispatcher maps:\nfp16-fp64-fp128-fp256\n    -&gt; run&lt;FP16, FP64, FP128, FP256&gt;()\n\nfp32-fp64-fp64-fp256\n    -&gt; run&lt;FP32, FP64, FP64, FP256&gt;()\nThis is perfectly workable, but it means that configuration files select from supported precision combinations rather than inventing arbitrary compiled types.",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Experimental Framework</span>"
+    ]
+  },
+  {
+    "objectID": "notes/framework.html#automatic-precision-name-traits",
+    "href": "notes/framework.html#automatic-precision-name-traits",
+    "title": "7  Experimental Framework",
+    "section": "7.6 Automatic precision-name traits",
+    "text": "7.6 Automatic precision-name traits\nAs you said, this is the simpler problem. Instead of passing\n{\"fp16\", \"fp64\", \"fp128\", \"fp256\"}\nseparately from\n&lt;hdnum::FP16, hdnum::FP64, hdnum::FP128, hdnum::FP256&gt;\nwe could define:\ntemplate&lt;class T&gt;\nstruct PrecisionTraits;\n\ntemplate&lt;&gt;\nstruct PrecisionTraits&lt;hdnum::FP16&gt; {\n    static constexpr std::string_view name = \"fp16\";\n};\n\ntemplate&lt;&gt;\nstruct PrecisionTraits&lt;hdnum::FP64&gt; {\n    static constexpr std::string_view name = \"fp64\";\n};\nThen:\nconst auto precision_names =\n    make_precision_names&lt;\n        T_factor,\n        T_work,\n        T_residual,\n        T_measure\n    &gt;();\nThis removes a duplicated source of information and prevents accidentally running FP16 while labeling the output as FP32.",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Experimental Framework</span>"
+    ]
+  },
+  {
+    "objectID": "notes/framework.html#research-framework-versus-general-purpose-library",
+    "href": "notes/framework.html#research-framework-versus-general-purpose-library",
+    "title": "7  Experimental Framework",
+    "section": "7.7 Research framework versus general-purpose library",
+    "text": "7.7 Research framework versus general-purpose library\nTyped records and configuration files would make the experimental framework more systematic. They would not, by themselves, turn the numerical implementation into a general-purpose library.\nThe clean long-term architecture would separate two products:\nmpir-core\n    Numerical algorithm and reusable numerical interfaces\n\nmpir-experiments\n    Problem generators, configurations, measurements, CSV output and plots\nThe core library should not need to know about CSV files, filenames, condition-number sweeps, or plot requirements.\nThe transition toward a general-purpose library would involve the following.\n\n1. Establish a stable numerical API\nThe public interface should clearly separate:\n\nalgorithm inputs;\nprecision roles;\noptions;\nresults;\ntermination statuses;\ndiagnostic information.\n\nInternal helpers should be moved out of the public interface where possible.\n\n\n2. Separate numerical execution from observation\nCurrently, complete iterate histories are stored when measurements are needed. A more general interface could support an iteration observer:\nmixed_ir(A, b, options, [&](const IterationState& state) {\n    recorder.observe(state);\n});\nThis would allow callers to:\n\ncompute error histories;\nlog progress;\nimplement custom stopping diagnostics;\navoid storing every iterate;\nuse the numerical library without experiment-specific machinery.\n\n\n\n3. Abstract the factorization and matrix backend\nThe current implementation is closely tied to HDNUM matrices, vectors, and full-pivoting LU. A broader library could define concepts or adapter interfaces for:\n\nmatrix and vector types;\nscalar conversion;\nLU factorization;\ntriangular solution;\nnorm evaluation;\nfiniteness checks.\n\nHDNUM would then become one supported backend rather than an assumption throughout the implementation.\nThis is the largest architectural change and should only be undertaken if support for other numerical backends is genuinely desired.\n\n\n4. Separate public headers and compiled utilities\nThe templated numerical kernel can remain header-based. Non-template components can move to .cc files:\ninclude/mpir/\n    mixed_ir.hpp\n    options.hpp\n    result.hpp\n    status.hpp\n\nsrc/\n    csv_writer.cc\n    configuration.cc\n    experiment_io.cc\nThe build should eventually provide an installable CMake target:\ntarget_link_libraries(my_program PRIVATE mpir::mpir)\n\n\n5. Add systematic tests\nA library-quality project would need:\n\nunit tests for conversions, norms, stopping conditions, and status handling;\nregression tests for known FP16 underflow and overflow cases;\ntests for singular and dimensionally invalid inputs;\ntests that CSV headers and records have identical schemas;\nconfiguration parsing and validation tests;\nnumerical tests over several dimensions, seeds, and condition numbers;\nsanitizer and multi-compiler builds.\n\n\n\n6. Version external contracts\nCSV columns and configuration formats become external interfaces once plotting scripts and saved experiments depend on them. They should have explicit schema versions:\nschema_version = 1\nChanging or renaming columns would then be a deliberate format change rather than an accidental breaking change.\n\n\n7. Provide packaging and documentation\nA general-purpose library also needs:\n\ninstallable headers and CMake configuration;\ndocumented supported scalar types and backends;\ndocumented numerical assumptions;\nconcise examples;\nsemantic versioning;\na clear distinction between public and internal APIs.",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Experimental Framework</span>"
+    ]
+  },
+  {
+    "objectID": "notes/framework.html#a-practical-future-roadmap",
+    "href": "notes/framework.html#a-practical-future-roadmap",
+    "title": "7  Experimental Framework",
+    "section": "7.8 A practical future roadmap",
+    "text": "7.8 A practical future roadmap\nFor this project, I would order the work as follows:\n\nAutomatic precision traits.\nRunRecord plus typed summary, history, and diagnostic records.\nA schema-aware generic CSV writer.\nSerialization tests and a schema_version column.\nA strongly typed ExperimentConfig.\nA TOML-driven generic experiment runner.\nSeparation into mpir-core and mpir-experiments.\nAn observer interface for per-iteration measurements.\nOnly then consider matrix/backend abstraction and installable-library packaging.\n\nThe first four steps would remove most remaining driver boilerplate without substantially complicating the project. Configuration files would be the next step if you expect many more experiments.\nThe decisive transition to a general-purpose library begins at steps 7–9: when the mixed-IR implementation becomes a stable numerical component that can be used independently of our specific experiment infrastructure. Typed records and configuration files primarily mature the research framework surrounding that numerical component.",
+    "crumbs": [
+      "Notes",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Experimental Framework</span>"
+    ]
+  },
+  {
     "objectID": "report.html",
     "href": "report.html",
-    "title": "7  Report",
+    "title": "8  Report",
     "section": "",
-    "text": "7.1 This is some title",
+    "text": "8.1 This is some title",
     "crumbs": [
-      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Report</span>"
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Report</span>"
     ]
   },
   {
