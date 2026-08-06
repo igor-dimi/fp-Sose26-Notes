@@ -1,52 +1,16 @@
-project:
-  type: book
-
-book:
-  downloads: pdf
-  title: "Advanced Praktika SoSe 26 Notes"
-  author: "Igor Dimitrov"
-  date: "4/21/2026"
-  chapters:
-    - index.qmd
-    - part: "Notes"
-      chapters:
-      - notes/project_setup.qmd
-      - notes/project_overview.qmd
-      - notes/conversions.qmd
-      - notes/mixed_ir.qmd
-      - notes/experiments.qmd
-      - notes/experiment_plan.qmd
-      - notes/framework.qmd
-    - report.qmd
-
-  appendices:
-    - appendices/gdb.qmd  
-
-
-
-
-
-    # - intro.qmd
-    # - summary.qmd
-    # - references.qmd
-
-
+profile:
+  group:
+    - [book, report]
 
 bibliography: references.bib
 
-format:
-  html:
-    theme:
-      - cosmo
-      - brand
-    include-in-header: 
-      - mathjax-macros.html
-    mermaid-format: js
-  pdf:
-    documentclass: scrreprt
-    include-in-header: preamble.tex
-    mermaid-format: png
-
-
-
 number-depth: 2
+
+filters: 
+  - pseudocode
+
+pseudocode:
+  caption-prefix: "Algorithm"
+  reference-prefix: "Algorithm"
+  caption-number: true
+  caption-align: left

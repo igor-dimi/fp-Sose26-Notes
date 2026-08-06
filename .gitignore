@@ -1,5 +1,6 @@
 # Quarto Output
 /.quarto/
+/.quarto.backup/
 /_book/
 build/
 

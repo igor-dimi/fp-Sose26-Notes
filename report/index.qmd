@@ -1,0 +1,173 @@
+---
+title: "Mixed-Precision Iterative Refinement"
+author: "Igor Dimitrov"
+---
+
+# Introduction
+
+Modern hardware supports several floating-point formats with different
+costs, accuracy, and numerical ranges. Low   precision can increase throughput
+and reduce memory traffic and energy consumption, but it also introduces
+larger rounding errors. Mixed-precision algorithms combine multiple formats
+to obtain some of the efficiency of low precision while retaining higher-precision
+accuracy. [@highamMixedPrecisionAlgorithms2022]
+
+This report studies mixed-precision iterative refinement for nonsingular
+linear systems using low precision for LU factorization and higher precision for refinement
+via numerical experiments that asses convergence and accuracy across precision triples and 
+condition numbers. 
+
+
+# Three-precision iterative refinement
+
+## Algorithm
+
+The implemented method is LU-based three-precision iterative refinement.
+[@highamMixedPrecisionAlgorithms2022]:
+
+```pseudocode
+#| label: algo-three-precision-ir
+#| html-line-number: true
+#| pdf-line-number: true
+#| pdf-placement: "H"
+
+\begin{algorithm}
+\caption{Three-precision iterative refinement}
+\begin{algorithmic}
+\Require Nonsingular system $Ax=b$
+\State Round $A$ and $b$ to precision $u_f$
+\State Compute $PAQ=LU$ in precision $u_f$
+\State Solve for $x_0$ using the factors in precision $u_f$
+\State Store $x_0$ in precision $u$
+\For{$i=0,1,\ldots,i_{\max}-1$}
+    \State Compute $r_i=b-Ax_i$ in precision $u_r$
+    \State Round $r_i$ to precision $u_f$
+    \State Solve for $d_i$ using the factors in precision $u_f$
+    \State Store $d_i$ in precision $u$
+    \State $x_{i+1} \gets x_i+d_i$ in precision $u$
+    \If{$\lVert d_i\rVert_2/\lVert x_i\rVert_2 < u$}
+        \State \Return $x_{i+1}$
+    \EndIf
+\EndFor
+\Return $x_{i_{\max}}$
+\end{algorithmic}
+\end{algorithm}
+```
+
+
+## Precision roles
+
+The algorithm uses three unit roundoffs, typically ordered as
+
+$$
+u_r \leq u \leq u_f,
+$$
+
+where $u_f$, $u$, and $u_r$ denote the factorization, working, and residual precisions, respectively. Low factorization precision reduces computational cost, while the working and residual precisions govern the attainable accuracy.
+
+
+## Convergence and attainable accuracy
+
+Iterative refinement is expected to converge when
+
+$$
+\kappa(A)u_f<1,
+$$
+
+and generally slows near this boundary. If it converges, $u$ and $u_r$ determine the attainable accuracy. Higher residual precision reduces residual rounding errors and can improve the forward error [@carsonAcceleratingSolutionLinear2018]
+
+# Experimental setup
+
+## Test problems and precision formats
+
+All experiments use dense random symmetric positive definite systems of dimension $n = 100$, 
+
+$$
+A = Q\Lambda Q^T,
+$$
+
+with prescribed condition number $\kappa_2(A)$. The FP64 right-hand side has normally distributed entries. An FP256 solve of the stored system provides the reference solution.
+
+The experiments use the following formats:
+
+| **Format** | **Implementation** | **Significand bits** | **Unit roundoff** |
+| ---------- | ------------------ | -------------------- | ----------------- |
+| bfloat16   | `CPFloat<8, 8>`    | 8                    | $2^{-8}$          |
+| FP16       | `CPFloat<11, 5>`   | 11                   | $2^{-11}$         |
+| FP32       | `float`            | 24                   | $2^{-24}$         |
+| FP64       | `double`           | 53                   | $2^{-53}$         |
+| FP128      | `FP<64>`           | 64                   | $2^{-64}$         |
+| FP256      | `FP<192>`          | 192                  | $2^{-192}$        |
+
+: Floating-point formats used in the experiments. {#tbl-precision-formats}
+
+CPFloat simulates bfloat16 and FP16; GMP provides FP128 and FP256. The main experiments use FP64 working precision. Each experiment specifies its factorization and residual precisions.
+
+## Error measures and termination criteria
+
+For each iterate, we compute
+
+$$
+\begin{aligned}
+e_i &=
+\frac{\lVert x_i-x_{\mathrm{ref}}\rVert_\infty}
+{\lVert x_{\mathrm{ref}}\rVert_\infty},\
+\eta_i &=
+\frac{\lVert b-Ax_i\rVert_\infty}
+{\lVert A\rVert_\infty\lVert x_i\rVert_\infty+
+\lVert b\rVert_\infty},\
+\rho_i &=
+\frac{\lVert d_i\rVert_2}{\lVert x_i\rVert_2}.
+\end{aligned}
+$$
+
+The errors $e_i$ and $\eta_i$ are evaluated in FP256. Refinement converges when $\rho_i<u$. Otherwise, it terminates at the iteration limit or upon detecting non-finite values or divergence. Each run records its termination status. The default iteration limit is 20.
+
+## Experimental framework and reproducibility
+
+Separate C++ experiment drivers share the same problem-generation, refinement, measurement, and CSV-output components. Each driver configures these components through explicit options. Fixed seeds ensure reproducibility: $42$ and $137$ for matrix construction and $2718$ for the right-hand side. Shared helper functions derive filenames and CSV fields from the configuration and algorithm output. Each CSV records the requested and measured condition numbers, termination status, iteration count, errors, and final relative correction.
+
+Raw data and generated plots are stored separately, allowing figures to be reproduced without rerunning the experiments.
+
+# Experimental design
+
+We conducted five groups of experiments that examine how conditioning, precision choices, and residual handling affect the convergence and accuracy of mixed iterative refinement. Unless stated otherwise, they use the common setup described above and vary only the parameters relevant to their objective. @tbl-experimental-design summarizes each group’s purpose, varied parameters, and recorded quantities.
+
+| Experiment                    | Varied parameters                                 | Recorded quantities                                | Purpose                                                        |
+| ----------------------------- | ------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------- |
+| Convergence histories         | Iteration and representative $\kappa_2(A)$ values | Forward error, backward error, relative correction | Examine convergence below, near, and above $\kappa_2(A)u_f=1$. |
+| Condition-number sweep        | $\kappa_2(A)$ and precision triple                | Final and best errors, iterations, status          | Determine how conditioning affects convergence and accuracy.   |
+| Residual-precision comparison | Residual precision $u_r$                          | Forward and backward errors                        | Measure the benefit of higher residual precision.              |
+| Direct-solve comparison       | Solution method                                   | Forward and backward errors                        | Compare mixed IR with a direct working-precision solve.        |
+| Residual-scaling experiments  | Residual scaling enabled or disabled              | Error histories and conversion diagnostics         | Determine whether scaling prevents residual information loss.  |
+
+: Overview of the five experimental groups. {#tbl-experimental-design}
+
+
+# Results and discussion
+
+## Convergence histories
+
+...
+
+## Condition-number sweep
+
+...
+
+## Residual precision
+
+...
+
+## Comparison with direct solution
+
+...
+
+# Low-precision limitation and residual scaling
+
+...
+
+# Conclusion
+
+...
+
+# References {.unnumbered}

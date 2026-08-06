@@ -1,0 +1,26 @@
+<script>
+window.MathJax = {
+  loader: {
+    load: ["[tex]/boldsymbol"]
+  },
+  tex: {
+    tags: "all",
+    inlineMath: [["$", "$"], ["\\(", "\\)"]],
+    displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+    processEscapes: true,
+    processEnvironments: true,
+    packages: {
+      "[+]": ["boldsymbol"]
+    },
+    macros: {
+      norm: ["\\left\\lVert #1 \\right\\rVert", 1],
+      normsub: ["\\left\\lVert #1 \\right\\rVert_{#2}", 2]
+    }
+  }
+};
+</script>
+
+<script
+  type="text/javascript"
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js">
+</script>

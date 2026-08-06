@@ -1,0 +1,20 @@
+project:
+  type: default
+  output-dir: report/_output
+  render:
+    - report/index.qmd
+
+manuscript:
+  article: report/index.qmd
+
+format:
+  html: default
+
+  pdf:
+    documentclass: article
+    include-in-header: preamble.tex
+    geometry:
+      - left=24mm
+      - right=24mm
+      - top=25mm
+      - bottom=25mm
