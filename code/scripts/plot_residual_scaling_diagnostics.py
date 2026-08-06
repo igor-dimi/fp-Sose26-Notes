@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Plot Group E residual-conversion diagnostics for FP16 scaling.
 
-By default, the script reads every residual-scaling CSV from
+By default, the script reads every residual-scaling comparison CSV from
 ``results/raw/robustness/residual_scaling`` and writes one two-panel figure
 per dataset to the corresponding directory under ``results/plots``.
 
@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from typing import Iterable
 import warnings
 
 import matplotlib
@@ -26,8 +25,22 @@ import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
+from mpir_plotting.csv_validation import (
+    coerce_numeric_columns,
+    invariant_value,
+    read_csv_checked,
+    require_invariant_columns,
+)
+from mpir_plotting.paths import (
+    discover_csv_files,
+    mirrored_plot_path,
+    resolve_results_roots,
+)
+from mpir_plotting.precisions import precision_label
+from mpir_plotting.styles import MIXED_IR_STATUS_NAMES, status_code
 
-CSV_PATTERN = "residual-scaling__*.csv"
+
+CSV_PATTERN = "residual-scaling__*__comparison.csv"
 DEFAULT_RAW_SUBDIRECTORY = Path("robustness/residual_scaling")
 EXPECTED_VARIANTS = ("unscaled", "scaled")
 
@@ -65,7 +78,7 @@ NUMERIC_COLUMNS = (
     "zeroed_by_conversion",
 )
 
-INVARIANT_METADATA = (
+INVARIANT_METADATA_COLUMNS = (
     "experiment",
     "matrix_family",
     "dimension",
@@ -87,15 +100,6 @@ VARIANT_STYLES = {
         "color": "#0072B2",
         "marker": "o",
     },
-}
-
-STATUS_CODES = {
-    "converged": "C",
-    "max-iterations": "M",
-    "diverged": "D",
-    "stagnated": "S",
-    "non-finite": "N",
-    "factorization-input-non-finite": "F",
 }
 
 # IEEE binary16 has minimum positive subnormal 2**-24. Under
@@ -126,8 +130,8 @@ def parse_arguments() -> Namespace:
         type=Path,
         default=None,
         help=(
-            "Root of the raw-results tree. Defaults to <code>/results/raw, "
-            "where <code> is inferred from the script location."
+            "Root of the raw-results tree. Defaults to "
+            "<repository>/results/raw."
         ),
     )
     parser.add_argument(
@@ -136,7 +140,7 @@ def parse_arguments() -> Namespace:
         default=None,
         help=(
             "Root of the plot-results tree. Defaults to "
-            "<code>/results/plots."
+            "<repository>/results/plots."
         ),
     )
     parser.add_argument(
@@ -158,127 +162,56 @@ def parse_arguments() -> Namespace:
     return args
 
 
-def infer_code_directory() -> Path:
-    """Infer the code directory for a script stored under ``code/scripts``."""
-    script_path = Path(__file__).resolve()
-    conventional_code_dir = script_path.parents[1]
-
-    if (conventional_code_dir / "results" / "raw").is_dir():
-        return conventional_code_dir
-
-    current_directory = Path.cwd().resolve()
-    if (current_directory / "results" / "raw").is_dir():
-        return current_directory
-
-    return conventional_code_dir
-
-
-def resolve_roots(args: Namespace) -> tuple[Path, Path]:
-    """Resolve the raw- and plot-results roots."""
-    code_directory = infer_code_directory()
-    raw_root = (
-        args.raw_root.resolve()
-        if args.raw_root is not None
-        else code_directory / "results" / "raw"
-    )
-    plots_root = (
-        args.plots_root.resolve()
-        if args.plots_root is not None
-        else code_directory / "results" / "plots"
-    )
-    return raw_root, plots_root
-
-
-def resolve_input_path(path: Path, raw_root: Path) -> Path:
-    """Resolve an explicit input against likely raw-results locations."""
-    candidates = (
-        path,
-        raw_root / path,
-        raw_root / DEFAULT_RAW_SUBDIRECTORY / path,
-    )
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate.resolve()
-
-    checked = "\n".join(f"  - {candidate}" for candidate in candidates)
-    raise FileNotFoundError(f"Could not find input {path}. Checked:\n{checked}")
-
-
-def discover_csv_files(inputs: Iterable[Path], raw_root: Path) -> list[Path]:
-    """Discover Group E residual-scaling CSV files."""
-    input_paths = list(inputs)
-
-    if not input_paths:
-        input_directory = raw_root / DEFAULT_RAW_SUBDIRECTORY
-        if not input_directory.is_dir():
-            raise FileNotFoundError(
-                f"Default input directory does not exist: {input_directory}"
-            )
-        csv_files = list(input_directory.glob(CSV_PATTERN))
-    else:
-        csv_files = []
-        for input_path in input_paths:
-            resolved_path = resolve_input_path(input_path, raw_root)
-            if resolved_path.is_dir():
-                csv_files.extend(resolved_path.rglob(CSV_PATTERN))
-            elif resolved_path.suffix.lower() == ".csv":
-                csv_files.append(resolved_path)
-            else:
-                raise ValueError(f"Input file is not a CSV file: {resolved_path}")
-
-    unique_files = sorted({path.resolve() for path in csv_files})
-    if not unique_files:
-        raise FileNotFoundError(f"No files matching {CSV_PATTERN} were found.")
-    return unique_files
-
-
-def one_value(dataframe: pd.DataFrame, column: str, csv_path: Path):
-    """Return one invariant column value after validating it."""
-    values = dataframe[column].dropna().unique()
-    if len(values) != 1:
-        raise ValueError(
-            f"{csv_path} must contain exactly one value for {column}; "
-            f"found {len(values)}."
-        )
-    return values[0]
-
-
 def read_diagnostics(csv_path: Path) -> pd.DataFrame:
     """Read, validate, and derive conversion-input diagnostics."""
-    dataframe = pd.read_csv(csv_path)
-    missing_columns = REQUIRED_COLUMNS - set(dataframe.columns)
-    if missing_columns:
-        missing = ", ".join(sorted(missing_columns))
-        raise ValueError(f"{csv_path} is missing required columns: {missing}")
+    dataframe = read_csv_checked(csv_path, REQUIRED_COLUMNS)
+    coerce_numeric_columns(
+        dataframe,
+        NUMERIC_COLUMNS,
+        csv_path,
+        require_complete=True,
+    )
 
-    for column in NUMERIC_COLUMNS:
-        dataframe[column] = pd.to_numeric(dataframe[column], errors="coerce")
+    dataframe["variant"] = (
+        dataframe["variant"].astype(str).str.strip().str.lower()
+    )
+    dataframe["status"] = (
+        dataframe["status"].astype(str).str.strip().str.lower()
+    )
 
-    if dataframe[list(NUMERIC_COLUMNS)].isna().any().any():
-        bad_columns = dataframe[list(NUMERIC_COLUMNS)].columns[
-            dataframe[list(NUMERIC_COLUMNS)].isna().any()
-        ]
+    unknown_statuses = sorted(
+        set(dataframe["status"]) - MIXED_IR_STATUS_NAMES
+    )
+    if unknown_statuses:
+        unknown = ", ".join(repr(status) for status in unknown_statuses)
+        expected = ", ".join(sorted(MIXED_IR_STATUS_NAMES))
         raise ValueError(
-            f"{csv_path} contains missing or invalid numeric data in: "
-            + ", ".join(bad_columns)
+            f"{csv_path} contains unknown status value(s): {unknown}. "
+            f"Expected one of: {expected}."
         )
 
-    for column in INVARIANT_METADATA:
-        one_value(dataframe, column, csv_path)
+    require_invariant_columns(
+        dataframe,
+        INVARIANT_METADATA_COLUMNS,
+        csv_path,
+    )
 
-    if one_value(dataframe, "experiment", csv_path) != "residual-scaling":
+    experiment = str(
+        invariant_value(dataframe, "experiment", csv_path)
+    ).strip().lower()
+    if experiment != "residual-scaling":
         raise ValueError(f"{csv_path} is not a residual-scaling experiment.")
 
     factor_precision = str(
-        one_value(dataframe, "factor_precision", csv_path)
-    ).lower()
+        invariant_value(dataframe, "factor_precision", csv_path)
+    ).strip().lower()
     if factor_precision != "fp16":
         raise ValueError(
             f"{csv_path} uses factor precision {factor_precision!r}; "
             "this diagnostic plot expects fp16."
         )
 
-    variants = set(dataframe["variant"].astype(str))
+    variants = set(dataframe["variant"])
     if variants != set(EXPECTED_VARIANTS):
         expected = ", ".join(EXPECTED_VARIANTS)
         found = ", ".join(sorted(variants))
@@ -291,24 +224,35 @@ def read_diagnostics(csv_path: Path) -> pd.DataFrame:
 
     for variant in EXPECTED_VARIANTS:
         group = dataframe.loc[dataframe["variant"] == variant]
-        scaling_flag = int(one_value(group, "scale_residual", csv_path))
+
+        scaling_flag = int(
+            invariant_value(group, "scale_residual", csv_path)
+        )
         if scaling_flag != expected_scaling[variant]:
             raise ValueError(
                 f"{csv_path}: variant {variant!r} has inconsistent "
                 "scale_residual metadata."
             )
 
-        if int(one_value(group, "record_residual_diagnostics", csv_path)) != 1:
+        diagnostics_flag = int(
+            invariant_value(
+                group,
+                "record_residual_diagnostics",
+                csv_path,
+            )
+        )
+        if diagnostics_flag != 1:
             raise ValueError(
                 f"{csv_path}: residual diagnostics were not enabled for "
                 f"variant {variant!r}."
             )
 
-        status = str(one_value(group, "status", csv_path))
+        status = str(invariant_value(group, "status", csv_path))
         if status != expected_status[variant]:
             warnings.warn(
-                f"{csv_path.name}: expected status {expected_status[variant]!r} "
-                f"for {variant}, found {status!r}.",
+                f"{csv_path.name}: expected status "
+                f"{expected_status[variant]!r} for {variant}, "
+                f"found {status!r}.",
                 stacklevel=1,
             )
 
@@ -325,13 +269,16 @@ def read_diagnostics(csv_path: Path) -> pd.DataFrame:
         dataframe[column] = dataframe[column].astype(int)
 
     duplicates = dataframe.duplicated(
-        subset=["variant", "iteration"], keep=False
+        subset=["variant", "iteration"],
+        keep=False,
     )
     if duplicates.any():
         raise ValueError(
             f"{csv_path} contains duplicate variant/iteration rows."
         )
 
+    if (dataframe["requested_kappa"] <= 0.0).any():
+        raise ValueError(f"{csv_path} contains a nonpositive requested_kappa.")
     if (dataframe["residual_inf_norm"] <= 0.0).any():
         raise ValueError(f"{csv_path} contains a nonpositive residual norm.")
     if (dataframe["min_nonzero_abs"] <= 0.0).any():
@@ -340,6 +287,10 @@ def read_diagnostics(csv_path: Path) -> pd.DataFrame:
         )
     if (dataframe["nonzero_components"] <= 0).any():
         raise ValueError(f"{csv_path} contains no nonzero residual components.")
+    if (dataframe["zeroed_by_conversion"] < 0).any():
+        raise ValueError(
+            f"{csv_path} contains a negative zeroed-component count."
+        )
     if (
         dataframe["zeroed_by_conversion"]
         > dataframe["nonzero_components"]
@@ -357,7 +308,9 @@ def read_diagnostics(csv_path: Path) -> pd.DataFrame:
         / dataframe.loc[scaled, "residual_inf_norm"]
     )
 
-    return dataframe.sort_values(["variant", "iteration"])
+    return dataframe.sort_values(["variant", "iteration"]).reset_index(
+        drop=True
+    )
 
 
 def configure_axis(axis: Axes, title: str, ylabel: str) -> None:
@@ -371,21 +324,31 @@ def configure_axis(axis: Axes, title: str, ylabel: str) -> None:
     axis.xaxis.get_major_locator().set_params(integer=True)
 
 
-def figure_title(dataframe: pd.DataFrame) -> str:
+def figure_title(dataframe: pd.DataFrame, csv_path: Path) -> str:
     """Construct a concise title from invariant metadata."""
-    row = dataframe.iloc[0]
-    precisions = (
-        f"{row['factor_precision']} / {row['work_precision']} / "
-        f"{row['residual_precision']}"
+    factor = str(
+        invariant_value(dataframe, "factor_precision", csv_path)
+    )
+    work = str(invariant_value(dataframe, "work_precision", csv_path))
+    residual = str(
+        invariant_value(dataframe, "residual_precision", csv_path)
+    )
+    dimension = int(invariant_value(dataframe, "dimension", csv_path))
+    requested_kappa = float(
+        invariant_value(dataframe, "requested_kappa", csv_path)
+    )
+
+    precisions = " / ".join(
+        precision_label(name) for name in (factor, work, residual)
     )
     return (
         f"Residual-conversion diagnostics: {precisions} "
-        f"(n = {int(row['dimension'])}, "
-        fr"$\kappa$ = {float(row['requested_kappa']):g})"
+        f"(n = {dimension}, "
+        fr"$\kappa$ = {requested_kappa:g})"
     )
 
 
-def plot_diagnostics(dataframe: pd.DataFrame) -> Figure:
+def plot_diagnostics(dataframe: pd.DataFrame, csv_path: Path) -> Figure:
     """Create the two-panel residual-conversion diagnostic figure."""
     figure, axes = plt.subplots(
         1,
@@ -400,9 +363,8 @@ def plot_diagnostics(dataframe: pd.DataFrame) -> Figure:
             dataframe["variant"] == variant
         ].sort_values("iteration")
         style = VARIANT_STYLES[variant]
-        status = str(group["status"].iloc[0])
-        code = STATUS_CODES.get(status, status)
-        label = f"{style['label']} [{code}]"
+        status = str(invariant_value(group, "status", csv_path))
+        label = f"{style['label']} [{status_code(status)}]"
 
         magnitude_axis.plot(
             group["iteration"],
@@ -434,7 +396,7 @@ def plot_diagnostics(dataframe: pd.DataFrame) -> Figure:
     configure_axis(
         magnitude_axis,
         "(a) Smallest conversion-input component",
-        r"Minimum nonzero magnitude before FP16 conversion",
+        "Minimum nonzero magnitude before FP16 conversion",
     )
     magnitude_axis.legend(frameon=False, loc="best")
 
@@ -448,22 +410,9 @@ def plot_diagnostics(dataframe: pd.DataFrame) -> Figure:
     count_axis.set_ylim(-0.5, max(1.0, max_zeroed + 1.5))
     count_axis.legend(frameon=False, loc="best")
 
-    figure.suptitle(figure_title(dataframe), fontsize=14)
+    figure.suptitle(figure_title(dataframe, csv_path), fontsize=14)
     figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.93))
     return figure
-
-
-def output_directory_for(
-    csv_path: Path,
-    raw_root: Path,
-    plots_root: Path,
-) -> Path:
-    """Mirror the CSV's raw-results directory beneath the plots root."""
-    try:
-        relative_directory = csv_path.parent.relative_to(raw_root)
-    except ValueError:
-        relative_directory = DEFAULT_RAW_SUBDIRECTORY
-    return plots_root / relative_directory
 
 
 def save_plot(
@@ -475,10 +424,13 @@ def save_plot(
     dpi: int,
 ) -> Path:
     """Save one diagnostic figure."""
-    output_directory = output_directory_for(csv_path, raw_root, plots_root)
-    output_directory.mkdir(parents=True, exist_ok=True)
-    output_path = output_directory / (
-        f"{csv_path.stem}__diagnostics.{output_format}"
+    output_path = mirrored_plot_path(
+        csv_path,
+        raw_root,
+        plots_root,
+        output_format,
+        DEFAULT_RAW_SUBDIRECTORY,
+        suffix="__diagnostics",
     )
 
     save_options: dict[str, object] = {"bbox_inches": "tight"}
@@ -493,14 +445,22 @@ def save_plot(
 def main() -> None:
     """Plot all requested residual-scaling diagnostic datasets."""
     args = parse_arguments()
-    raw_root, plots_root = resolve_roots(args)
-    csv_files = discover_csv_files(args.inputs, raw_root)
+    raw_root, plots_root = resolve_results_roots(
+        args.raw_root,
+        args.plots_root,
+    )
+    csv_files = discover_csv_files(
+        args.inputs,
+        raw_root,
+        DEFAULT_RAW_SUBDIRECTORY,
+        CSV_PATTERN,
+    )
 
     print(f"Found {len(csv_files)} residual-scaling CSV file(s).")
 
     for csv_path in csv_files:
         dataframe = read_diagnostics(csv_path)
-        figure = plot_diagnostics(dataframe)
+        figure = plot_diagnostics(dataframe, csv_path)
         output_path = save_plot(
             figure,
             csv_path,

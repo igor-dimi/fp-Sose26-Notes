@@ -25,11 +25,27 @@ set(CPFLOAT_LIBRARY "${CPFLOAT_DIR}/build/lib/libcpfloat.a")
 
 
 # results and plots paths
-set(MPIR_RESULTS_RAW_DIR "${CMAKE_CURRENT_SOURCE_DIR}/results/raw")
-set(MPIR_RESULTS_PLOTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/results/plots")
+
+# Repository and results paths
+get_filename_component(
+    MPIR_REPOSITORY_ROOT
+    "${CMAKE_CURRENT_SOURCE_DIR}/.."
+    ABSOLUTE
+)
+
+set(MPIR_RESULTS_DIR "${MPIR_REPOSITORY_ROOT}/results")
+set(MPIR_RESULTS_RAW_DIR "${MPIR_RESULTS_DIR}/raw")
+set(MPIR_RESULTS_PLOTS_DIR "${MPIR_RESULTS_DIR}/plots")
 
 file(MAKE_DIRECTORY "${MPIR_RESULTS_RAW_DIR}")
 file(MAKE_DIRECTORY "${MPIR_RESULTS_PLOTS_DIR}")
+
+
+# set(MPIR_RESULTS_RAW_DIR "${CMAKE_CURRENT_SOURCE_DIR}/results/raw")
+# set(MPIR_RESULTS_PLOTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/results/plots")
+
+# file(MAKE_DIRECTORY "${MPIR_RESULTS_RAW_DIR}")
+# file(MAKE_DIRECTORY "${MPIR_RESULTS_PLOTS_DIR}")
 
 
 # --------------------------------------------------------------------

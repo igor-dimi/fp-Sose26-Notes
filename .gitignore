@@ -11,6 +11,9 @@ build/
 /code/results/raw/
 /code/results/plots/
 
+/results/raw/
+/results/plots/
+
 # keep result folders if you wnt empty directories in git
 !/code/results/raw/.gitkeep
 !/code/results/plots/.gitkeep
