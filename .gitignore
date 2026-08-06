@@ -11,6 +11,9 @@ build/
 /code/results/raw/
 /code/results/plots/
 
+/results/raw/
+/results/plots/
+
 # keep result folders if you wnt empty directories in git
 !/code/results/raw/.gitkeep
 !/code/results/plots/.gitkeep
@@ -20,3 +23,5 @@ build/
 !.vscode/settings.json
 **/*.quarto_ipynb
 notes/conversions_files/figure-latex/mermaid-figure-1.png
+
+__pycache__
