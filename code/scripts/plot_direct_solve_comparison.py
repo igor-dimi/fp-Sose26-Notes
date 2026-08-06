@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Plot the Group D direct-solve comparison.
+"""Plot iterative-refinement/direct-LU condition-sweep comparisons.
 
 By default, the script reads every direct-solve-comparison CSV from
-``results/raw/direct_comparison`` and writes one two-panel log-log
-figure per dataset to ``results/plots/direct_comparison``.
+``results/raw/direct_comparison`` and writes one two-panel log-log figure per
+dataset to ``results/plots/direct_comparison``.
+
+Precision roles are read from each CSV.  A directory may therefore contain,
+for example, both FP32-FP64-FP128 and FP64-FP64-FP64 iterative-refinement
+runs; each dataset receives its own labels and reference lines.
 
 The intended location of this script is ``code/scripts``. Input files or
 directories may also be supplied explicitly on the command line.
@@ -70,7 +74,7 @@ COMMON_METADATA_COLUMNS = (
 )
 
 # Number of significand bits p. The experiment uses u = 2**(-p), so the
-# low-precision factorization boundary is kappa_* = 1/u_f = 2**p.
+# iterative-refinement factorization boundary is kappa_* = 1/u_f = 2**p.
 PRECISION_SIGNIFICAND_BITS = {
     "fp8": 4,
     "bfloat16": 8,
@@ -83,11 +87,9 @@ PRECISION_SIGNIFICAND_BITS = {
 
 METHOD_STYLES = {
     "mixed-ir": {
-        "label": "Mixed IR: FP32–FP64–FP128",
         "color": "#0072B2",
     },
     "direct-lu": {
-        "label": "Direct FP64 LU",
         "color": "#D55E00",
     },
 }
@@ -100,6 +102,16 @@ class StatusStyle:
     code: str
     description: str
     marker: str
+
+
+@dataclass(frozen=True)
+class PrecisionRoles:
+    """Precision metadata for one method in a comparison dataset."""
+
+    factor: str
+    work: str
+    residual: str
+    measure: str
 
 
 MIXED_STATUS_STYLES = {
@@ -118,8 +130,9 @@ def parse_arguments() -> Namespace:
     """Parse command-line arguments."""
     parser = ArgumentParser(
         description=(
-            "Compare Group D mixed-precision iterative refinement with a "
-            "direct FP64 LU solve in forward- and backward-error panels."
+            "Compare iterative refinement with a direct LU solve in "
+            "forward- and backward-error panels. Precision labels are "
+            "derived from each CSV."
         )
     )
     parser.add_argument(
@@ -257,27 +270,71 @@ def one_metadata_value(dataframe: pd.DataFrame, column: str, path: Path):
 def validate_precision_roles(
     sweeps: dict[str, pd.DataFrame],
     csv_path: Path,
-) -> None:
-    """Check the precision configurations prescribed for Group D."""
-    expected = {
-        "mixed-ir": ("fp32", "fp64", "fp128"),
-        "direct-lu": ("fp64", "fp64", "none"),
-    }
-    for variant, expected_roles in expected.items():
-        subset = sweeps[variant]
-        actual_roles = tuple(
-            str(one_metadata_value(subset, column, csv_path))
-            for column in (
-                "factor_precision",
-                "work_precision",
-                "residual_precision",
-            )
+) -> dict[str, PrecisionRoles]:
+    """Validate and return the precision roles recorded by both methods.
+
+    The iterative-refinement triple is intentionally unrestricted.  The
+    direct baseline must use one arithmetic precision for factorization and
+    solution and must mark residual precision as ``none``.
+    """
+
+    roles: dict[str, PrecisionRoles] = {}
+    for variant, subset in sweeps.items():
+        roles[variant] = PrecisionRoles(
+            factor=str(
+                one_metadata_value(subset, "factor_precision", csv_path)
+            ).strip().lower(),
+            work=str(
+                one_metadata_value(subset, "work_precision", csv_path)
+            ).strip().lower(),
+            residual=str(
+                one_metadata_value(subset, "residual_precision", csv_path)
+            ).strip().lower(),
+            measure=str(
+                one_metadata_value(subset, "measure_precision", csv_path)
+            ).strip().lower(),
         )
-        if actual_roles != expected_roles:
+
+    iterative = roles["mixed-ir"]
+    direct = roles["direct-lu"]
+
+    for role_name in ("factor", "work", "residual", "measure"):
+        precision_name = getattr(iterative, role_name)
+        if precision_name not in PRECISION_SIGNIFICAND_BITS:
+            supported = ", ".join(PRECISION_SIGNIFICAND_BITS)
             raise ValueError(
-                f"{csv_path}: {variant} has precision roles {actual_roles}; "
-                f"expected {expected_roles}."
+                f"{csv_path}: iterative-refinement {role_name} precision "
+                f"{precision_name!r} is unknown; expected one of: "
+                f"{supported}."
             )
+
+    if direct.factor != direct.work:
+        raise ValueError(
+            f"{csv_path}: direct LU must factor and solve in one precision; "
+            f"found factor={direct.factor!r}, work={direct.work!r}."
+        )
+    if direct.residual != "none":
+        raise ValueError(
+            f"{csv_path}: direct LU residual precision must be 'none'; "
+            f"found {direct.residual!r}."
+        )
+    for role_name in ("factor", "work", "measure"):
+        precision_name = getattr(direct, role_name)
+        if precision_name not in PRECISION_SIGNIFICAND_BITS:
+            supported = ", ".join(PRECISION_SIGNIFICAND_BITS)
+            raise ValueError(
+                f"{csv_path}: direct-LU {role_name} precision "
+                f"{precision_name!r} is unknown; expected one of: "
+                f"{supported}."
+            )
+    if iterative.measure != direct.measure:
+        raise ValueError(
+            f"{csv_path}: both methods must use the same measurement "
+            f"precision; found {iterative.measure!r} and "
+            f"{direct.measure!r}."
+        )
+
+    return roles
 
 
 def read_comparison(csv_path: Path) -> dict[str, pd.DataFrame]:
@@ -392,6 +449,29 @@ def unit_roundoff(precision_name: str) -> float:
     return math.ldexp(1.0, -significand_bits)
 
 
+def precision_label(precision_name: str) -> str:
+    """Return a compact display label for a precision name."""
+    if precision_name.startswith("fp"):
+        return precision_name.upper()
+    if precision_name == "bfloat16":
+        return "bfloat16"
+    return precision_name
+
+
+def iterative_refinement_label(roles: PrecisionRoles) -> str:
+    """Return the method label for any iterative-refinement triple."""
+    triple = "–".join(
+        precision_label(name)
+        for name in (roles.factor, roles.work, roles.residual)
+    )
+    return f"Iterative refinement: {triple}"
+
+
+def direct_lu_label(roles: PrecisionRoles) -> str:
+    """Return the direct-solve label derived from CSV metadata."""
+    return f"Direct {precision_label(roles.work)} LU"
+
+
 def format_number(value: float) -> str:
     """Format a positive number for a math-text annotation."""
     if (
@@ -477,6 +557,7 @@ def plot_method_curve(
 
 def make_legend_handles(
     sweeps: dict[str, pd.DataFrame],
+    roles: dict[str, PrecisionRoles],
 ) -> tuple[list[Line2D], list[str]]:
     """Build method and mixed-status legend entries."""
     mixed = sweeps["mixed-ir"]
@@ -494,9 +575,9 @@ def make_legend_handles(
         ),
     ]
     labels = [
-        f"{METHOD_STYLES['mixed-ir']['label']} "
+        f"{iterative_refinement_label(roles['mixed-ir'])} "
         f"({status_counts(mixed, mixed=True)})",
-        f"{METHOD_STYLES['direct-lu']['label']} "
+        f"{direct_lu_label(roles['direct-lu'])} "
         f"({status_counts(direct, mixed=False)})",
     ]
 
@@ -530,15 +611,23 @@ def make_figure(
 ) -> Figure:
     """Create the two-panel Group D comparison figure."""
     mixed = sweeps["mixed-ir"]
-    factor = str(one_metadata_value(mixed, "factor_precision", csv_path))
-    work = str(one_metadata_value(mixed, "work_precision", csv_path))
-    measure = str(one_metadata_value(mixed, "measure_precision", csv_path))
+    roles = validate_precision_roles(sweeps, csv_path)
+    iterative_roles = roles["mixed-ir"]
+    direct_roles = roles["direct-lu"]
     family = str(one_metadata_value(mixed, "matrix_family", csv_path))
     dimension = int(one_metadata_value(mixed, "dimension", csv_path))
 
-    factor_boundary = 1.0 / unit_roundoff(factor)
-    work_roundoff = unit_roundoff(work)
+    factor_boundary = 1.0 / unit_roundoff(iterative_roles.factor)
+    iterative_work_roundoff = unit_roundoff(iterative_roles.work)
+    direct_roundoff = unit_roundoff(direct_roles.work)
     kappas = mixed["requested_kappa"].to_numpy(dtype=float)
+    boundary_is_visible = kappas.min() <= factor_boundary <= kappas.max()
+    shared_work_roundoff = math.isclose(
+        iterative_work_roundoff,
+        direct_roundoff,
+        rel_tol=0.0,
+        abs_tol=0.0,
+    )
 
     figure, (forward_axis, backward_axis) = plt.subplots(
         2,
@@ -550,20 +639,40 @@ def make_figure(
 
     for axis in (forward_axis, backward_axis):
         configure_loglog_axis(axis)
-        axis.axvline(
-            factor_boundary,
-            color="#333333",
-            linestyle="--",
-            linewidth=1.2,
-            zorder=1,
-        )
-        axis.axhline(
-            work_roundoff,
-            color="#666666",
-            linestyle=":",
-            linewidth=1.1,
-            zorder=1,
-        )
+        if boundary_is_visible:
+            axis.axvline(
+                factor_boundary,
+                color="#333333",
+                linestyle="--",
+                linewidth=1.2,
+                zorder=1,
+            )
+
+        if shared_work_roundoff:
+            axis.axhline(
+                iterative_work_roundoff,
+                color="#666666",
+                linestyle=":",
+                linewidth=1.1,
+                zorder=1,
+            )
+        else:
+            axis.axhline(
+                iterative_work_roundoff,
+                color=METHOD_STYLES["mixed-ir"]["color"],
+                linestyle=":",
+                linewidth=1.0,
+                alpha=0.75,
+                zorder=1,
+            )
+            axis.axhline(
+                direct_roundoff,
+                color=METHOD_STYLES["direct-lu"]["color"],
+                linestyle=":",
+                linewidth=1.0,
+                alpha=0.75,
+                zorder=1,
+            )
 
     for variant in EXPECTED_VARIANTS:
         plot_method_curve(
@@ -583,7 +692,7 @@ def make_figure(
     # This is a slope reference, not a pointwise error bound.
     forward_axis.plot(
         kappas,
-        kappas * work_roundoff,
+        kappas * direct_roundoff,
         color="#777777",
         linestyle="-.",
         linewidth=1.05,
@@ -602,27 +711,52 @@ def make_figure(
     )
 
     figure.suptitle(
-        "Direct-solve comparison: mixed IR versus direct FP64 LU",
+        "Direct-solve comparison: iterative refinement versus direct LU",
         fontsize=15,
         y=0.985,
     )
     subtitle = (
-        f"Mixed IR = {factor.upper()}–{work.upper()}–FP128; "
+        f"IR = "
+        f"{precision_label(iterative_roles.factor)}–"
+        f"{precision_label(iterative_roles.work)}–"
+        f"{precision_label(iterative_roles.residual)}; "
+        f"direct = {precision_label(direct_roles.work)}; "
         f"{family.replace('-', ' ')}, n = {dimension}, "
-        f"measurement = {measure.upper()}"
+        f"measurement = {precision_label(iterative_roles.measure)}"
     )
     figure.text(0.5, 0.949, subtitle, ha="center", va="top", fontsize=10)
 
     boundary_text = format_number(factor_boundary)
-    roundoff_text = format_number(work_roundoff)
+    if boundary_is_visible:
+        boundary_reference = (
+            rf"Dashed vertical: $\kappa_*=1/u_f={boundary_text}$"
+        )
+    else:
+        boundary_reference = (
+            rf"IR factorization boundary: "
+            rf"$\kappa_*=1/u_f={boundary_text}$ (outside sweep)"
+        )
+
+    if shared_work_roundoff:
+        roundoff_reference = (
+            rf"Dotted horizontal: $u={format_number(direct_roundoff)}$"
+        )
+    else:
+        roundoff_reference = (
+            rf"Dotted: $u_{{\mathrm{{IR}}}}="
+            rf"{format_number(iterative_work_roundoff)}$, "
+            rf"$u_{{\mathrm{{direct}}}}={format_number(direct_roundoff)}$"
+        )
+
     reference_text = (
-        rf"Dashed vertical: $\kappa_*=1/u_f={boundary_text}$"
-        rf"    Dotted horizontal: $u_{{\mathrm{{work}}}}={roundoff_text}$"
-        rf"    Dash-dot (forward): reference slope $\kappa u_{{\mathrm{{work}}}}$"
+        boundary_reference
+        + "    "
+        + roundoff_reference
+        + rf"    Dash-dot (forward): $\kappa u_{{\mathrm{{direct}}}}$"
     )
     figure.text(0.5, 0.919, reference_text, ha="center", va="top", fontsize=9)
 
-    handles, labels = make_legend_handles(sweeps)
+    handles, labels = make_legend_handles(sweeps, roles)
     figure.legend(
         handles=handles,
         labels=labels,

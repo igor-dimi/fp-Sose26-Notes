@@ -39,9 +39,10 @@ struct DirectSolveResult {
  * uses ten logarithmic subdivisions per decade, extends to 10/u_f, and
  * contains the exact theoretical boundary 1/u_f.
  */
+template <class T_factor>
 [[nodiscard]] std::vector<double> group_d_kappas()
 {
-    return mpir::kappa_sweep<hdnum::FP32>(
+    return mpir::kappa_sweep<T_factor>(
         minimum_kappa,
         max_boundary_multiple,
         points_per_decade
@@ -163,9 +164,9 @@ void write_direct_common_fields(
  */
 void run_direct_solve_comparison()
 {
-    using T_factor = hdnum::FP32;
+    using T_factor = hdnum::FP64;
     using T_work = hdnum::FP64;
-    using T_residual = hdnum::FP128;
+    using T_residual = hdnum::FP64;
     using T_measure = hdnum::FP256;
 
     mpir::TestProblemOptions problem_options;
@@ -178,7 +179,7 @@ void run_direct_solve_comparison()
         mpir::ExperimentKind::direct_solve_comparison,
         mpir::MatrixFamily::random_spd,
         problem_dimension,
-        {"fp32", "fp64", "fp128", "fp256"}
+        {"fp64", "fp64", "fp64", "fp256"}
     };
 
     const auto output_directory =
@@ -220,7 +221,7 @@ void run_direct_solve_comparison()
 
     constexpr std::string_view mixed_variant = "mixed-ir";
 
-    for (const double kappa : group_d_kappas()) {
+    for (const double kappa : group_d_kappas<T_factor>()) {
         // Construct the problem once. Both methods therefore receive exactly
         // the same working-precision A and b and share the same FP256
         // reference solution.

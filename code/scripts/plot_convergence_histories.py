@@ -112,6 +112,7 @@ REPRESENTATIVE_BOUNDARY_FACTORS = (
     1.0,
     2.0,
     10.0,
+    100.0
 )
 
 # Full decimal notation is easier to read for the FP8, bfloat16, FP16,
