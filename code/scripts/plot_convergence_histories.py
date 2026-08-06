@@ -3,19 +3,19 @@
 
 By default, the script reads every convergence-history CSV from
 ``results/raw/convergence`` and writes one two-panel figure per precision
-configuration to ``results/plots/convergence``.  Pass
+configuration to ``results/plots/convergence``. Pass
 ``--include-relative-correction`` to add the relative-correction history as a
 third panel.
 
-The intended location of this script is ``code/scripts``.  Input files or
+The intended location of this script is ``code/scripts``. Input files or
 directories may also be supplied explicitly on the command line.
 """
 
 from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 import warnings
 
 import matplotlib
@@ -28,8 +28,30 @@ import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
+from mpir_plotting.csv_validation import (
+    coerce_numeric_columns,
+    invariant_value,
+    read_csv_checked,
+    require_invariant_columns,
+)
+from mpir_plotting.paths import (
+    discover_csv_files,
+    mirrored_plot_path,
+    resolve_results_roots,
+)
+from mpir_plotting.precisions import (
+    factorization_boundary,
+    precision_label,
+)
+from mpir_plotting.styles import (
+    MIXED_IR_STATUS_NAMES,
+    status_code,
+    status_key,
+)
+
 
 CSV_PATTERN = "convergence-history__*.csv"
+DEFAULT_RAW_SUBDIRECTORY = Path("convergence")
 
 REQUIRED_COLUMNS = {
     "requested_kappa",
@@ -55,6 +77,16 @@ NUMERIC_COLUMNS = (
     "rel_correction",
 )
 
+INVARIANT_METADATA_COLUMNS = (
+    "factor_precision",
+    "work_precision",
+    "residual_precision",
+    "measure_precision",
+    "matrix_family",
+    "dimension",
+    "variant",
+)
+
 DEFAULT_METRICS = (
     (
         "forward_error_inf",
@@ -75,35 +107,6 @@ RELATIVE_CORRECTION_METRIC = (
 )
 
 ALL_METRICS = DEFAULT_METRICS + (RELATIVE_CORRECTION_METRIC,)
-
-STATUS_CODES = {
-    "converged": "C",
-    "max-iterations": "M",
-    "diverged": "D",
-    "non-finite": "N",
-    "factorization-input-non-finite": "F",
-}
-
-STATUS_DESCRIPTIONS = {
-    "C": "converged",
-    "M": "maximum iterations",
-    "D": "diverged",
-    "N": "non-finite value",
-    "F": "non-finite factorization input",
-}
-
-# Number of significand bits p used by each current factorization type.
-# The convergence-boundary convention in condition_grids.hpp is
-# kappa_* = 1 / u_f = 2**p.
-FACTOR_SIGNIFICAND_BITS = {
-    "fp8": 4,
-    "bfloat16": 8,
-    "fp16": 11,
-    "fp32": 24,
-    "fp64": 53,
-    "fp128": 128,
-    "fp256": 256,
-}
 
 REPRESENTATIVE_BOUNDARY_FACTORS = (
     0.01,
@@ -129,7 +132,6 @@ def parse_arguments() -> Namespace:
             "figures, optionally including relative-correction histories."
         )
     )
-
     parser.add_argument(
         "inputs",
         nargs="*",
@@ -145,8 +147,8 @@ def parse_arguments() -> Namespace:
         type=Path,
         default=None,
         help=(
-            "Root of the raw-results tree. Defaults to <code>/results/raw, "
-            "where <code> is inferred from the script location."
+            "Root of the raw-results tree. Defaults to "
+            "<repository>/results/raw."
         ),
     )
     parser.add_argument(
@@ -155,7 +157,7 @@ def parse_arguments() -> Namespace:
         default=None,
         help=(
             "Root of the plot-results tree. Defaults to "
-            "<code>/results/plots."
+            "<repository>/results/plots."
         ),
     )
     parser.add_argument(
@@ -180,138 +182,41 @@ def parse_arguments() -> Namespace:
     )
 
     args = parser.parse_args()
-
     if args.dpi <= 0:
         parser.error("--dpi must be positive")
-
     return args
-
-
-def infer_code_directory() -> Path:
-    """Infer the code directory for a script stored under ``code/scripts``."""
-    script_path = Path(__file__).resolve()
-    conventional_code_dir = script_path.parents[1]
-
-    if (conventional_code_dir / "results" / "raw").is_dir():
-        return conventional_code_dir
-
-    current_directory = Path.cwd().resolve()
-
-    if (current_directory / "results" / "raw").is_dir():
-        return current_directory
-
-    return conventional_code_dir
-
-
-def resolve_roots(args: Namespace) -> tuple[Path, Path]:
-    """Resolve the raw- and plot-results roots."""
-    code_directory = infer_code_directory()
-
-    raw_root = (
-        args.raw_root.resolve()
-        if args.raw_root is not None
-        else code_directory / "results" / "raw"
-    )
-    plots_root = (
-        args.plots_root.resolve()
-        if args.plots_root is not None
-        else code_directory / "results" / "plots"
-    )
-
-    return raw_root, plots_root
-
-
-def resolve_input_path(path: Path, raw_root: Path) -> Path:
-    """Resolve an explicit input against the current directory and raw tree."""
-    candidates = (
-        path,
-        raw_root / path,
-        raw_root / "convergence" / path,
-    )
-
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate.resolve()
-
-    checked = "\n".join(f"  - {candidate}" for candidate in candidates)
-    raise FileNotFoundError(
-        f"Could not find input {path}. Checked:\n{checked}"
-    )
-
-
-def discover_csv_files(inputs: Iterable[Path], raw_root: Path) -> list[Path]:
-    """Discover convergence-history CSV files from explicit or default inputs."""
-    input_paths = list(inputs)
-
-    if not input_paths:
-        convergence_directory = raw_root / "convergence"
-
-        if not convergence_directory.is_dir():
-            raise FileNotFoundError(
-                "Default input directory does not exist: "
-                f"{convergence_directory}"
-            )
-
-        csv_files = list(convergence_directory.glob(CSV_PATTERN))
-    else:
-        csv_files = []
-
-        for input_path in input_paths:
-            resolved_path = resolve_input_path(input_path, raw_root)
-
-            if resolved_path.is_dir():
-                csv_files.extend(resolved_path.rglob(CSV_PATTERN))
-            elif resolved_path.is_file():
-                if resolved_path.suffix.lower() != ".csv":
-                    raise ValueError(
-                        f"Input file is not a CSV file: {resolved_path}"
-                    )
-                csv_files.append(resolved_path)
-
-    unique_files = sorted({path.resolve() for path in csv_files})
-
-    if not unique_files:
-        raise FileNotFoundError(
-            f"No files matching {CSV_PATTERN} were found."
-        )
-
-    return unique_files
 
 
 def read_history(csv_path: Path) -> pd.DataFrame:
     """Read and validate one convergence-history CSV file."""
-    dataframe = pd.read_csv(csv_path)
-    missing_columns = REQUIRED_COLUMNS - set(dataframe.columns)
-
-    if missing_columns:
-        missing = ", ".join(sorted(missing_columns))
-        raise ValueError(
-            f"{csv_path} is missing required columns: {missing}"
-        )
-
-    for column in NUMERIC_COLUMNS:
-        dataframe[column] = pd.to_numeric(
-            dataframe[column],
-            errors="coerce",
-        )
+    dataframe = read_csv_checked(csv_path, REQUIRED_COLUMNS)
+    coerce_numeric_columns(dataframe, NUMERIC_COLUMNS, csv_path)
 
     if dataframe["requested_kappa"].isna().any():
         raise ValueError(
             f"{csv_path} contains a missing or invalid requested_kappa."
         )
+    if (
+        ~np.isfinite(dataframe["requested_kappa"])
+        | (dataframe["requested_kappa"] <= 0.0)
+    ).any():
+        raise ValueError(
+            f"{csv_path} contains a non-positive or non-finite "
+            "requested_kappa."
+        )
 
     if dataframe["status"].isna().any():
         raise ValueError(f"{csv_path} contains a missing status.")
 
-    dataframe["status"] = dataframe["status"].astype(str).str.strip()
-
-    unknown_statuses = sorted(
-        set(dataframe["status"].unique()) - set(STATUS_CODES)
+    dataframe["status"] = (
+        dataframe["status"].astype(str).str.strip().str.lower()
     )
-
+    unknown_statuses = sorted(
+        set(dataframe["status"]) - MIXED_IR_STATUS_NAMES
+    )
     if unknown_statuses:
         unknown = ", ".join(repr(status) for status in unknown_statuses)
-        expected = ", ".join(STATUS_CODES)
+        expected = ", ".join(sorted(MIXED_IR_STATUS_NAMES))
         raise ValueError(
             f"{csv_path} contains unknown status value(s): {unknown}. "
             f"Expected one of: {expected}."
@@ -319,7 +224,6 @@ def read_history(csv_path: Path) -> pd.DataFrame:
 
     status_counts = dataframe.groupby("requested_kappa")["status"].nunique()
     inconsistent_kappas = status_counts[status_counts != 1].index.tolist()
-
     if inconsistent_kappas:
         formatted_kappas = ", ".join(
             f"{kappa:g}" for kappa in inconsistent_kappas
@@ -329,15 +233,19 @@ def read_history(csv_path: Path) -> pd.DataFrame:
             f"kappa = {formatted_kappas}."
         )
 
-    history = dataframe.dropna(subset=["iteration"]).copy()
+    require_invariant_columns(
+        dataframe,
+        INVARIANT_METADATA_COLUMNS,
+        csv_path,
+    )
 
+    history = dataframe.dropna(subset=["iteration"]).copy()
     status_only_kappas = sorted(
         dataframe.loc[
             dataframe["iteration"].isna(),
             "requested_kappa",
         ].unique()
     )
-
     if status_only_kappas:
         formatted_kappas = ", ".join(
             f"{kappa:g}" for kappa in status_only_kappas
@@ -349,26 +257,27 @@ def read_history(csv_path: Path) -> pd.DataFrame:
         )
 
     if history.empty:
-        raise ValueError(
-            f"{csv_path} contains no available iterates to plot."
-        )
+        raise ValueError(f"{csv_path} contains no available iterates to plot.")
 
     nonintegral_iterations = (
-        history["iteration"] % 1.0
-    ).abs() > np.finfo(float).eps
-
+        ~np.isfinite(history["iteration"])
+        | (history["iteration"] < 0.0)
+        | (
+            (history["iteration"] % 1.0).abs()
+            > np.finfo(float).eps
+        )
+    )
     if nonintegral_iterations.any():
         raise ValueError(
-            f"{csv_path} contains nonintegral iteration values."
+            f"{csv_path} contains negative, non-finite, or nonintegral "
+            "iteration values."
         )
 
     history["iteration"] = history["iteration"].astype(int)
-
     duplicates = history.duplicated(
         subset=["requested_kappa", "iteration"],
         keep=False,
     )
-
     if duplicates.any():
         raise ValueError(
             f"{csv_path} contains duplicate rows for a condition number "
@@ -376,10 +285,11 @@ def read_history(csv_path: Path) -> pd.DataFrame:
         )
 
     missing_metrics = history[
-        list(column for column, _, _ in ALL_METRICS)
+        [column for column, _, _ in ALL_METRICS]
     ].isna()
-
-    if missing_metrics[["forward_error_inf", "backward_error_inf"]].any().any():
+    if missing_metrics[
+        ["forward_error_inf", "backward_error_inf"]
+    ].any().any():
         raise ValueError(
             f"{csv_path} contains missing forward or backward errors for "
             "an available iterate."
@@ -391,55 +301,9 @@ def read_history(csv_path: Path) -> pd.DataFrame:
             "iteration 0."
         )
 
-    metadata_columns = (
-        "factor_precision",
-        "work_precision",
-        "residual_precision",
-        "measure_precision",
-        "matrix_family",
-        "dimension",
-        "variant",
-    )
-
-    varying_metadata = [
-        column
-        for column in metadata_columns
-        if dataframe[column].nunique(dropna=False) != 1
-    ]
-
-    if varying_metadata:
-        varying = ", ".join(varying_metadata)
-        raise ValueError(
-            f"{csv_path} combines incompatible metadata values: {varying}"
-        )
-
-    return history.sort_values(["requested_kappa", "iteration"])
-
-
-def factorization_boundary(dataframe: pd.DataFrame) -> float | None:
-    """Return kappa_* = 1 / u_f for a recognized factorization type."""
-    factor_precision = str(dataframe.iloc[0]["factor_precision"]).lower()
-    significand_bits = FACTOR_SIGNIFICAND_BITS.get(factor_precision)
-
-    if significand_bits is None:
-        warnings.warn(
-            "No factorization-boundary metadata is known for precision "
-            f"{factor_precision!r}; using plain kappa labels.",
-            stacklevel=1,
-        )
-        return None
-
-    boundary = float(2**significand_bits)
-
-    if not np.isfinite(boundary):
-        warnings.warn(
-            f"The boundary for precision {factor_precision!r} exceeds "
-            "the plotting range; using plain kappa labels.",
-            stacklevel=1,
-        )
-        return None
-
-    return boundary
+    return history.sort_values(
+        ["requested_kappa", "iteration"]
+    ).reset_index(drop=True)
 
 
 def decimal_math_text(value: float) -> str:
@@ -493,12 +357,11 @@ def representative_boundary_factor(
     kappa: float,
     boundary: float,
 ) -> float | None:
-    """Recognize a representative-grid point as a multiple of kappa_*."""
+    """Recognize a representative-grid point as a multiple of kappa_* ."""
     if np.isclose(kappa, 1.0, rtol=1.0e-12, atol=1.0e-15):
         return None
 
     ratio = kappa / boundary
-
     for factor in REPRESENTATIVE_BOUNDARY_FACTORS:
         if np.isclose(ratio, factor, rtol=1.0e-10, atol=1.0e-14):
             return factor
@@ -515,13 +378,9 @@ def boundary_factor_math_text(factor: float) -> str:
     return fr"{factor_text}\kappa_*"
 
 
-def kappa_label(kappa: float, boundary: float | None) -> str:
+def kappa_label(kappa: float, boundary: float) -> str:
     """Format one condition number and expose its boundary-grid role."""
     value_text = number_math_text(kappa)
-
-    if boundary is None:
-        return fr"$\kappa={value_text}$"
-
     factor = representative_boundary_factor(kappa, boundary)
 
     if factor is not None:
@@ -534,57 +393,49 @@ def kappa_label(kappa: float, boundary: float | None) -> str:
     return fr"$\kappa={value_text}$"
 
 
-def status_code(group: pd.DataFrame) -> str:
-    """Return the validated one-letter termination code for one run."""
+def run_status(group: pd.DataFrame) -> str:
+    """Return the single validated termination status for one run."""
     statuses = group["status"].unique()
-
     if len(statuses) != 1:
         raise ValueError(
             "A condition-number history must have exactly one status."
         )
-
-    return STATUS_CODES[str(statuses[0])]
-
-
-def status_key(codes: Iterable[str]) -> str:
-    """Construct a compact explanation of the status codes in a figure."""
-    present_codes = set(codes)
-    definitions = (
-        f"{code} = {description}"
-        for code, description in STATUS_DESCRIPTIONS.items()
-        if code in present_codes
-    )
-    return "Status: " + "; ".join(definitions)
+    return str(statuses[0])
 
 
-def legend_title(boundary: float | None, codes: Iterable[str]) -> str:
+def legend_title(boundary: float, statuses: Iterable[str]) -> str:
     """Construct the boundary definition and status key for the legend."""
-    lines: list[str] = []
-
-    if boundary is not None:
-        boundary_text = number_math_text(boundary)
-        lines.append(fr"$\kappa_*=1/u_f={boundary_text}$")
-
-    lines.append(status_key(codes))
-    return "\n".join(lines)
-
-
-def figure_title(dataframe: pd.DataFrame) -> str:
-    """Construct a title from the invariant CSV metadata."""
-    row = dataframe.iloc[0]
-    precisions = (
-        f"{row['factor_precision']} / {row['work_precision']} / "
-        f"{row['residual_precision']}"
+    boundary_text = number_math_text(boundary)
+    return "\n".join(
+        (
+            fr"$\kappa_*=1/u_f={boundary_text}$",
+            status_key(statuses),
+        )
     )
 
+
+def figure_title(dataframe: pd.DataFrame, csv_path: Path) -> str:
+    """Construct a title from the invariant CSV metadata."""
+    factor = str(invariant_value(dataframe, "factor_precision", csv_path))
+    work = str(invariant_value(dataframe, "work_precision", csv_path))
+    residual = str(
+        invariant_value(dataframe, "residual_precision", csv_path)
+    )
+    dimension = int(invariant_value(dataframe, "dimension", csv_path))
+    variant = str(invariant_value(dataframe, "variant", csv_path))
+
+    precisions = (
+        f"{precision_label(factor)}–{precision_label(work)}–"
+        f"{precision_label(residual)}"
+    )
     return (
         f"Convergence histories: {precisions} "
-        f"(n = {int(row['dimension'])}, {row['variant']})"
+        f"(n = {dimension}, {variant})"
     )
 
 
 def positive_log_values(values: pd.Series) -> pd.Series:
-    """Replace nonpositive values by NaN because they cannot appear on a log axis."""
+    """Replace nonpositive values by NaN for a logarithmic axis."""
     return values.where(values > 0.0)
 
 
@@ -602,15 +453,15 @@ def configure_axis(axis: Axes, title: str, ylabel: str) -> None:
 
 def plot_history(
     dataframe: pd.DataFrame,
+    csv_path: Path,
     include_relative_correction: bool = False,
 ) -> tuple[Figure, int]:
     """Create a two- or three-panel convergence-history figure."""
+    factor = str(invariant_value(dataframe, "factor_precision", csv_path))
+    boundary = factorization_boundary(factor)
     kappas = sorted(dataframe["requested_kappa"].unique())
-    boundary = factorization_boundary(dataframe)
     metrics = (
-        ALL_METRICS
-        if include_relative_correction
-        else DEFAULT_METRICS
+        ALL_METRICS if include_relative_correction else DEFAULT_METRICS
     )
     panel_count = len(metrics)
     colors = plt.get_cmap("viridis")(
@@ -627,15 +478,18 @@ def plot_history(
     axes = np.atleast_1d(axes)
 
     omitted_nonpositive = 0
-    plotted_status_codes: list[str] = []
+    plotted_statuses: list[str] = []
 
     for index, kappa in enumerate(kappas):
         group = dataframe.loc[
             dataframe["requested_kappa"] == kappa
         ].sort_values("iteration")
-        code = status_code(group)
-        plotted_status_codes.append(code)
-        label = f"{kappa_label(float(kappa), boundary)} [{code}]"
+        status = run_status(group)
+        plotted_statuses.append(status)
+        label = (
+            f"{kappa_label(float(kappa), boundary)} "
+            f"[{status_code(status)}]"
+        )
 
         for axis, (column, _, _) in zip(axes, metrics):
             values = positive_log_values(group[column])
@@ -665,7 +519,7 @@ def plot_history(
     legend_rows = int(np.ceil(len(labels) / legend_columns))
     bottom_margin = 0.18 + 0.055 * max(0, legend_rows - 2)
 
-    figure.suptitle(figure_title(dataframe), fontsize=14)
+    figure.suptitle(figure_title(dataframe, csv_path), fontsize=14)
     figure.legend(
         handles,
         labels,
@@ -673,62 +527,26 @@ def plot_history(
         bbox_to_anchor=(0.5, 0.01),
         ncol=legend_columns,
         frameon=False,
-        title=legend_title(boundary, plotted_status_codes),
+        title=legend_title(boundary, plotted_statuses),
     )
     figure.tight_layout(rect=(0.0, bottom_margin, 1.0, 0.93))
 
     return figure, omitted_nonpositive
 
 
-def output_directory_for(
-    csv_path: Path,
-    raw_root: Path,
-    plots_root: Path,
-) -> Path:
-    """Mirror the CSV's raw-results subdirectory beneath the plots root."""
-    try:
-        relative_directory = csv_path.parent.relative_to(raw_root)
-    except ValueError:
-        relative_directory = Path("convergence")
-
-    return plots_root / relative_directory
-
-
-def save_plot(
-    figure: Figure,
-    csv_path: Path,
-    raw_root: Path,
-    plots_root: Path,
-    output_format: str,
-    dpi: int,
-) -> Path:
-    """Save one figure to the mirrored plot-results directory."""
-    output_directory = output_directory_for(
-        csv_path,
-        raw_root,
-        plots_root,
-    )
-    output_directory.mkdir(parents=True, exist_ok=True)
-
-    output_path = output_directory / f"{csv_path.stem}.{output_format}"
-    save_options: dict[str, object] = {
-        "bbox_inches": "tight",
-    }
-
-    if output_format == "png":
-        save_options["dpi"] = dpi
-
-    figure.savefig(output_path, **save_options)
-    plt.close(figure)
-
-    return output_path
-
-
-def main() -> None:
+def main() -> int:
     """Plot all requested convergence-history datasets."""
     args = parse_arguments()
-    raw_root, plots_root = resolve_roots(args)
-    csv_files = discover_csv_files(args.inputs, raw_root)
+    raw_root, plots_root = resolve_results_roots(
+        args.raw_root,
+        args.plots_root,
+    )
+    csv_files = discover_csv_files(
+        args.inputs,
+        raw_root,
+        DEFAULT_RAW_SUBDIRECTORY,
+        CSV_PATTERN,
+    )
 
     print(f"Found {len(csv_files)} convergence-history CSV file(s).")
 
@@ -736,20 +554,27 @@ def main() -> None:
         dataframe = read_history(csv_path)
         figure, omitted_nonpositive = plot_history(
             dataframe,
+            csv_path,
             include_relative_correction=args.include_relative_correction,
         )
-        output_path = save_plot(
-            figure,
+        output_path = mirrored_plot_path(
             csv_path,
             raw_root,
             plots_root,
             args.format,
-            args.dpi,
+            DEFAULT_RAW_SUBDIRECTORY,
         )
+        save_options: dict[str, object] = {
+            "bbox_inches": "tight",
+            "facecolor": "white",
+        }
+        if args.format == "png":
+            save_options["dpi"] = args.dpi
 
-        statuses = ", ".join(
-            sorted(dataframe["status"].dropna().unique())
-        )
+        figure.savefig(output_path, **save_options)
+        plt.close(figure)
+
+        statuses = ", ".join(sorted(dataframe["status"].unique()))
         print(
             f"Wrote {output_path} "
             f"({dataframe['requested_kappa'].nunique()} condition numbers; "
@@ -763,6 +588,8 @@ def main() -> None:
                 stacklevel=1,
             )
 
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -18,7 +18,6 @@ from __future__ import annotations
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 import math
 import warnings
 
@@ -33,8 +32,32 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
+from mpir_plotting.csv_validation import (
+    coerce_numeric_columns,
+    invariant_value,
+    read_csv_checked,
+)
+from mpir_plotting.paths import (
+    discover_csv_files,
+    mirrored_plot_path,
+    resolve_results_roots,
+)
+from mpir_plotting.precisions import (
+    PRECISIONS,
+    factorization_boundary,
+    is_supported_precision,
+    precision_label,
+    unit_roundoff,
+)
+from mpir_plotting.styles import (
+    DIRECT_SOLVE_STATUS_NAMES,
+    MIXED_IR_STATUS_NAMES,
+    STATUS_STYLES,
+)
+
 
 CSV_PATTERN = "direct-solve-comparison__*.csv"
+DEFAULT_RAW_SUBDIRECTORY = Path("direct_comparison")
 EXPECTED_VARIANTS = ("mixed-ir", "direct-lu")
 
 REQUIRED_COLUMNS = {
@@ -73,18 +96,6 @@ COMMON_METADATA_COLUMNS = (
     "rotation_theta",
 )
 
-# Number of significand bits p. The experiment uses u = 2**(-p), so the
-# iterative-refinement factorization boundary is kappa_* = 1/u_f = 2**p.
-PRECISION_SIGNIFICAND_BITS = {
-    "fp8": 4,
-    "bfloat16": 8,
-    "fp16": 11,
-    "fp32": 24,
-    "fp64": 53,
-    "fp128": 128,
-    "fp256": 256,
-}
-
 METHOD_STYLES = {
     "mixed-ir": {
         "color": "#0072B2",
@@ -96,15 +107,6 @@ METHOD_STYLES = {
 
 
 @dataclass(frozen=True)
-class StatusStyle:
-    """Visual and textual encoding for one mixed-IR status."""
-
-    code: str
-    description: str
-    marker: str
-
-
-@dataclass(frozen=True)
 class PrecisionRoles:
     """Precision metadata for one method in a comparison dataset."""
 
@@ -112,19 +114,6 @@ class PrecisionRoles:
     work: str
     residual: str
     measure: str
-
-
-MIXED_STATUS_STYLES = {
-    "converged": StatusStyle("C", "converged", "o"),
-    "max-iterations": StatusStyle("M", "maximum iterations", "^"),
-    "diverged": StatusStyle("D", "diverged", "X"),
-    "stagnated": StatusStyle("S", "stagnated", "P"),
-    "non-finite": StatusStyle("N", "non-finite value", "s"),
-    "factorization-input-non-finite": StatusStyle(
-        "F", "non-finite factorization input", "D"
-    ),
-}
-
 
 def parse_arguments() -> Namespace:
     """Parse command-line arguments."""
@@ -150,8 +139,8 @@ def parse_arguments() -> Namespace:
         type=Path,
         default=None,
         help=(
-            "Root of the raw-results tree. Defaults to <code>/results/raw, "
-            "where <code> is inferred from the script location."
+            "Root of the raw-results tree. Defaults to "
+            "<repository>/results/raw."
         ),
     )
     parser.add_argument(
@@ -160,7 +149,7 @@ def parse_arguments() -> Namespace:
         default=None,
         help=(
             "Root of the plot-results tree. Defaults to "
-            "<code>/results/plots."
+            "<repository>/results/plots."
         ),
     )
     parser.add_argument(
@@ -182,91 +171,6 @@ def parse_arguments() -> Namespace:
     return args
 
 
-def infer_code_directory() -> Path:
-    """Infer the code directory for a script stored under ``code/scripts``."""
-    script_path = Path(__file__).resolve()
-    conventional_code_dir = script_path.parents[1]
-    if (conventional_code_dir / "results" / "raw").is_dir():
-        return conventional_code_dir
-
-    current_directory = Path.cwd().resolve()
-    if (current_directory / "results" / "raw").is_dir():
-        return current_directory
-
-    return conventional_code_dir
-
-
-def resolve_roots(args: Namespace) -> tuple[Path, Path]:
-    """Resolve the raw- and plot-results roots."""
-    code_directory = infer_code_directory()
-    raw_root = (
-        args.raw_root.resolve()
-        if args.raw_root is not None
-        else code_directory / "results" / "raw"
-    )
-    plots_root = (
-        args.plots_root.resolve()
-        if args.plots_root is not None
-        else code_directory / "results" / "plots"
-    )
-    return raw_root, plots_root
-
-
-def resolve_input_path(path: Path, raw_root: Path) -> Path:
-    """Resolve an explicit input against likely raw-results locations."""
-    candidates = (
-        path,
-        raw_root / path,
-        raw_root / "direct_comparison" / path,
-    )
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate.resolve()
-
-    checked = "\n".join(f"  - {candidate}" for candidate in candidates)
-    raise FileNotFoundError(f"Could not find input {path}. Checked:\n{checked}")
-
-
-def discover_csv_files(inputs: Iterable[Path], raw_root: Path) -> list[Path]:
-    """Discover Group D comparison CSV files."""
-    input_paths = list(inputs)
-    if not input_paths:
-        input_directory = raw_root / "direct_comparison"
-        if not input_directory.is_dir():
-            raise FileNotFoundError(
-                f"Default input directory does not exist: {input_directory}"
-            )
-        csv_files = list(input_directory.glob(CSV_PATTERN))
-    else:
-        csv_files = []
-        for input_path in input_paths:
-            resolved_path = resolve_input_path(input_path, raw_root)
-            if resolved_path.is_dir():
-                csv_files.extend(resolved_path.rglob(CSV_PATTERN))
-            elif resolved_path.suffix.lower() == ".csv":
-                csv_files.append(resolved_path)
-            else:
-                raise ValueError(f"Input file is not a CSV file: {resolved_path}")
-
-    unique_files = sorted({path.resolve() for path in csv_files})
-    if not unique_files:
-        raise FileNotFoundError(f"No files matching {CSV_PATTERN} were found.")
-    return unique_files
-
-
-def one_metadata_value(dataframe: pd.DataFrame, column: str, path: Path):
-    """Return a metadata value after checking that it is constant."""
-    if column not in dataframe.columns:
-        raise ValueError(f"{path} is missing metadata column {column}.")
-    values = dataframe[column].dropna().unique()
-    if len(values) != 1:
-        raise ValueError(
-            f"{path} must contain exactly one value for {column}; "
-            f"found {len(values)}."
-        )
-    return values[0]
-
-
 def validate_precision_roles(
     sweeps: dict[str, pd.DataFrame],
     csv_path: Path,
@@ -282,16 +186,16 @@ def validate_precision_roles(
     for variant, subset in sweeps.items():
         roles[variant] = PrecisionRoles(
             factor=str(
-                one_metadata_value(subset, "factor_precision", csv_path)
+                invariant_value(subset, "factor_precision", csv_path)
             ).strip().lower(),
             work=str(
-                one_metadata_value(subset, "work_precision", csv_path)
+                invariant_value(subset, "work_precision", csv_path)
             ).strip().lower(),
             residual=str(
-                one_metadata_value(subset, "residual_precision", csv_path)
+                invariant_value(subset, "residual_precision", csv_path)
             ).strip().lower(),
             measure=str(
-                one_metadata_value(subset, "measure_precision", csv_path)
+                invariant_value(subset, "measure_precision", csv_path)
             ).strip().lower(),
         )
 
@@ -300,8 +204,8 @@ def validate_precision_roles(
 
     for role_name in ("factor", "work", "residual", "measure"):
         precision_name = getattr(iterative, role_name)
-        if precision_name not in PRECISION_SIGNIFICAND_BITS:
-            supported = ", ".join(PRECISION_SIGNIFICAND_BITS)
+        if not is_supported_precision(precision_name):
+            supported = ", ".join(PRECISIONS)
             raise ValueError(
                 f"{csv_path}: iterative-refinement {role_name} precision "
                 f"{precision_name!r} is unknown; expected one of: "
@@ -320,8 +224,8 @@ def validate_precision_roles(
         )
     for role_name in ("factor", "work", "measure"):
         precision_name = getattr(direct, role_name)
-        if precision_name not in PRECISION_SIGNIFICAND_BITS:
-            supported = ", ".join(PRECISION_SIGNIFICAND_BITS)
+        if not is_supported_precision(precision_name):
+            supported = ", ".join(PRECISIONS)
             raise ValueError(
                 f"{csv_path}: direct-LU {role_name} precision "
                 f"{precision_name!r} is unknown; expected one of: "
@@ -339,24 +243,20 @@ def validate_precision_roles(
 
 def read_comparison(csv_path: Path) -> dict[str, pd.DataFrame]:
     """Read and validate one Group D comparison CSV."""
-    dataframe = pd.read_csv(csv_path)
-    missing_columns = REQUIRED_COLUMNS - set(dataframe.columns)
-    if missing_columns:
-        missing = ", ".join(sorted(missing_columns))
-        raise ValueError(f"{csv_path} is missing required columns: {missing}")
-    if dataframe.empty:
-        raise ValueError(f"{csv_path} contains no data rows.")
-
-    for column in NUMERIC_COLUMNS:
-        dataframe[column] = pd.to_numeric(dataframe[column], errors="coerce")
+    dataframe = read_csv_checked(csv_path, REQUIRED_COLUMNS)
+    coerce_numeric_columns(dataframe, NUMERIC_COLUMNS, csv_path)
 
     if dataframe["requested_kappa"].isna().any():
         raise ValueError(f"{csv_path} contains an invalid requested_kappa.")
     if (dataframe["requested_kappa"] <= 0).any():
         raise ValueError(f"{csv_path} contains a non-positive requested_kappa.")
 
-    dataframe["variant"] = dataframe["variant"].astype(str).str.strip()
-    dataframe["status"] = dataframe["status"].astype(str).str.strip()
+    dataframe["variant"] = (
+        dataframe["variant"].astype(str).str.strip().str.lower()
+    )
+    dataframe["status"] = (
+        dataframe["status"].astype(str).str.strip().str.lower()
+    )
     actual_variants = set(dataframe["variant"])
     if actual_variants != set(EXPECTED_VARIANTS):
         raise ValueError(
@@ -382,9 +282,9 @@ def read_comparison(csv_path: Path) -> dict[str, pd.DataFrame]:
 
     for column in COMMON_METADATA_COLUMNS:
         if column in dataframe.columns:
-            one_metadata_value(dataframe, column, csv_path)
+            invariant_value(dataframe, column, csv_path)
 
-    if str(one_metadata_value(dataframe, "experiment", csv_path)) != (
+    if str(invariant_value(dataframe, "experiment", csv_path)) != (
         "direct-solve-comparison"
     ):
         raise ValueError(
@@ -424,7 +324,7 @@ def read_comparison(csv_path: Path) -> dict[str, pd.DataFrame]:
             )
 
     unknown_mixed_statuses = sorted(
-        set(sweeps["mixed-ir"]["status"]) - set(MIXED_STATUS_STYLES)
+        set(sweeps["mixed-ir"]["status"]) - MIXED_IR_STATUS_NAMES
     )
     if unknown_mixed_statuses:
         raise ValueError(
@@ -432,21 +332,31 @@ def read_comparison(csv_path: Path) -> dict[str, pd.DataFrame]:
             f"{', '.join(map(repr, unknown_mixed_statuses))}."
         )
 
+    unknown_direct_statuses = sorted(
+        set(sweeps["direct-lu"]["status"]) - DIRECT_SOLVE_STATUS_NAMES
+    )
+    if unknown_direct_statuses:
+        raise ValueError(
+            f"{csv_path} contains unknown direct-LU status value(s): "
+            f"{', '.join(map(repr, unknown_direct_statuses))}."
+        )
+
     validate_precision_roles(sweeps, csv_path)
     return sweeps
 
 
-def unit_roundoff(precision_name: str) -> float:
-    """Return unit roundoff for a supported precision."""
-    try:
-        significand_bits = PRECISION_SIGNIFICAND_BITS[precision_name]
-    except KeyError as error:
-        supported = ", ".join(PRECISION_SIGNIFICAND_BITS)
-        raise ValueError(
-            f"Unknown precision {precision_name!r}; expected one of: "
-            f"{supported}."
-        ) from error
-    return math.ldexp(1.0, -significand_bits)
+def iterative_refinement_label(roles: PrecisionRoles) -> str:
+    """Return the method label for any iterative-refinement triple."""
+    triple = "–".join(
+        precision_label(name)
+        for name in (roles.factor, roles.work, roles.residual)
+    )
+    return f"Iterative refinement: {triple}"
+
+
+def direct_lu_label(roles: PrecisionRoles) -> str:
+    """Return the direct-solve label derived from CSV metadata."""
+    return f"Direct {precision_label(roles.work)} LU"
 
 
 def precision_label(precision_name: str) -> str:
@@ -493,16 +403,12 @@ def configure_loglog_axis(axis: Axes) -> None:
     axis.set_axisbelow(True)
 
 
-def status_counts(dataframe: pd.DataFrame, mixed: bool) -> str:
+def status_counts(dataframe: pd.DataFrame) -> str:
     """Return compact status counts for a method legend label."""
     counts = dataframe["status"].value_counts()
     parts: list[str] = []
     for status, count in counts.items():
-        if mixed and status in MIXED_STATUS_STYLES:
-            name = MIXED_STATUS_STYLES[status].code
-        else:
-            name = str(status)
-        parts.append(f"{int(count)} {name}")
+        parts.append(f"{int(count)} {STATUS_STYLES[status].code}")
     return ", ".join(parts)
 
 
@@ -536,7 +442,9 @@ def plot_method_curve(
         )
         return
 
-    for status, status_style in MIXED_STATUS_STYLES.items():
+    for status, status_style in STATUS_STYLES.items():
+        if status not in MIXED_IR_STATUS_NAMES:
+            continue
         subset = dataframe[
             (dataframe["status"] == status) & dataframe[y_column].notna()
         ]
@@ -576,13 +484,15 @@ def make_legend_handles(
     ]
     labels = [
         f"{iterative_refinement_label(roles['mixed-ir'])} "
-        f"({status_counts(mixed, mixed=True)})",
+        f"({status_counts(mixed)})",
         f"{direct_lu_label(roles['direct-lu'])} "
-        f"({status_counts(direct, mixed=False)})",
+        f"({status_counts(direct)})",
     ]
 
     present_statuses = set(mixed["status"])
-    for status, style in MIXED_STATUS_STYLES.items():
+    for status, style in STATUS_STYLES.items():
+        if status not in MIXED_IR_STATUS_NAMES:
+            continue
         if status not in present_statuses:
             continue
         handles.append(
@@ -614,10 +524,10 @@ def make_figure(
     roles = validate_precision_roles(sweeps, csv_path)
     iterative_roles = roles["mixed-ir"]
     direct_roles = roles["direct-lu"]
-    family = str(one_metadata_value(mixed, "matrix_family", csv_path))
-    dimension = int(one_metadata_value(mixed, "dimension", csv_path))
+    family = str(invariant_value(mixed, "matrix_family", csv_path))
+    dimension = int(invariant_value(mixed, "dimension", csv_path))
 
-    factor_boundary = 1.0 / unit_roundoff(iterative_roles.factor)
+    factor_boundary = factorization_boundary(iterative_roles.factor)
     iterative_work_roundoff = unit_roundoff(iterative_roles.work)
     direct_roundoff = unit_roundoff(direct_roles.work)
     kappas = mixed["requested_kappa"].to_numpy(dtype=float)
@@ -804,38 +714,29 @@ def make_figure(
     return figure
 
 
-def output_path_for(
-    csv_path: Path,
-    raw_root: Path,
-    plots_root: Path,
-    output_format: str,
-) -> Path:
-    """Mirror a raw-results path beneath the plot-results root."""
-    try:
-        relative_path = csv_path.resolve().relative_to(raw_root.resolve())
-        relative_parent = relative_path.parent
-    except ValueError:
-        relative_parent = Path("direct_comparison")
-
-    output_directory = plots_root / relative_parent
-    output_directory.mkdir(parents=True, exist_ok=True)
-    return output_directory / f"{csv_path.stem}.{output_format}"
-
-
 def main() -> int:
     """Plot every selected Group D comparison dataset."""
     args = parse_arguments()
-    raw_root, plots_root = resolve_roots(args)
-    csv_files = discover_csv_files(args.inputs, raw_root)
+    raw_root, plots_root = resolve_results_roots(
+        args.raw_root,
+        args.plots_root,
+    )
+    csv_files = discover_csv_files(
+        args.inputs,
+        raw_root,
+        DEFAULT_RAW_SUBDIRECTORY,
+        CSV_PATTERN,
+    )
 
     for csv_path in csv_files:
         sweeps = read_comparison(csv_path)
         figure = make_figure(sweeps, csv_path)
-        output_path = output_path_for(
+        output_path = mirrored_plot_path(
             csv_path,
             raw_root,
             plots_root,
             args.format,
+            DEFAULT_RAW_SUBDIRECTORY,
         )
         figure.savefig(
             output_path,

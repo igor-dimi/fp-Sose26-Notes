@@ -12,9 +12,9 @@ a directory containing them may also be supplied explicitly.
 from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
-from pathlib import Path
-from typing import Iterable
+from collections.abc import Iterable
 import math
+from pathlib import Path
 
 import matplotlib
 
@@ -27,8 +27,32 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 
+from mpir_plotting.csv_validation import (
+    coerce_numeric_columns,
+    invariant_value,
+    read_csv_checked,
+    require_invariant_columns,
+)
+from mpir_plotting.paths import (
+    discover_csv_files,
+    mirrored_plot_directory,
+    resolve_results_roots,
+)
+from mpir_plotting.precisions import (
+    factorization_boundary,
+    precision_label,
+    unit_roundoff,
+)
+from mpir_plotting.styles import (
+    MIXED_IR_STATUS_NAMES,
+    STATUS_STYLES,
+    status_code,
+    status_key,
+)
+
 
 CSV_PATTERN = "residual-precision__*.csv"
+DEFAULT_RAW_SUBDIRECTORY = Path("residual_precision")
 EXPECTED_RESIDUAL_PRECISIONS = ("fp64", "fp128")
 
 REQUIRED_COLUMNS = {
@@ -57,6 +81,19 @@ NUMERIC_COLUMNS = (
     "max_iterations",
 )
 
+INVARIANT_METADATA_COLUMNS = (
+    "experiment",
+    "matrix_family",
+    "dimension",
+    "factor_precision",
+    "work_precision",
+    "residual_precision",
+    "measure_precision",
+    "variant",
+    "rhs_mode",
+    "max_iterations",
+)
+
 MATCHED_METADATA_COLUMNS = (
     "experiment",
     "matrix_family",
@@ -78,26 +115,12 @@ MATCHED_METADATA_COLUMNS = (
     "scale_residual",
 )
 
-# Number of significand bits p. The convention used by condition_grids.hpp is
-# u = 2**(-p), hence kappa_* = 1/u_f = 2**p.
-PRECISION_SIGNIFICAND_BITS = {
-    "fp8": 4,
-    "bfloat16": 8,
-    "fp16": 11,
-    "fp32": 24,
-    "fp64": 53,
-    "fp128": 128,
-    "fp256": 256,
-}
-
 CURVE_STYLES = {
     "fp64": {
-        "label": "FP64 residual",
         "color": "#0072B2",
         "marker": "o",
     },
     "fp128": {
-        "label": "FP128 residual",
         "color": "#D55E00",
         "marker": "s",
     },
@@ -127,8 +150,8 @@ def parse_arguments() -> Namespace:
         type=Path,
         default=None,
         help=(
-            "Root of the raw-results tree. Defaults to <code>/results/raw, "
-            "where <code> is inferred from the script location."
+            "Root of the raw-results tree. Defaults to "
+            "<repository>/results/raw."
         ),
     )
     parser.add_argument(
@@ -137,7 +160,7 @@ def parse_arguments() -> Namespace:
         default=None,
         help=(
             "Root of the plot-results tree. Defaults to "
-            "<code>/results/plots."
+            "<repository>/results/plots."
         ),
     )
     parser.add_argument(
@@ -159,103 +182,10 @@ def parse_arguments() -> Namespace:
     return args
 
 
-def infer_code_directory() -> Path:
-    """Infer the code directory for a script stored under ``code/scripts``."""
-    script_path = Path(__file__).resolve()
-    conventional_code_dir = script_path.parents[1]
-    if (conventional_code_dir / "results" / "raw").is_dir():
-        return conventional_code_dir
-
-    current_directory = Path.cwd().resolve()
-    if (current_directory / "results" / "raw").is_dir():
-        return current_directory
-
-    return conventional_code_dir
-
-
-def resolve_roots(args: Namespace) -> tuple[Path, Path]:
-    """Resolve raw- and plot-results roots."""
-    code_directory = infer_code_directory()
-    raw_root = (
-        args.raw_root.resolve()
-        if args.raw_root is not None
-        else code_directory / "results" / "raw"
-    )
-    plots_root = (
-        args.plots_root.resolve()
-        if args.plots_root is not None
-        else code_directory / "results" / "plots"
-    )
-    return raw_root, plots_root
-
-
-def resolve_input_path(path: Path, raw_root: Path) -> Path:
-    """Resolve an explicit input against likely raw-results locations."""
-    candidates = (
-        path,
-        raw_root / path,
-        raw_root / "residual_precision" / path,
-    )
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate.resolve()
-
-    checked = "\n".join(f"  - {candidate}" for candidate in candidates)
-    raise FileNotFoundError(f"Could not find input {path}. Checked:\n{checked}")
-
-
-def discover_csv_files(inputs: Iterable[Path], raw_root: Path) -> list[Path]:
-    """Discover the two residual-precision CSV files."""
-    input_paths = list(inputs)
-    if not input_paths:
-        input_directory = raw_root / "residual_precision"
-        if not input_directory.is_dir():
-            raise FileNotFoundError(
-                f"Default input directory does not exist: {input_directory}"
-            )
-        csv_files = list(input_directory.glob(CSV_PATTERN))
-    else:
-        csv_files = []
-        for input_path in input_paths:
-            resolved_path = resolve_input_path(input_path, raw_root)
-            if resolved_path.is_dir():
-                csv_files.extend(resolved_path.rglob(CSV_PATTERN))
-            elif resolved_path.suffix.lower() == ".csv":
-                csv_files.append(resolved_path)
-            else:
-                raise ValueError(f"Input file is not a CSV file: {resolved_path}")
-
-    unique_files = sorted({path.resolve() for path in csv_files})
-    if not unique_files:
-        raise FileNotFoundError(f"No files matching {CSV_PATTERN} were found.")
-    return unique_files
-
-
-def one_metadata_value(dataframe: pd.DataFrame, column: str, path: Path):
-    """Return a metadata value after checking that it is constant."""
-    if column not in dataframe.columns:
-        raise ValueError(f"{path} is missing metadata column {column}.")
-    values = dataframe[column].dropna().unique()
-    if len(values) != 1:
-        raise ValueError(
-            f"{path} must contain exactly one value for {column}; "
-            f"found {len(values)}."
-        )
-    return values[0]
-
-
 def read_sweep(csv_path: Path) -> pd.DataFrame:
     """Read and validate one residual-precision sweep."""
-    dataframe = pd.read_csv(csv_path)
-    missing_columns = REQUIRED_COLUMNS - set(dataframe.columns)
-    if missing_columns:
-        missing = ", ".join(sorted(missing_columns))
-        raise ValueError(f"{csv_path} is missing required columns: {missing}")
-    if dataframe.empty:
-        raise ValueError(f"{csv_path} contains no data rows.")
-
-    for column in NUMERIC_COLUMNS:
-        dataframe[column] = pd.to_numeric(dataframe[column], errors="coerce")
+    dataframe = read_csv_checked(csv_path, REQUIRED_COLUMNS)
+    coerce_numeric_columns(dataframe, NUMERIC_COLUMNS, csv_path)
 
     if dataframe["requested_kappa"].isna().any():
         raise ValueError(f"{csv_path} contains an invalid requested_kappa.")
@@ -276,23 +206,29 @@ def read_sweep(csv_path: Path) -> pd.DataFrame:
                 f"non-positive, or non-finite {column} value(s)."
             )
 
-    for column in (
-        "experiment",
-        "matrix_family",
-        "dimension",
-        "factor_precision",
-        "work_precision",
-        "residual_precision",
-        "measure_precision",
-        "variant",
-        "rhs_mode",
-        "max_iterations",
-    ):
-        one_metadata_value(dataframe, column, csv_path)
+    dataframe["status"] = (
+        dataframe["status"].astype(str).str.strip().str.lower()
+    )
+    unknown_statuses = sorted(
+        set(dataframe["status"]) - MIXED_IR_STATUS_NAMES
+    )
+    if unknown_statuses:
+        unknown = ", ".join(repr(status) for status in unknown_statuses)
+        expected = ", ".join(sorted(MIXED_IR_STATUS_NAMES))
+        raise ValueError(
+            f"{csv_path} contains unknown status value(s): {unknown}. "
+            f"Expected one of: {expected}."
+        )
+
+    require_invariant_columns(
+        dataframe,
+        INVARIANT_METADATA_COLUMNS,
+        csv_path,
+    )
 
     residual_precision = str(
-        one_metadata_value(dataframe, "residual_precision", csv_path)
-    )
+        invariant_value(dataframe, "residual_precision", csv_path)
+    ).strip().lower()
     if residual_precision not in EXPECTED_RESIDUAL_PRECISIONS:
         expected = ", ".join(EXPECTED_RESIDUAL_PRECISIONS)
         raise ValueError(
@@ -303,7 +239,9 @@ def read_sweep(csv_path: Path) -> pd.DataFrame:
     return dataframe.sort_values("requested_kappa").reset_index(drop=True)
 
 
-def load_comparison(csv_files: Iterable[Path]) -> dict[str, pd.DataFrame]:
+def load_comparison(
+    csv_files: Iterable[Path],
+) -> tuple[dict[str, pd.DataFrame], dict[str, Path]]:
     """Load exactly one FP64- and one FP128-residual sweep."""
     sweeps: dict[str, pd.DataFrame] = {}
     paths: dict[str, Path] = {}
@@ -311,8 +249,8 @@ def load_comparison(csv_files: Iterable[Path]) -> dict[str, pd.DataFrame]:
     for csv_path in csv_files:
         dataframe = read_sweep(csv_path)
         residual = str(
-            one_metadata_value(dataframe, "residual_precision", csv_path)
-        )
+            invariant_value(dataframe, "residual_precision", csv_path)
+        ).strip().lower()
         if residual in sweeps:
             raise ValueError(
                 f"Multiple {residual} residual sweeps were supplied: "
@@ -340,15 +278,23 @@ def load_comparison(csv_files: Iterable[Path]) -> dict[str, pd.DataFrame]:
             candidate["requested_kappa"].to_numpy(),
         ):
             raise ValueError(
-                f"The requested_kappa grids do not match between "
+                "The requested_kappa grids do not match between "
                 f"{reference_path} and {candidate_path}."
             )
 
         for column in MATCHED_METADATA_COLUMNS:
             if column not in reference.columns and column not in candidate.columns:
                 continue
-            reference_value = one_metadata_value(reference, column, reference_path)
-            candidate_value = one_metadata_value(candidate, column, candidate_path)
+            reference_value = invariant_value(
+                reference,
+                column,
+                reference_path,
+            )
+            candidate_value = invariant_value(
+                candidate,
+                column,
+                candidate_path,
+            )
             if reference_value != candidate_value:
                 raise ValueError(
                     f"The sweeps differ in {column}: {reference_value!r} "
@@ -356,28 +302,18 @@ def load_comparison(csv_files: Iterable[Path]) -> dict[str, pd.DataFrame]:
                 )
 
     factor = str(
-        one_metadata_value(reference, "factor_precision", reference_path)
-    )
-    work = str(one_metadata_value(reference, "work_precision", reference_path))
+        invariant_value(reference, "factor_precision", reference_path)
+    ).strip().lower()
+    work = str(
+        invariant_value(reference, "work_precision", reference_path)
+    ).strip().lower()
     if factor != "fp32" or work != "fp64":
         raise ValueError(
             "Group C expects factor_precision='fp32' and "
             f"work_precision='fp64'; found {factor!r} and {work!r}."
         )
 
-    return sweeps
-
-
-def unit_roundoff(precision_name: str) -> float:
-    """Return unit roundoff for a supported precision."""
-    try:
-        significand_bits = PRECISION_SIGNIFICAND_BITS[precision_name]
-    except KeyError as error:
-        supported = ", ".join(PRECISION_SIGNIFICAND_BITS)
-        raise ValueError(
-            f"Unknown precision {precision_name!r}; expected one of: {supported}."
-        ) from error
-    return math.ldexp(1.0, -significand_bits)
+    return sweeps, paths
 
 
 def format_number(value: float) -> str:
@@ -404,14 +340,11 @@ def configure_loglog_axis(axis: Axes) -> None:
 def status_counts(dataframe: pd.DataFrame) -> str:
     """Return compact termination-status counts for a legend label."""
     counts = dataframe["status"].value_counts()
-    parts = []
-    if "converged" in counts:
-        parts.append(f"{int(counts['converged'])} C")
-    if "max-iterations" in counts:
-        parts.append(f"{int(counts['max-iterations'])} M")
-    for status, count in counts.items():
-        if status not in ("converged", "max-iterations"):
-            parts.append(f"{int(count)} {status}")
+    parts = [
+        f"{int(counts[status])} {status_code(status)}"
+        for status in STATUS_STYLES
+        if status in counts
+    ]
     return ", ".join(parts)
 
 
@@ -423,7 +356,10 @@ def plot_error_curve(
 ) -> None:
     """Plot one residual-precision error curve."""
     style = CURVE_STYLES[residual]
-    label = f"{style['label']} ({status_counts(dataframe)})"
+    label = (
+        f"{precision_label(residual)} residual "
+        f"({status_counts(dataframe)})"
+    )
     axis.plot(
         dataframe["requested_kappa"],
         dataframe[y_column],
@@ -438,22 +374,31 @@ def plot_error_curve(
     )
 
 
-def make_figure(sweeps: dict[str, pd.DataFrame]) -> Figure:
+def make_figure(
+    sweeps: dict[str, pd.DataFrame],
+    paths: dict[str, Path],
+) -> Figure:
     """Create the two-panel Group C comparison figure."""
-    reference = sweeps[EXPECTED_RESIDUAL_PRECISIONS[0]]
-    reference_path = Path("FP64 residual sweep")
-    factor = str(
-        one_metadata_value(reference, "factor_precision", reference_path)
-    )
-    work = str(one_metadata_value(reference, "work_precision", reference_path))
-    measure = str(
-        one_metadata_value(reference, "measure_precision", reference_path)
-    )
-    family = str(one_metadata_value(reference, "matrix_family", reference_path))
-    dimension = int(one_metadata_value(reference, "dimension", reference_path))
-    variant = str(one_metadata_value(reference, "variant", reference_path))
+    reference_residual = EXPECTED_RESIDUAL_PRECISIONS[0]
+    reference = sweeps[reference_residual]
+    reference_path = paths[reference_residual]
 
-    factor_boundary = 1.0 / unit_roundoff(factor)
+    factor = str(
+        invariant_value(reference, "factor_precision", reference_path)
+    ).strip().lower()
+    work = str(
+        invariant_value(reference, "work_precision", reference_path)
+    ).strip().lower()
+    measure = str(
+        invariant_value(reference, "measure_precision", reference_path)
+    ).strip().lower()
+    family = str(
+        invariant_value(reference, "matrix_family", reference_path)
+    )
+    dimension = int(invariant_value(reference, "dimension", reference_path))
+    variant = str(invariant_value(reference, "variant", reference_path))
+
+    factor_boundary = factorization_boundary(factor)
     work_roundoff = unit_roundoff(work)
     kappas = reference["requested_kappa"].to_numpy(dtype=float)
 
@@ -509,19 +454,24 @@ def make_figure(sweeps: dict[str, pd.DataFrame]) -> Figure:
 
     backward_axis.set_ylabel("Relative backward error")
     backward_axis.set_title(
-        "(a) Final normwise backward error, infinity norm", loc="left"
+        "(a) Final normwise backward error, infinity norm",
+        loc="left",
     )
 
     forward_axis.set_ylabel("Relative forward error")
     forward_axis.set_xlabel(r"Requested condition number $\kappa$")
     forward_axis.set_title(
-        "(b) Final relative forward error, infinity norm", loc="left"
+        "(b) Final relative forward error, infinity norm",
+        loc="left",
     )
 
-    title = "Residual-precision comparison: FP32–FP64 working solve"
+    title = (
+        "Residual-precision comparison: "
+        f"{precision_label(factor)}–{precision_label(work)} working solve"
+    )
     subtitle = (
         f"{family.replace('-', ' ')}, n = {dimension}, {variant} residual, "
-        f"measurement = {measure}"
+        f"measurement = {precision_label(measure)}"
     )
     figure.suptitle(title, fontsize=15, y=0.985)
     figure.text(0.5, 0.949, subtitle, ha="center", va="top", fontsize=10)
@@ -531,22 +481,22 @@ def make_figure(sweeps: dict[str, pd.DataFrame]) -> Figure:
     reference_text = (
         rf"Dashed vertical: $\kappa_*=1/u_f={boundary_text}$"
         rf"    Dotted horizontal: $u_{{\mathrm{{work}}}}={roundoff_text}$"
-        rf"    Dash-dot (forward): reference slope $\kappa u_{{\mathrm{{work}}}}$"
+        rf"    Dash-dot (forward): reference slope "
+        rf"$\kappa u_{{\mathrm{{work}}}}$"
     )
     figure.text(0.5, 0.919, reference_text, ha="center", va="top", fontsize=9)
 
     curve_handles, curve_labels = backward_axis.get_legend_handles_labels()
-    reference_handles = [
-        Line2D(
-            [],
-            [],
-            linestyle="none",
-            label="C = converged; M = maximum iterations",
-        )
-    ]
+    all_statuses = (
+        status
+        for residual in EXPECTED_RESIDUAL_PRECISIONS
+        for status in sweeps[residual]["status"]
+    )
+    status_definition = status_key(all_statuses).removeprefix("Status: ")
+    status_handle = Line2D([], [], linestyle="none", label=status_definition)
     figure.legend(
-        handles=curve_handles + reference_handles,
-        labels=curve_labels + ["C = converged; M = maximum iterations"],
+        handles=curve_handles + [status_handle],
+        labels=curve_labels + [status_definition],
         loc="upper center",
         bbox_to_anchor=(0.5, 0.895),
         ncol=3,
@@ -556,31 +506,51 @@ def make_figure(sweeps: dict[str, pd.DataFrame]) -> Figure:
         columnspacing=1.3,
     )
 
-    figure.subplots_adjust(top=0.82, bottom=0.10, left=0.12, right=0.98, hspace=0.28)
+    figure.subplots_adjust(
+        top=0.82,
+        bottom=0.10,
+        left=0.12,
+        right=0.98,
+        hspace=0.28,
+    )
     return figure
 
 
 def output_path_for(
     sweeps: dict[str, pd.DataFrame],
+    paths: dict[str, Path],
+    raw_root: Path,
     plots_root: Path,
     output_format: str,
 ) -> Path:
     """Construct the deterministic comparison-figure path."""
-    reference = sweeps[EXPECTED_RESIDUAL_PRECISIONS[0]]
-    reference_path = Path("FP64 residual sweep")
-    family = str(one_metadata_value(reference, "matrix_family", reference_path))
-    dimension = int(one_metadata_value(reference, "dimension", reference_path))
-    rhs = str(one_metadata_value(reference, "rhs_mode", reference_path))
-    factor = str(
-        one_metadata_value(reference, "factor_precision", reference_path)
-    )
-    work = str(one_metadata_value(reference, "work_precision", reference_path))
-    measure = str(
-        one_metadata_value(reference, "measure_precision", reference_path)
-    )
+    reference_residual = EXPECTED_RESIDUAL_PRECISIONS[0]
+    reference = sweeps[reference_residual]
+    reference_path = paths[reference_residual]
 
-    output_directory = plots_root / "residual_precision"
+    family = str(
+        invariant_value(reference, "matrix_family", reference_path)
+    )
+    dimension = int(invariant_value(reference, "dimension", reference_path))
+    rhs = str(invariant_value(reference, "rhs_mode", reference_path))
+    factor = str(
+        invariant_value(reference, "factor_precision", reference_path)
+    ).strip().lower()
+    work = str(
+        invariant_value(reference, "work_precision", reference_path)
+    ).strip().lower()
+    measure = str(
+        invariant_value(reference, "measure_precision", reference_path)
+    ).strip().lower()
+
+    output_directory = mirrored_plot_directory(
+        reference_path,
+        raw_root,
+        plots_root,
+        DEFAULT_RAW_SUBDIRECTORY,
+    )
     output_directory.mkdir(parents=True, exist_ok=True)
+
     filename = (
         f"residual-precision__{family}__n-{dimension}__{rhs}__"
         f"uf-{factor}__u-{work}__ur-fp64-vs-fp128__um-{measure}."
@@ -592,11 +562,25 @@ def output_path_for(
 def main() -> int:
     """Load the two sweeps and write their comparison figure."""
     args = parse_arguments()
-    raw_root, plots_root = resolve_roots(args)
-    csv_files = discover_csv_files(args.inputs, raw_root)
-    sweeps = load_comparison(csv_files)
-    figure = make_figure(sweeps)
-    output_path = output_path_for(sweeps, plots_root, args.format)
+    raw_root, plots_root = resolve_results_roots(
+        args.raw_root,
+        args.plots_root,
+    )
+    csv_files = discover_csv_files(
+        args.inputs,
+        raw_root,
+        DEFAULT_RAW_SUBDIRECTORY,
+        CSV_PATTERN,
+    )
+    sweeps, paths = load_comparison(csv_files)
+    figure = make_figure(sweeps, paths)
+    output_path = output_path_for(
+        sweeps,
+        paths,
+        raw_root,
+        plots_root,
+        args.format,
+    )
     figure.savefig(
         output_path,
         dpi=args.dpi,
