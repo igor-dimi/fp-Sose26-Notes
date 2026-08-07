@@ -18,3 +18,4 @@ format:
       - right=24mm
       - top=25mm
       - bottom=25mm
+    papersize: a4

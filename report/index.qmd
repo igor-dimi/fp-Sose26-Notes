@@ -10,23 +10,24 @@ costs, accuracy, and numerical ranges. Low   precision can increase throughput
 and reduce memory traffic and energy consumption, but it also introduces
 larger rounding errors. Mixed-precision algorithms combine multiple formats
 to obtain some of the efficiency of low precision while retaining higher-precision
-accuracy. [@highamMixedPrecisionAlgorithms2022]
+accuracy [@highamMixedPrecisionAlgorithms2022].
 
 This report studies mixed-precision iterative refinement for nonsingular
-linear systems using low precision for LU factorization and higher precision for refinement
-via numerical experiments that asses convergence and accuracy across precision triples and 
-condition numbers. 
-
+linear systems using low precision for LU factorization and higher precision for refinement.
+Numerical experiments assess convergence and accuracy across precision triples and condition
+numbers. The study focuses on convergence, attainable accuracy, and iteration counts, rather than
+wall-clock performance. Several low- and high-precision formats are emulated or implemented in software,
+so measured runtimes would not represent performance on hardware with native support for these formats.
 
 # Three-precision iterative refinement
 
 ## Algorithm
 
-The implemented method is LU-based three-precision iterative refinement.
+The implemented method is LU-based three-precision iterative refinement
 [@highamMixedPrecisionAlgorithms2022]:
 
 ```pseudocode
-#| label: algo-three-precision-ir
+#| label: algo-mixed-ir
 #| html-line-number: true
 #| pdf-line-number: true
 #| pdf-placement: "H"
@@ -49,10 +50,15 @@ The implemented method is LU-based three-precision iterative refinement.
         \State \Return $x_{i+1}$
     \EndIf
 \EndFor
-\Return $x_{i_{\max}}$
+\State \Return $x_{i_{\max}}$
 \end{algorithmic}
 \end{algorithm}
 ```
+
+@algo-mixed-ir summarizes the core three-precision method. Our implementation
+extends the core algorithm with optional residual scaling for limited-range formats,
+configurable robustness checks, optional iterate histories, optional residual diagnostics,
+and descriptive termination statuses. 
 
 
 ## Precision roles
@@ -63,7 +69,8 @@ $$
 u_r \leq u \leq u_f,
 $$
 
-where $u_f$, $u$, and $u_r$ denote the factorization, working, and residual precisions, respectively. Low factorization precision reduces computational cost, while the working and residual precisions govern the attainable accuracy.
+where $u_f$, $u$, and $u_r$ are the unit roundoffs of the factorization, working,
+and residual precisions, respectively.
 
 
 ## Convergence and attainable accuracy
@@ -71,22 +78,53 @@ where $u_f$, $u$, and $u_r$ denote the factorization, working, and residual prec
 Iterative refinement is expected to converge when
 
 $$
-\kappa(A)u_f<1,
+\kappa(A)u_f<1
 $$
 
-and generally slows near this boundary. If it converges, $u$ and $u_r$ determine the attainable accuracy. Higher residual precision reduces residual rounding errors and can improve the forward error [@carsonAcceleratingSolutionLinear2018]
+This is a useful approximate condition; convergence generally slows near this boundary. If the iteration converges, $u$ and $u_r$ determine the attainable accuracy. Higher residual precision reduces residual rounding errors and can improve the forward error [@carsonAcceleratingSolutionLinear2018].
 
 # Experimental setup
 
-## Test problems and precision formats
+The experiments use a common configurable framework in which explicit options configure both the test problem and the mixed-IR algorithm. Each driver selects these configurations, while shared components construct the problem, execute the algorithm, evaluate errors, and record the results.
 
-All experiments use dense random symmetric positive definite systems of dimension $n = 100$, 
+## Configuration and common settings
+
+Each driver selects the matrix family, dimension, condition numbers, and precision types. `TestProblemOptions` controls right-hand-side construction and random seeds, while `MixedIROptions` controls termination, residual scaling, and storage of iterate histories and residual diagnostics. Unless stated otherwise, the experiments use the common settings in @tbl-common-settings.
+
+| Parameter                           | Common setting                                               |
+| ----------------------------------- | ------------------------------------------------------------ |
+| Matrix family                       | Random dense SPD                                             |
+| Dimension                           | $n=100$                                                      |
+| Right-hand side                     | $b_i\sim\mathcal{N}(0,1)$ in FP64                            |
+| Random seeds                        | $42$ for matrix construction; $2718$ for the right-hand side |
+| Working precision                   | FP64                                                         |
+| Reference and measurement precision | FP256                                                        |
+| Maximum iterations                  | $20$                                                         |
+| Divergence detection                | Enabled; growth factor $10$ over three consecutive steps     |
+| Residual scaling                    | Enabled                                                      |
+| Iterate histories                   | Enabled                                                      |
+| Residual diagnostics                | Disabled                                                     |
+
+: Common experimental settings. {#tbl-common-settings}
+
+
+The condition numbers and precision triples vary between experimental groups. Residual scaling normalizes the residual before conversion to the factorization precision and rescales the computed correction. It is disabled only for the scaled-unscaled comparison and is discussed later
+under [Low-precision limitations and residual scaling](#sec-residual-scaling).
+
+## Test problems 
+
+The test-problem generator independently configures the matrix family and right-hand-side construction. It supports structured rotated-SPD, dense random-SPD, and nonsymmetric random-SVD matrices. Right-hand sides can be formed from an all-ones solution, a random-sign solution, or directly sampled normal entries. Unless stated otherwise, the experiments use dense random-SPD matrices and random-normal FP64 right-hand sides.
+
+The random-SPD matrices have the form 
 
 $$
 A = Q\Lambda Q^T,
 $$
 
-with prescribed condition number $\kappa_2(A)$. The FP64 right-hand side has normally distributed entries. An FP256 solve of the stored system provides the reference solution.
+with orthogonal $Q$ and prescribed condition number $\kappa_2(A)$. An FP256 solve of the stored system provides the reference solution.
+
+
+## Precision formats
 
 The experiments use the following formats:
 
@@ -103,7 +141,7 @@ The experiments use the following formats:
 
 CPFloat simulates bfloat16 and FP16; GMP provides FP128 and FP256. The main experiments use FP64 working precision. Each experiment specifies its factorization and residual precisions.
 
-## Error measures and termination criteria
+## Error measures 
 
 For each iterate, we compute
 
@@ -111,37 +149,63 @@ $$
 \begin{aligned}
 e_i &=
 \frac{\lVert x_i-x_{\mathrm{ref}}\rVert_\infty}
-{\lVert x_{\mathrm{ref}}\rVert_\infty},\
+     {\lVert x_{\mathrm{ref}}\rVert_\infty},
+\\
 \eta_i &=
 \frac{\lVert b-Ax_i\rVert_\infty}
-{\lVert A\rVert_\infty\lVert x_i\rVert_\infty+
-\lVert b\rVert_\infty},\
-\rho_i &=
-\frac{\lVert d_i\rVert_2}{\lVert x_i\rVert_2}.
+     {\lVert A\rVert_\infty\lVert x_i\rVert_\infty
+      +\lVert b\rVert_\infty}.
 \end{aligned}
 $$
 
-The errors $e_i$ and $\eta_i$ are evaluated in FP256. Refinement converges when $\rho_i<u$. Otherwise, it terminates at the iteration limit or upon detecting non-finite values or divergence. Each run records its termination status. The default iteration limit is 20.
+The forward error $e_i$ and the normwise backward error $\eta_i$ are both evaluated in FP256.
+
+## Termination criteria and statuses
+
+Convergence is determined by the relative correction
+
+$$
+\rho_i=\frac{\lVert d_i\rVert_2}{\lVert x_i\rVert_2}.
+$$
+
+Refinement terminates with status `converged` when $\rho_i < u$. 
+Otherwise, it returns `max_iterations` after 20 iterations, 
+`factorization_input_non_finite` if $A$ or $b$ is non-finite
+after conversion to the factorization precision, 
+`non-finite` if a non-finite value appears later, 
+or `diverged` if the correction norm grows by more than a factor
+of $10$ for three consecutive iterations.
+The iteration limit, growth factor, and required number of consecutive
+growth steps are configurable.
+
 
 ## Experimental framework and reproducibility
 
-Separate C++ experiment drivers share the same problem-generation, refinement, measurement, and CSV-output components. Each driver configures these components through explicit options. Fixed seeds ensure reproducibility: $42$ and $137$ for matrix construction and $2718$ for the right-hand side. Shared helper functions derive filenames and CSV fields from the configuration and algorithm output. Each CSV records the requested and measured condition numbers, termination status, iteration count, errors, and final relative correction.
+Each C++ driver defines an experimental group by selecting precision types and configuring
+the shared test-problem, mixed-IR, measurement, and output components. 
+Helper functions derive output paths, filenames, and common CSV fields from the configuration
+and algorithm result. Drivers add only experiment-specific fields, such as iteration histories
+or conversion diagnostics.
 
-Raw data and generated plots are stored separately, allowing figures to be reproduced without rerunning the experiments.
+Each CSV records the run configuration, random seeds, and termination status.
+Python scripts validate the raw data and generate plots without modifying it.
+Fixed seeds and self-describing outputs allow runs to be repeated and figures
+to be regenerated without rerunning the experiments.
 
 # Experimental design
 
-We conducted five groups of experiments that examine how conditioning, precision choices, and residual handling affect the convergence and accuracy of mixed iterative refinement. Unless stated otherwise, they use the common setup described above and vary only the parameters relevant to their objective. @tbl-experimental-design summarizes each group’s purpose, varied parameters, and recorded quantities.
+We conducted five groups of experiments to examine how conditioning, precision choices, and residual handling affect the convergence and accuracy of mixed iterative refinement. Unless stated otherwise, they use the common setup described above and vary only the parameters relevant to their objective. @tbl-experimental-design summarizes each group’s purpose, varied parameters, and recorded quantities.
 
-| Experiment                    | Varied parameters                                 | Recorded quantities                                | Purpose                                                        |
-| ----------------------------- | ------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------- |
-| Convergence histories         | Iteration and representative $\kappa_2(A)$ values | Forward error, backward error, relative correction | Examine convergence below, near, and above $\kappa_2(A)u_f=1$. |
-| Condition-number sweep        | $\kappa_2(A)$ and precision triple                | Final and best errors, iterations, status          | Determine how conditioning affects convergence and accuracy.   |
-| Residual-precision comparison | Residual precision $u_r$                          | Forward and backward errors                        | Measure the benefit of higher residual precision.              |
-| Direct-solve comparison       | Solution method                                   | Forward and backward errors                        | Compare mixed IR with a direct working-precision solve.        |
-| Residual-scaling experiments  | Residual scaling enabled or disabled              | Error histories and conversion diagnostics         | Determine whether scaling prevents residual information loss.  |
+| Experimental group            | Parameters varied                                         | Quantities recorded                                                  | Purpose                                                       |
+| ----------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Convergence histories         | Representative $\kappa_2(A)$ values and precision triples | Per-iteration forward error, backward error, relative correction; final status | Examine behavior below, near, and above $\kappa_2(A)u_f=1$.   |
+| Condition-number sweep        | $\kappa_2(A)$ and precision triple                        | Final forward and backward errors, iteration count, status                   | Determine how conditioning affects convergence and accuracy.  |
+| Residual-precision comparison | $\kappa_2(A)$ and residual precision                                        | Final forward and backward errors, final status                                          | Measure the benefit of higher residual precision.             |
+| Direct-solve comparison       | $\kappa_2(A)$ and solution method                                           | Final forward and backward errors, final status                                          | Compare mixed IR with a direct working-precision solve.       |
+| Residual-scaling experiments  | Residual scaling enabled or disabled                      | Error histories and conversion diagnostics                           | Determine whether scaling prevents residual information loss. |
 
-: Overview of the five experimental groups. {#tbl-experimental-design}
+: Overview of the five experimental groups. {#tbl-experimental-design tbl-colwidths="[20,25,27,28]"}
+
 
 
 # Results and discussion
@@ -154,15 +218,15 @@ We conducted five groups of experiments that examine how conditioning, precision
 
 ...
 
-## Residual precision
+## Residual-precision comparison
 
 ...
 
-## Comparison with direct solution
+## Direct-solve comparison
 
 ...
 
-# Low-precision limitation and residual scaling
+## Low-precision limitations and residual scaling {#sec-residual-scaling}
 
 ...
 
