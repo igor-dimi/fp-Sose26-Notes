@@ -215,7 +215,91 @@ We conducted five groups of experiments to examine how conditioning, precision c
 
 ## Convergence histories
 
-...
+In this experiment group $u_f$, $u_r$ and $\kappa(A)$ are varied; $u$ and other common settings remain fixed. For each configuration, the forward error, backward error, and relative correction are recorded after every refinement step, Relative corrections are omitted from the final plots.
+These histories show the convergence rate, attained accuracy, and termination status.
+
+For each factorization precision, the driver defines the reference condition number
+
+$$
+\kappa_* = u_f^{-1}
+$$
+
+and tests $\kappa_2(A)=1$ together with representative values below, near, and above $\kappa_*$. Condition numbers are chosen as multiples of $\kappa_*$ to provide a common relative scale across factorization formats. The condition $\kappa_2(A)u_f<1$ serves as an approximate theoretical reference. 
+
+Curve labels include termination status. `C`, `M`, `D`, and `F` denote convergence, the iteration limit, detected divergence, and non-finite factorization input, respectively.
+
+Seven precision configurations were tested. Four are presented: FP8–FP64–FP128, bfloat16–FP64–FP128, FP16–FP64–FP64, and FP16–FP64–FP128. They were selected to show qualitatively distinct effects: the FP8 stress case, the different factorization behavior of bfloat16 and FP16, and the effect of increasing the residual precision from FP64 to FP128. The omitted FP32 configurations are summarized in the text as higher-factorization-precision counterparts.
+
+The convergence results are shown in Figure @fig-convergence-histories
+
+::: {#fig-convergence-histories layout-ncol=1 fig-pos="p" fig-align="center"}
+![](../results/plots/convergence/convergence-history__random-spd__n-100__random-normal__uf-fp8__u-fp64__ur-fp128__um-fp256.png){#fig-convergence-fp8 width=81%}
+
+![](../results/plots/convergence/convergence-history__random-spd__n-100__random-normal__uf-bfloat16__u-fp64__ur-fp128__um-fp256.png){#fig-convergence-bfloat16 width=81%}
+
+![](../results/plots/convergence/convergence-history__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp128__um-fp256.png){#fig-convergence-fp16-fp128 width=81%}
+
+![](../results/plots/convergence/convergence-history__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp64__um-fp256.png){#fig-convergence-fp16-fp64 width=81%}
+:::
+
+### Interpretation
+
+Across all precison triples, convergence slows as the condition number increases.
+Runs well below $\kappa_*$ converge rapidly. Runs near $\kappa_*$ require more
+iterations, while rusn sufficiently far above it reach the iteration limit or diverge.
+The  transition occurs at different multiples of $\kappa_*$; which confirms that $\kappa_* = u_f^{-1}$
+is an approximate condition, and not a fixed convergence boundary.
+
+The following comparisons examine the effects of $u_f$ and $u_r$.
+$u_f$ primarily affects the convergence rate and practical convergence region.
+$u_r$ primarily affects the attainable forward accuracy.
+
+
+#### Effect of $u_f$
+
+FP16–FP64–FP128 and bfloat16–FP64–FP128 differ only in the factorization format. FP16 has the smaller unit roundoff, while bfloat16 has the larger exponent range. Their reference condition numbers are
+
+$$
+\kappa_{\mathrm{FP16}}=2048,
+\qquad
+\kappa_{\mathrm{bfloat16}}=256.
+$$
+
+The configurations are compared at equal values of $\kappa/\kappa_*$ because their absolute reference condition numbers differ.
+
+Both configurations converge at $\kappa=1$, $0.01\kappa_*$, and $0.1\kappa_*$. FP16 requires fewer iterations and also converges at $0.5\kappa_*$, where the bfloat16 configuration reaches the iteration limit. Neither configuration converges within 20 iterations at $\kappa_*$ or above, and both diverge at $10\kappa_*$.
+
+FP16 therefore provides faster convergence and a larger practical convergence region relative to $\kappa_*$ in these experiments. Its smaller exponent range causes no disadvantage here because residual scaling mitigates underflow when the residual is converted to the factorization format. Without scaling, the FP16 configuration reaches an early accuracy plateau. This behavior is examined in the residual-scaling experiment below. Neither configuration encounters a range failure in the factorization input, so the present comparison primarily reflects the smaller unit roundoff of FP16.
+
+#### Effect of $u_r$
+
+FP16–FP64–FP64 and FP16–FP64–FP128 differ only in $u_r$. Their histories are nearly identical until the errors approach FP64 accuracy.
+
+With FP64 residuals, the forward error reaches a condition-dependent plateau. The runs from $0.01\kappa_*$ to $\kappa_*$ therefore reach the iteration limit. With FP128 residuals, the forward error continues to decrease: the runs through $0.5\kappa_*$ converge with errors of order $10^{-16}$. At $\kappa_*$, the error reaches approximately $8\times10^{-16}$ but the stopping criterion is not satisfied within 20 iterations. The FP128 residuals also produce lower backward errors in the stable cases.
+
+The residual precision has little effect after these accuracy limits are reached. At $2\kappa_*$ and above, both configurations show nearly identical behavior, and both diverge at $10\kappa_*$. Increasing the residual precision therefore improves the attainable accuracy and termination behavior of convergent runs, but does not correct instability caused by an insufficiently accurate factorization.
+
+
+#### FP8 stress case
+
+FP8–FP64–FP128 tests the limits of low-precision factorization. For FP8,
+
+$$
+\kappa_* = u_f^{-1} = 16.
+$$
+
+The runs at $\kappa=1$ and $0.1\kappa_*$ converge in 10 and 17 refinement steps, respectively. At $0.5\kappa_*$, the errors continue to decrease but do not reach working-precision accuracy within 20 steps. Convergence becomes progressively slower as the condition number increases; the runs from $\kappa_*$ to $10\kappa_*$ also reach the iteration limit.
+
+At $100\kappa_*$, conversion of the matrix to FP8 produces non-finite entries. Factorization therefore terminates before an iteration history is generated, and this run is not shown in Figure @fig-convergence-histories. FP8 is thus limited by both its low factorization accuracy and its small exponent range.
+
+#### Omitted FP32 configurations
+
+The omitted FP32 results reproduce the behavior of the corresponding FP16 configurations. With FP64 residuals, the forward error reaches condition-dependent plateaus, although the backward error approaches working-precision accuracy. With FP128 residuals, these plateaus disappear in the convergent cases and more runs satisfy the stopping criterion.
+
+Increasing residual precision therefore has the same effect with FP16 and FP32 factorization: it has little influence on early convergence but lowers the attainable forward error. Increasing factorization precision instead shifts $\kappa_*=u_f^{-1}$ to larger absolute condition numbers and extends the observed convergence region. Thus, factorization precision primarily controls convergence, while residual precision primarily controls attainable accuracy.
+
+
+
 
 ## Condition-number sweep
 
