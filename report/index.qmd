@@ -78,7 +78,7 @@ and residual precisions, respectively.
 Iterative refinement is expected to converge when
 
 $$
-\kappa(A)u_f<1
+\kappa(A)u_f<1.
 $$
 
 This is a useful approximate condition; convergence generally slows near this boundary. If the iteration converges, $u$ and $u_r$ determine the attainable accuracy. Higher residual precision reduces residual rounding errors and can improve the forward error [@carsonAcceleratingSolutionLinear2018].
@@ -89,11 +89,14 @@ The experiments use a common configurable framework in which explicit options co
 
 ## Configuration and common settings
 
-Each driver selects the matrix family, dimension, condition numbers, and precision types. `TestProblemOptions` controls right-hand-side construction and random seeds, while `MixedIROptions` controls termination, residual scaling, and storage of iterate histories and residual diagnostics. Unless stated otherwise, the experiments use the common settings in @tbl-common-settings.
+Each experimental driver specifies the dimension, condition numbers, and precision types and configures the test problem and algorithm through separate option structures. `TestProblemOptions` controls problem construction, including the matrix family, right-hand-side mode, and random seeds, while `MixedIROptions` controls termination, residual scaling, and storage of iterate histories and residual diagnostics. Unless stated otherwise, the experiments use the common settings in @tbl-common-settings.
+
+
+
 
 | Parameter                           | Common setting                                               |
 | ----------------------------------- | ------------------------------------------------------------ |
-| Matrix family                       | Random dense SPD                                             |
+| Matrix family                       | Dense random SPD                                             |
 | Dimension                           | $n=100$                                                      |
 | Right-hand side                     | $b_i\sim\mathcal{N}(0,1)$ in FP64                            |
 | Random seeds                        | $42$ for matrix construction; $2718$ for the right-hand side |
@@ -199,7 +202,7 @@ We conducted five groups of experiments to examine how conditioning, precision c
 | Experimental group            | Parameters varied                                         | Quantities recorded                                                  | Purpose                                                       |
 | ----------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------- |
 | Convergence histories         | Representative $\kappa_2(A)$ values and precision triples | Per-iteration forward error, backward error, relative correction; final status | Examine behavior below, near, and above $\kappa_2(A)u_f=1$.   |
-| Condition-number sweep        | $\kappa_2(A)$ and precision triple                        | Final forward and backward errors, iteration count, status                   | Determine how conditioning affects convergence and accuracy.  |
+| Condition-number sweep        | $\kappa_2(A)$ and precision triple                        | Final forward and backward errors, iteration count, final status                   | Determine how conditioning affects convergence and accuracy.  |
 | Residual-precision comparison | $\kappa_2(A)$ and residual precision                                        | Final forward and backward errors, final status                                          | Measure the benefit of higher residual precision.             |
 | Direct-solve comparison       | $\kappa_2(A)$ and solution method                                           | Final forward and backward errors, final status                                          | Compare mixed IR with a direct working-precision solve.       |
 | Residual-scaling experiments  | Residual scaling enabled or disabled                      | Error histories and conversion diagnostics                           | Determine whether scaling prevents residual information loss. |
