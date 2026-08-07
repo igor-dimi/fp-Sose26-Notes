@@ -487,7 +487,7 @@
     "href": "report/index.html",
     "title": "8  Mixed-Precision Iterative Refinement",
     "section": "",
-    "text": "9 Introduction\nModern hardware supports several floating-point formats with different costs, accuracy, and numerical ranges. Low precision can increase throughput and reduce memory traffic and energy consumption, but it also introduces larger rounding errors. Mixed-precision algorithms combine multiple formats to obtain some of the efficiency of low precision while retaining higher-precision accuracy. (Higham and Mary 2022)\nThis report studies mixed-precision iterative refinement for nonsingular linear systems using low precision for LU factorization and higher precision for refinement via numerical experiments that asses convergence and accuracy across precision triples and condition numbers.",
+    "text": "9 Introduction\nModern hardware supports several floating-point formats with different costs, accuracy, and numerical ranges. Low precision can increase throughput and reduce memory traffic and energy consumption, but it also introduces larger rounding errors. Mixed-precision algorithms combine multiple formats to obtain some of the efficiency of low precision while retaining higher-precision accuracy (Higham and Mary 2022).\nThis report studies mixed-precision iterative refinement for nonsingular linear systems using low precision for LU factorization and higher precision for refinement. Numerical experiments assess convergence and accuracy across precision triples and condition numbers. The study focuses on convergence, attainable accuracy, and iteration counts, rather than wall-clock performance. Several low- and high-precision formats are emulated or implemented in software, so measured runtimes would not represent performance on hardware with native support for these formats.",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
@@ -498,7 +498,7 @@
     "href": "report/index.html#algorithm",
     "title": "8  Mixed-Precision Iterative Refinement",
     "section": "10.1 Algorithm",
-    "text": "10.1 Algorithm\nThe implemented method is LU-based three-precision iterative refinement. (Higham and Mary 2022):\n\n\n\\begin{algorithm} \\caption{Three-precision iterative refinement} \\begin{algorithmic} \\Require Nonsingular system $Ax=b$ \\State Round $A$ and $b$ to precision $u_f$ \\State Compute $PAQ=LU$ in precision $u_f$ \\State Solve for $x_0$ using the factors in precision $u_f$ \\State Store $x_0$ in precision $u$ \\For{$i=0,1,\\ldots,i_{\\max}-1$} \\State Compute $r_i=b-Ax_i$ in precision $u_r$ \\State Round $r_i$ to precision $u_f$ \\State Solve for $d_i$ using the factors in precision $u_f$ \\State Store $d_i$ in precision $u$ \\State $x_{i+1} \\gets x_i+d_i$ in precision $u$ \\If{$\\lVert d_i\\rVert_2/\\lVert x_i\\rVert_2 &lt; u$} \\State \\Return $x_{i+1}$ \\EndIf \\EndFor \\Return $x_{i_{\\max}}$ \\end{algorithmic} \\end{algorithm}",
+    "text": "10.1 Algorithm\nThe implemented method is LU-based three-precision iterative refinement (Higham and Mary 2022):\n\n\n\\begin{algorithm} \\caption{Three-precision iterative refinement} \\begin{algorithmic} \\Require Nonsingular system $Ax=b$ \\State Round $A$ and $b$ to precision $u_f$ \\State Compute $PAQ=LU$ in precision $u_f$ \\State Solve for $x_0$ using the factors in precision $u_f$ \\State Store $x_0$ in precision $u$ \\For{$i=0,1,\\ldots,i_{\\max}-1$} \\State Compute $r_i=b-Ax_i$ in precision $u_r$ \\State Round $r_i$ to precision $u_f$ \\State Solve for $d_i$ using the factors in precision $u_f$ \\State Store $d_i$ in precision $u$ \\State $x_{i+1} \\gets x_i+d_i$ in precision $u$ \\If{$\\lVert d_i\\rVert_2/\\lVert x_i\\rVert_2 &lt; u$} \\State \\Return $x_{i+1}$ \\EndIf \\EndFor \\State \\Return $x_{i_{\\max}}$ \\end{algorithmic} \\end{algorithm}\n\n\nAlgorithm 1 summarizes the core three-precision method. Our implementation extends the core algorithm with optional residual scaling for limited-range formats, configurable robustness checks, optional iterate histories, optional residual diagnostics, and descriptive termination statuses.",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
@@ -509,7 +509,7 @@
     "href": "report/index.html#precision-roles",
     "title": "8  Mixed-Precision Iterative Refinement",
     "section": "10.2 Precision roles",
-    "text": "10.2 Precision roles\nThe algorithm uses three unit roundoffs, typically ordered as\n\\[\nu_r \\leq u \\leq u_f,\n\\]\nwhere \\(u_f\\), \\(u\\), and \\(u_r\\) denote the factorization, working, and residual precisions, respectively. Low factorization precision reduces computational cost, while the working and residual precisions govern the attainable accuracy.",
+    "text": "10.2 Precision roles\nThe algorithm uses three unit roundoffs, typically ordered as\n\\[\nu_r \\leq u \\leq u_f,\n\\]\nwhere \\(u_f\\), \\(u\\), and \\(u_r\\) are the unit roundoffs of the factorization, working, and residual precisions, respectively.",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
@@ -520,29 +520,62 @@
     "href": "report/index.html#convergence-and-attainable-accuracy",
     "title": "8  Mixed-Precision Iterative Refinement",
     "section": "10.3 Convergence and attainable accuracy",
-    "text": "10.3 Convergence and attainable accuracy\nIterative refinement is expected to converge when\n\\[\n\\kappa(A)u_f&lt;1,\n\\]\nand generally slows near this boundary. If it converges, \\(u\\) and \\(u_r\\) determine the attainable accuracy. Higher residual precision reduces residual rounding errors and can improve the forward error (Carson and Higham 2018)",
+    "text": "10.3 Convergence and attainable accuracy\nIterative refinement is expected to converge when\n\\[\n\\kappa(A)u_f&lt;1\n\\]\nThis is a useful approximate condition; convergence generally slows near this boundary. If the iteration converges, \\(u\\) and \\(u_r\\) determine the attainable accuracy. Higher residual precision reduces residual rounding errors and can improve the forward error (Carson and Higham 2018).",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
     ]
   },
   {
-    "objectID": "report/index.html#test-problems-and-precision-formats",
-    "href": "report/index.html#test-problems-and-precision-formats",
+    "objectID": "report/index.html#configuration-and-common-settings",
+    "href": "report/index.html#configuration-and-common-settings",
     "title": "8  Mixed-Precision Iterative Refinement",
-    "section": "11.1 Test problems and precision formats",
-    "text": "11.1 Test problems and precision formats\nAll experiments use dense random symmetric positive definite systems of dimension \\(n = 100\\),\n\\[\nA = Q\\Lambda Q^T,\n\\]\nwith prescribed condition number \\(\\kappa_2(A)\\). The FP64 right-hand side has normally distributed entries. An FP256 solve of the stored system provides the reference solution.\nThe experiments use the following formats:\n\n\n\nTable 11.1: Floating-point formats used in the experiments.\n\n\n\n\n\n\n\n\n\n\n\nFormat\nImplementation\nSignificand bits\nUnit roundoff\n\n\n\n\nbfloat16\nCPFloat&lt;8, 8&gt;\n8\n\\(2^{-8}\\)\n\n\nFP16\nCPFloat&lt;11, 5&gt;\n11\n\\(2^{-11}\\)\n\n\nFP32\nfloat\n24\n\\(2^{-24}\\)\n\n\nFP64\ndouble\n53\n\\(2^{-53}\\)\n\n\nFP128\nFP&lt;64&gt;\n64\n\\(2^{-64}\\)\n\n\nFP256\nFP&lt;192&gt;\n192\n\\(2^{-192}\\)\n\n\n\n\n\n\nCPFloat simulates bfloat16 and FP16; GMP provides FP128 and FP256. The main experiments use FP64 working precision. Each experiment specifies its factorization and residual precisions.",
+    "section": "11.1 Configuration and common settings",
+    "text": "11.1 Configuration and common settings\nEach driver selects the matrix family, dimension, condition numbers, and precision types. TestProblemOptions controls right-hand-side construction and random seeds, while MixedIROptions controls termination, residual scaling, and storage of iterate histories and residual diagnostics. Unless stated otherwise, the experiments use the common settings in Table 11.1.\n\n\n\nTable 11.1: Common experimental settings.\n\n\n\n\n\n\n\n\n\nParameter\nCommon setting\n\n\n\n\nMatrix family\nRandom dense SPD\n\n\nDimension\n\\(n=100\\)\n\n\nRight-hand side\n\\(b_i\\sim\\mathcal{N}(0,1)\\) in FP64\n\n\nRandom seeds\n\\(42\\) for matrix construction; \\(2718\\) for the right-hand side\n\n\nWorking precision\nFP64\n\n\nReference and measurement precision\nFP256\n\n\nMaximum iterations\n\\(20\\)\n\n\nDivergence detection\nEnabled; growth factor \\(10\\) over three consecutive steps\n\n\nResidual scaling\nEnabled\n\n\nIterate histories\nEnabled\n\n\nResidual diagnostics\nDisabled\n\n\n\n\n\n\nThe condition numbers and precision triples vary between experimental groups. Residual scaling normalizes the residual before conversion to the factorization precision and rescales the computed correction. It is disabled only for the scaled-unscaled comparison and is discussed later under Low-precision limitations and residual scaling.",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
     ]
   },
   {
-    "objectID": "report/index.html#error-measures-and-termination-criteria",
-    "href": "report/index.html#error-measures-and-termination-criteria",
+    "objectID": "report/index.html#test-problems",
+    "href": "report/index.html#test-problems",
     "title": "8  Mixed-Precision Iterative Refinement",
-    "section": "11.2 Error measures and termination criteria",
-    "text": "11.2 Error measures and termination criteria\nFor each iterate, we compute\n\\[\n\\begin{aligned}\ne_i &=\n\\frac{\\lVert x_i-x_{\\mathrm{ref}}\\rVert_\\infty}\n{\\lVert x_{\\mathrm{ref}}\\rVert_\\infty},\\\n\\eta_i &=\n\\frac{\\lVert b-Ax_i\\rVert_\\infty}\n{\\lVert A\\rVert_\\infty\\lVert x_i\\rVert_\\infty+\n\\lVert b\\rVert_\\infty},\\\n\\rho_i &=\n\\frac{\\lVert d_i\\rVert_2}{\\lVert x_i\\rVert_2}.\n\\end{aligned}\n\\]\nThe errors \\(e_i\\) and \\(\\eta_i\\) are evaluated in FP256. Refinement converges when \\(\\rho_i&lt;u\\). Otherwise, it terminates at the iteration limit or upon detecting non-finite values or divergence. Each run records its termination status. The default iteration limit is 20.",
+    "section": "11.2 Test problems",
+    "text": "11.2 Test problems\nThe test-problem generator independently configures the matrix family and right-hand-side construction. It supports structured rotated-SPD, dense random-SPD, and nonsymmetric random-SVD matrices. Right-hand sides can be formed from an all-ones solution, a random-sign solution, or directly sampled normal entries. Unless stated otherwise, the experiments use dense random-SPD matrices and random-normal FP64 right-hand sides.\nThe random-SPD matrices have the form\n\\[\nA = Q\\Lambda Q^T,\n\\]\nwith orthogonal \\(Q\\) and prescribed condition number \\(\\kappa_2(A)\\). An FP256 solve of the stored system provides the reference solution.",
+    "crumbs": [
+      "Report",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
+    ]
+  },
+  {
+    "objectID": "report/index.html#precision-formats",
+    "href": "report/index.html#precision-formats",
+    "title": "8  Mixed-Precision Iterative Refinement",
+    "section": "11.3 Precision formats",
+    "text": "11.3 Precision formats\nThe experiments use the following formats:\n\n\n\nTable 11.2: Floating-point formats used in the experiments.\n\n\n\n\n\n\n\n\n\n\n\nFormat\nImplementation\nSignificand bits\nUnit roundoff\n\n\n\n\nbfloat16\nCPFloat&lt;8, 8&gt;\n8\n\\(2^{-8}\\)\n\n\nFP16\nCPFloat&lt;11, 5&gt;\n11\n\\(2^{-11}\\)\n\n\nFP32\nfloat\n24\n\\(2^{-24}\\)\n\n\nFP64\ndouble\n53\n\\(2^{-53}\\)\n\n\nFP128\nFP&lt;64&gt;\n64\n\\(2^{-64}\\)\n\n\nFP256\nFP&lt;192&gt;\n192\n\\(2^{-192}\\)\n\n\n\n\n\n\nCPFloat simulates bfloat16 and FP16; GMP provides FP128 and FP256. The main experiments use FP64 working precision. Each experiment specifies its factorization and residual precisions.",
+    "crumbs": [
+      "Report",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
+    ]
+  },
+  {
+    "objectID": "report/index.html#error-measures",
+    "href": "report/index.html#error-measures",
+    "title": "8  Mixed-Precision Iterative Refinement",
+    "section": "11.4 Error measures",
+    "text": "11.4 Error measures\nFor each iterate, we compute\n\\[\n\\begin{aligned}\ne_i &=\n\\frac{\\lVert x_i-x_{\\mathrm{ref}}\\rVert_\\infty}\n     {\\lVert x_{\\mathrm{ref}}\\rVert_\\infty},\n\\\\\n\\eta_i &=\n\\frac{\\lVert b-Ax_i\\rVert_\\infty}\n     {\\lVert A\\rVert_\\infty\\lVert x_i\\rVert_\\infty\n      +\\lVert b\\rVert_\\infty}.\n\\end{aligned}\n\\]\nThe forward error \\(e_i\\) and the normwise backward error \\(\\eta_i\\) are both evaluated in FP256.",
+    "crumbs": [
+      "Report",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
+    ]
+  },
+  {
+    "objectID": "report/index.html#termination-criteria-and-statuses",
+    "href": "report/index.html#termination-criteria-and-statuses",
+    "title": "8  Mixed-Precision Iterative Refinement",
+    "section": "11.5 Termination criteria and statuses",
+    "text": "11.5 Termination criteria and statuses\nConvergence is determined by the relative correction\n\\[\n\\rho_i=\\frac{\\lVert d_i\\rVert_2}{\\lVert x_i\\rVert_2}.\n\\]\nRefinement terminates with status converged when \\(\\rho_i &lt; u\\). Otherwise, it returns max_iterations after 20 iterations, factorization_input_non_finite if \\(A\\) or \\(b\\) is non-finite after conversion to the factorization precision, non-finite if a non-finite value appears later, or diverged if the correction norm grows by more than a factor of \\(10\\) for three consecutive iterations. The iteration limit, growth factor, and required number of consecutive growth steps are configurable.",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
@@ -552,8 +585,8 @@
     "objectID": "report/index.html#experimental-framework-and-reproducibility",
     "href": "report/index.html#experimental-framework-and-reproducibility",
     "title": "8  Mixed-Precision Iterative Refinement",
-    "section": "11.3 Experimental framework and reproducibility",
-    "text": "11.3 Experimental framework and reproducibility\nSeparate C++ experiment drivers share the same problem-generation, refinement, measurement, and CSV-output components. Each driver configures these components through explicit options. Fixed seeds ensure reproducibility: \\(42\\) and \\(137\\) for matrix construction and \\(2718\\) for the right-hand side. Shared helper functions derive filenames and CSV fields from the configuration and algorithm output. Each CSV records the requested and measured condition numbers, termination status, iteration count, errors, and final relative correction.\nRaw data and generated plots are stored separately, allowing figures to be reproduced without rerunning the experiments.",
+    "section": "11.6 Experimental framework and reproducibility",
+    "text": "11.6 Experimental framework and reproducibility\nEach C++ driver defines an experimental group by selecting precision types and configuring the shared test-problem, mixed-IR, measurement, and output components. Helper functions derive output paths, filenames, and common CSV fields from the configuration and algorithm result. Drivers add only experiment-specific fields, such as iteration histories or conversion diagnostics.\nEach CSV records the run configuration, random seeds, and termination status. Python scripts validate the raw data and generate plots without modifying it. Fixed seeds and self-describing outputs allow runs to be repeated and figures to be regenerated without rerunning the experiments.",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
@@ -582,22 +615,33 @@
     ]
   },
   {
-    "objectID": "report/index.html#residual-precision",
-    "href": "report/index.html#residual-precision",
+    "objectID": "report/index.html#residual-precision-comparison",
+    "href": "report/index.html#residual-precision-comparison",
     "title": "8  Mixed-Precision Iterative Refinement",
-    "section": "13.3 Residual precision",
-    "text": "13.3 Residual precision\n…",
+    "section": "13.3 Residual-precision comparison",
+    "text": "13.3 Residual-precision comparison\n…",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
     ]
   },
   {
-    "objectID": "report/index.html#comparison-with-direct-solution",
-    "href": "report/index.html#comparison-with-direct-solution",
+    "objectID": "report/index.html#direct-solve-comparison",
+    "href": "report/index.html#direct-solve-comparison",
     "title": "8  Mixed-Precision Iterative Refinement",
-    "section": "13.4 Comparison with direct solution",
-    "text": "13.4 Comparison with direct solution\n…",
+    "section": "13.4 Direct-solve comparison",
+    "text": "13.4 Direct-solve comparison\n…",
+    "crumbs": [
+      "Report",
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
+    ]
+  },
+  {
+    "objectID": "report/index.html#sec-residual-scaling",
+    "href": "report/index.html#sec-residual-scaling",
+    "title": "8  Mixed-Precision Iterative Refinement",
+    "section": "13.5 Low-precision limitations and residual scaling",
+    "text": "13.5 Low-precision limitations and residual scaling\n…",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"

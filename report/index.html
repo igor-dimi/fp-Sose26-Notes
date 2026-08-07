@@ -314,20 +314,23 @@ window.Quarto = {
   </ul></li>
   <li><a href="#experimental-setup" id="toc-experimental-setup" class="nav-link" data-scroll-target="#experimental-setup"><span class="header-section-number">11</span> Experimental setup</a>
   <ul class="collapse">
-  <li><a href="#test-problems-and-precision-formats" id="toc-test-problems-and-precision-formats" class="nav-link" data-scroll-target="#test-problems-and-precision-formats"><span class="header-section-number">11.1</span> Test problems and precision formats</a></li>
-  <li><a href="#error-measures-and-termination-criteria" id="toc-error-measures-and-termination-criteria" class="nav-link" data-scroll-target="#error-measures-and-termination-criteria"><span class="header-section-number">11.2</span> Error measures and termination criteria</a></li>
-  <li><a href="#experimental-framework-and-reproducibility" id="toc-experimental-framework-and-reproducibility" class="nav-link" data-scroll-target="#experimental-framework-and-reproducibility"><span class="header-section-number">11.3</span> Experimental framework and reproducibility</a></li>
+  <li><a href="#configuration-and-common-settings" id="toc-configuration-and-common-settings" class="nav-link" data-scroll-target="#configuration-and-common-settings"><span class="header-section-number">11.1</span> Configuration and common settings</a></li>
+  <li><a href="#test-problems" id="toc-test-problems" class="nav-link" data-scroll-target="#test-problems"><span class="header-section-number">11.2</span> Test problems</a></li>
+  <li><a href="#precision-formats" id="toc-precision-formats" class="nav-link" data-scroll-target="#precision-formats"><span class="header-section-number">11.3</span> Precision formats</a></li>
+  <li><a href="#error-measures" id="toc-error-measures" class="nav-link" data-scroll-target="#error-measures"><span class="header-section-number">11.4</span> Error measures</a></li>
+  <li><a href="#termination-criteria-and-statuses" id="toc-termination-criteria-and-statuses" class="nav-link" data-scroll-target="#termination-criteria-and-statuses"><span class="header-section-number">11.5</span> Termination criteria and statuses</a></li>
+  <li><a href="#experimental-framework-and-reproducibility" id="toc-experimental-framework-and-reproducibility" class="nav-link" data-scroll-target="#experimental-framework-and-reproducibility"><span class="header-section-number">11.6</span> Experimental framework and reproducibility</a></li>
   </ul></li>
   <li><a href="#experimental-design" id="toc-experimental-design" class="nav-link" data-scroll-target="#experimental-design"><span class="header-section-number">12</span> Experimental design</a></li>
   <li><a href="#results-and-discussion" id="toc-results-and-discussion" class="nav-link" data-scroll-target="#results-and-discussion"><span class="header-section-number">13</span> Results and discussion</a>
   <ul class="collapse">
   <li><a href="#convergence-histories" id="toc-convergence-histories" class="nav-link" data-scroll-target="#convergence-histories"><span class="header-section-number">13.1</span> Convergence histories</a></li>
   <li><a href="#condition-number-sweep" id="toc-condition-number-sweep" class="nav-link" data-scroll-target="#condition-number-sweep"><span class="header-section-number">13.2</span> Condition-number sweep</a></li>
-  <li><a href="#residual-precision" id="toc-residual-precision" class="nav-link" data-scroll-target="#residual-precision"><span class="header-section-number">13.3</span> Residual precision</a></li>
-  <li><a href="#comparison-with-direct-solution" id="toc-comparison-with-direct-solution" class="nav-link" data-scroll-target="#comparison-with-direct-solution"><span class="header-section-number">13.4</span> Comparison with direct solution</a></li>
+  <li><a href="#residual-precision-comparison" id="toc-residual-precision-comparison" class="nav-link" data-scroll-target="#residual-precision-comparison"><span class="header-section-number">13.3</span> Residual-precision comparison</a></li>
+  <li><a href="#direct-solve-comparison" id="toc-direct-solve-comparison" class="nav-link" data-scroll-target="#direct-solve-comparison"><span class="header-section-number">13.4</span> Direct-solve comparison</a></li>
+  <li><a href="#sec-residual-scaling" id="toc-sec-residual-scaling" class="nav-link" data-scroll-target="#sec-residual-scaling"><span class="header-section-number">13.5</span> Low-precision limitations and residual scaling</a></li>
   </ul></li>
-  <li><a href="#low-precision-limitation-and-residual-scaling" id="toc-low-precision-limitation-and-residual-scaling" class="nav-link" data-scroll-target="#low-precision-limitation-and-residual-scaling"><span class="header-section-number">14</span> Low-precision limitation and residual scaling</a></li>
-  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><span class="header-section-number">15</span> Conclusion</a></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><span class="header-section-number">14</span> Conclusion</a></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
 </nav>
@@ -362,19 +365,20 @@ window.Quarto = {
 
 <section id="introduction" class="level1" data-number="9">
 <h1 data-number="9"><span class="header-section-number">9</span> Introduction</h1>
-<p>Modern hardware supports several floating-point formats with different costs, accuracy, and numerical ranges. Low precision can increase throughput and reduce memory traffic and energy consumption, but it also introduces larger rounding errors. Mixed-precision algorithms combine multiple formats to obtain some of the efficiency of low precision while retaining higher-precision accuracy. <span class="citation" data-cites="highamMixedPrecisionAlgorithms2022">(<a href="#ref-highamMixedPrecisionAlgorithms2022" role="doc-biblioref">Higham and Mary 2022</a>)</span></p>
-<p>This report studies mixed-precision iterative refinement for nonsingular linear systems using low precision for LU factorization and higher precision for refinement via numerical experiments that asses convergence and accuracy across precision triples and condition numbers.</p>
+<p>Modern hardware supports several floating-point formats with different costs, accuracy, and numerical ranges. Low precision can increase throughput and reduce memory traffic and energy consumption, but it also introduces larger rounding errors. Mixed-precision algorithms combine multiple formats to obtain some of the efficiency of low precision while retaining higher-precision accuracy <span class="citation" data-cites="highamMixedPrecisionAlgorithms2022">(<a href="#ref-highamMixedPrecisionAlgorithms2022" role="doc-biblioref">Higham and Mary 2022</a>)</span>.</p>
+<p>This report studies mixed-precision iterative refinement for nonsingular linear systems using low precision for LU factorization and higher precision for refinement. Numerical experiments assess convergence and accuracy across precision triples and condition numbers. The study focuses on convergence, attainable accuracy, and iteration counts, rather than wall-clock performance. Several low- and high-precision formats are emulated or implemented in software, so measured runtimes would not represent performance on hardware with native support for these formats.</p>
 </section>
 <section id="three-precision-iterative-refinement" class="level1" data-number="10">
 <h1 data-number="10"><span class="header-section-number">10</span> Three-precision iterative refinement</h1>
 <section id="algorithm" class="level2" data-number="10.1">
 <h2 data-number="10.1" class="anchored" data-anchor-id="algorithm"><span class="header-section-number">10.1</span> Algorithm</h2>
-<p>The implemented method is LU-based three-precision iterative refinement. <span class="citation" data-cites="highamMixedPrecisionAlgorithms2022">(<a href="#ref-highamMixedPrecisionAlgorithms2022" role="doc-biblioref">Higham and Mary 2022</a>)</span>:</p>
-<div id="algo-three-precision-ir" class="pseudocode-container quarto-float" data-no-end="false" data-indent-size="1.2em" data-pseudocode-number="1" data-line-number-punc=":" data-caption-prefix="Algorithm" data-comment-delimiter="//" data-indent-lines="false" data-line-number="true">
+<p>The implemented method is LU-based three-precision iterative refinement <span class="citation" data-cites="highamMixedPrecisionAlgorithms2022">(<a href="#ref-highamMixedPrecisionAlgorithms2022" role="doc-biblioref">Higham and Mary 2022</a>)</span>:</p>
+<div id="algo-mixed-ir" class="pseudocode-container quarto-float" data-indent-lines="false" data-caption-prefix="Algorithm" data-no-end="false" data-line-number-punc=":" data-comment-delimiter="//" data-pseudocode-number="1" data-line-number="true" data-indent-size="1.2em">
 <div class="pseudocode">
-\begin{algorithm} \caption{Three-precision iterative refinement} \begin{algorithmic} \Require Nonsingular system $Ax=b$ \State Round $A$ and $b$ to precision $u_f$ \State Compute $PAQ=LU$ in precision $u_f$ \State Solve for $x_0$ using the factors in precision $u_f$ \State Store $x_0$ in precision $u$ \For{$i=0,1,\ldots,i_{\max}-1$} \State Compute $r_i=b-Ax_i$ in precision $u_r$ \State Round $r_i$ to precision $u_f$ \State Solve for $d_i$ using the factors in precision $u_f$ \State Store $d_i$ in precision $u$ \State $x_{i+1} \gets x_i+d_i$ in precision $u$ \If{$\lVert d_i\rVert_2/\lVert x_i\rVert_2 &lt; u$} \State \Return $x_{i+1}$ \EndIf \EndFor \Return $x_{i_{\max}}$ \end{algorithmic} \end{algorithm}
+\begin{algorithm} \caption{Three-precision iterative refinement} \begin{algorithmic} \Require Nonsingular system $Ax=b$ \State Round $A$ and $b$ to precision $u_f$ \State Compute $PAQ=LU$ in precision $u_f$ \State Solve for $x_0$ using the factors in precision $u_f$ \State Store $x_0$ in precision $u$ \For{$i=0,1,\ldots,i_{\max}-1$} \State Compute $r_i=b-Ax_i$ in precision $u_r$ \State Round $r_i$ to precision $u_f$ \State Solve for $d_i$ using the factors in precision $u_f$ \State Store $d_i$ in precision $u$ \State $x_{i+1} \gets x_i+d_i$ in precision $u$ \If{$\lVert d_i\rVert_2/\lVert x_i\rVert_2 &lt; u$} \State \Return $x_{i+1}$ \EndIf \EndFor \State \Return $x_{i_{\max}}$ \end{algorithmic} \end{algorithm}
 </div>
 </div>
+<p><a href="#algo-mixed-ir" class="quarto-xref">Algorithm 1</a> summarizes the core three-precision method. Our implementation extends the core algorithm with optional residual scaling for limited-range formats, configurable robustness checks, optional iterate histories, optional residual diagnostics, and descriptive termination statuses.</p>
 </section>
 <section id="precision-roles" class="level2" data-number="10.2">
 <h2 data-number="10.2" class="anchored" data-anchor-id="precision-roles"><span class="header-section-number">10.2</span> Precision roles</h2>
@@ -382,31 +386,108 @@ window.Quarto = {
 <p><span class="math display">\[
 u_r \leq u \leq u_f,
 \]</span></p>
-<p>where <span class="math inline">\(u_f\)</span>, <span class="math inline">\(u\)</span>, and <span class="math inline">\(u_r\)</span> denote the factorization, working, and residual precisions, respectively. Low factorization precision reduces computational cost, while the working and residual precisions govern the attainable accuracy.</p>
+<p>where <span class="math inline">\(u_f\)</span>, <span class="math inline">\(u\)</span>, and <span class="math inline">\(u_r\)</span> are the unit roundoffs of the factorization, working, and residual precisions, respectively.</p>
 </section>
 <section id="convergence-and-attainable-accuracy" class="level2" data-number="10.3">
 <h2 data-number="10.3" class="anchored" data-anchor-id="convergence-and-attainable-accuracy"><span class="header-section-number">10.3</span> Convergence and attainable accuracy</h2>
 <p>Iterative refinement is expected to converge when</p>
 <p><span class="math display">\[
-\kappa(A)u_f&lt;1,
+\kappa(A)u_f&lt;1
 \]</span></p>
-<p>and generally slows near this boundary. If it converges, <span class="math inline">\(u\)</span> and <span class="math inline">\(u_r\)</span> determine the attainable accuracy. Higher residual precision reduces residual rounding errors and can improve the forward error <span class="citation" data-cites="carsonAcceleratingSolutionLinear2018">(<a href="#ref-carsonAcceleratingSolutionLinear2018" role="doc-biblioref">Carson and Higham 2018</a>)</span></p>
+<p>This is a useful approximate condition; convergence generally slows near this boundary. If the iteration converges, <span class="math inline">\(u\)</span> and <span class="math inline">\(u_r\)</span> determine the attainable accuracy. Higher residual precision reduces residual rounding errors and can improve the forward error <span class="citation" data-cites="carsonAcceleratingSolutionLinear2018">(<a href="#ref-carsonAcceleratingSolutionLinear2018" role="doc-biblioref">Carson and Higham 2018</a>)</span>.</p>
 </section>
 </section>
 <section id="experimental-setup" class="level1" data-number="11">
 <h1 data-number="11"><span class="header-section-number">11</span> Experimental setup</h1>
-<section id="test-problems-and-precision-formats" class="level2" data-number="11.1">
-<h2 data-number="11.1" class="anchored" data-anchor-id="test-problems-and-precision-formats"><span class="header-section-number">11.1</span> Test problems and precision formats</h2>
-<p>All experiments use dense random symmetric positive definite systems of dimension <span class="math inline">\(n = 100\)</span>,</p>
+<p>The experiments use a common configurable framework in which explicit options configure both the test problem and the mixed-IR algorithm. Each driver selects these configurations, while shared components construct the problem, execute the algorithm, evaluate errors, and record the results.</p>
+<section id="configuration-and-common-settings" class="level2" data-number="11.1">
+<h2 data-number="11.1" class="anchored" data-anchor-id="configuration-and-common-settings"><span class="header-section-number">11.1</span> Configuration and common settings</h2>
+<p>Each driver selects the matrix family, dimension, condition numbers, and precision types. <code>TestProblemOptions</code> controls right-hand-side construction and random seeds, while <code>MixedIROptions</code> controls termination, residual scaling, and storage of iterate histories and residual diagnostics. Unless stated otherwise, the experiments use the common settings in <a href="#tbl-common-settings" class="quarto-xref">Table&nbsp;<span>11.1</span></a>.</p>
+<div id="tbl-common-settings" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-common-settings-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;11.1: Common experimental settings.
+</figcaption>
+<div aria-describedby="tbl-common-settings-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 36%">
+<col style="width: 63%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>Common setting</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Matrix family</td>
+<td>Random dense SPD</td>
+</tr>
+<tr class="even">
+<td>Dimension</td>
+<td><span class="math inline">\(n=100\)</span></td>
+</tr>
+<tr class="odd">
+<td>Right-hand side</td>
+<td><span class="math inline">\(b_i\sim\mathcal{N}(0,1)\)</span> in FP64</td>
+</tr>
+<tr class="even">
+<td>Random seeds</td>
+<td><span class="math inline">\(42\)</span> for matrix construction; <span class="math inline">\(2718\)</span> for the right-hand side</td>
+</tr>
+<tr class="odd">
+<td>Working precision</td>
+<td>FP64</td>
+</tr>
+<tr class="even">
+<td>Reference and measurement precision</td>
+<td>FP256</td>
+</tr>
+<tr class="odd">
+<td>Maximum iterations</td>
+<td><span class="math inline">\(20\)</span></td>
+</tr>
+<tr class="even">
+<td>Divergence detection</td>
+<td>Enabled; growth factor <span class="math inline">\(10\)</span> over three consecutive steps</td>
+</tr>
+<tr class="odd">
+<td>Residual scaling</td>
+<td>Enabled</td>
+</tr>
+<tr class="even">
+<td>Iterate histories</td>
+<td>Enabled</td>
+</tr>
+<tr class="odd">
+<td>Residual diagnostics</td>
+<td>Disabled</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>The condition numbers and precision triples vary between experimental groups. Residual scaling normalizes the residual before conversion to the factorization precision and rescales the computed correction. It is disabled only for the scaled-unscaled comparison and is discussed later under <a href="#sec-residual-scaling">Low-precision limitations and residual scaling</a>.</p>
+</section>
+<section id="test-problems" class="level2" data-number="11.2">
+<h2 data-number="11.2" class="anchored" data-anchor-id="test-problems"><span class="header-section-number">11.2</span> Test problems</h2>
+<p>The test-problem generator independently configures the matrix family and right-hand-side construction. It supports structured rotated-SPD, dense random-SPD, and nonsymmetric random-SVD matrices. Right-hand sides can be formed from an all-ones solution, a random-sign solution, or directly sampled normal entries. Unless stated otherwise, the experiments use dense random-SPD matrices and random-normal FP64 right-hand sides.</p>
+<p>The random-SPD matrices have the form</p>
 <p><span class="math display">\[
 A = Q\Lambda Q^T,
 \]</span></p>
-<p>with prescribed condition number <span class="math inline">\(\kappa_2(A)\)</span>. The FP64 right-hand side has normally distributed entries. An FP256 solve of the stored system provides the reference solution.</p>
+<p>with orthogonal <span class="math inline">\(Q\)</span> and prescribed condition number <span class="math inline">\(\kappa_2(A)\)</span>. An FP256 solve of the stored system provides the reference solution.</p>
+</section>
+<section id="precision-formats" class="level2" data-number="11.3">
+<h2 data-number="11.3" class="anchored" data-anchor-id="precision-formats"><span class="header-section-number">11.3</span> Precision formats</h2>
 <p>The experiments use the following formats:</p>
 <div id="tbl-precision-formats" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-precision-formats-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Table&nbsp;11.1: Floating-point formats used in the experiments.
+Table&nbsp;11.2: Floating-point formats used in the experiments.
 </figcaption>
 <div aria-describedby="tbl-precision-formats-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
@@ -468,34 +549,41 @@ Table&nbsp;11.1: Floating-point formats used in the experiments.
 </div>
 <p>CPFloat simulates bfloat16 and FP16; GMP provides FP128 and FP256. The main experiments use FP64 working precision. Each experiment specifies its factorization and residual precisions.</p>
 </section>
-<section id="error-measures-and-termination-criteria" class="level2" data-number="11.2">
-<h2 data-number="11.2" class="anchored" data-anchor-id="error-measures-and-termination-criteria"><span class="header-section-number">11.2</span> Error measures and termination criteria</h2>
+<section id="error-measures" class="level2" data-number="11.4">
+<h2 data-number="11.4" class="anchored" data-anchor-id="error-measures"><span class="header-section-number">11.4</span> Error measures</h2>
 <p>For each iterate, we compute</p>
 <p><span class="math display">\[
 \begin{aligned}
 e_i &amp;=
 \frac{\lVert x_i-x_{\mathrm{ref}}\rVert_\infty}
-{\lVert x_{\mathrm{ref}}\rVert_\infty},\
+     {\lVert x_{\mathrm{ref}}\rVert_\infty},
+\\
 \eta_i &amp;=
 \frac{\lVert b-Ax_i\rVert_\infty}
-{\lVert A\rVert_\infty\lVert x_i\rVert_\infty+
-\lVert b\rVert_\infty},\
-\rho_i &amp;=
-\frac{\lVert d_i\rVert_2}{\lVert x_i\rVert_2}.
+     {\lVert A\rVert_\infty\lVert x_i\rVert_\infty
+      +\lVert b\rVert_\infty}.
 \end{aligned}
 \]</span></p>
-<p>The errors <span class="math inline">\(e_i\)</span> and <span class="math inline">\(\eta_i\)</span> are evaluated in FP256. Refinement converges when <span class="math inline">\(\rho_i&lt;u\)</span>. Otherwise, it terminates at the iteration limit or upon detecting non-finite values or divergence. Each run records its termination status. The default iteration limit is 20.</p>
+<p>The forward error <span class="math inline">\(e_i\)</span> and the normwise backward error <span class="math inline">\(\eta_i\)</span> are both evaluated in FP256.</p>
 </section>
-<section id="experimental-framework-and-reproducibility" class="level2" data-number="11.3">
-<h2 data-number="11.3" class="anchored" data-anchor-id="experimental-framework-and-reproducibility"><span class="header-section-number">11.3</span> Experimental framework and reproducibility</h2>
-<p>Separate C++ experiment drivers share the same problem-generation, refinement, measurement, and CSV-output components. Each driver configures these components through explicit options. Fixed seeds ensure reproducibility: <span class="math inline">\(42\)</span> and <span class="math inline">\(137\)</span> for matrix construction and <span class="math inline">\(2718\)</span> for the right-hand side. Shared helper functions derive filenames and CSV fields from the configuration and algorithm output. Each CSV records the requested and measured condition numbers, termination status, iteration count, errors, and final relative correction.</p>
-<p>Raw data and generated plots are stored separately, allowing figures to be reproduced without rerunning the experiments.</p>
+<section id="termination-criteria-and-statuses" class="level2" data-number="11.5">
+<h2 data-number="11.5" class="anchored" data-anchor-id="termination-criteria-and-statuses"><span class="header-section-number">11.5</span> Termination criteria and statuses</h2>
+<p>Convergence is determined by the relative correction</p>
+<p><span class="math display">\[
+\rho_i=\frac{\lVert d_i\rVert_2}{\lVert x_i\rVert_2}.
+\]</span></p>
+<p>Refinement terminates with status <code>converged</code> when <span class="math inline">\(\rho_i &lt; u\)</span>. Otherwise, it returns <code>max_iterations</code> after 20 iterations, <code>factorization_input_non_finite</code> if <span class="math inline">\(A\)</span> or <span class="math inline">\(b\)</span> is non-finite after conversion to the factorization precision, <code>non-finite</code> if a non-finite value appears later, or <code>diverged</code> if the correction norm grows by more than a factor of <span class="math inline">\(10\)</span> for three consecutive iterations. The iteration limit, growth factor, and required number of consecutive growth steps are configurable.</p>
+</section>
+<section id="experimental-framework-and-reproducibility" class="level2" data-number="11.6">
+<h2 data-number="11.6" class="anchored" data-anchor-id="experimental-framework-and-reproducibility"><span class="header-section-number">11.6</span> Experimental framework and reproducibility</h2>
+<p>Each C++ driver defines an experimental group by selecting precision types and configuring the shared test-problem, mixed-IR, measurement, and output components. Helper functions derive output paths, filenames, and common CSV fields from the configuration and algorithm result. Drivers add only experiment-specific fields, such as iteration histories or conversion diagnostics.</p>
+<p>Each CSV records the run configuration, random seeds, and termination status. Python scripts validate the raw data and generate plots without modifying it. Fixed seeds and self-describing outputs allow runs to be repeated and figures to be regenerated without rerunning the experiments.</p>
 </section>
 </section>
 <section id="experimental-design" class="level1" data-number="12">
 <h1 data-number="12"><span class="header-section-number">12</span> Experimental design</h1>
-<p>We conducted five groups of experiments that examine how conditioning, precision choices, and residual handling affect the convergence and accuracy of mixed iterative refinement. Unless stated otherwise, they use the common setup described above and vary only the parameters relevant to their objective. <a href="#tbl-experimental-design" class="quarto-xref">Table&nbsp;<span>12.1</span></a> summarizes each group’s purpose, varied parameters, and recorded quantities.</p>
-<div id="tbl-experimental-design" class="quarto-float quarto-figure quarto-figure-center anchored">
+<p>We conducted five groups of experiments to examine how conditioning, precision choices, and residual handling affect the convergence and accuracy of mixed iterative refinement. Unless stated otherwise, they use the common setup described above and vary only the parameters relevant to their objective. <a href="#tbl-experimental-design" class="quarto-xref">Table&nbsp;<span>12.1</span></a> summarizes each group’s purpose, varied parameters, and recorded quantities.</p>
+<div id="tbl-experimental-design" class="quarto-float quarto-figure quarto-figure-center anchored" data-tbl-colwidths="[20,25,27,28]">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-experimental-design-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 Table&nbsp;12.1: Overview of the five experimental groups.
@@ -503,42 +591,42 @@ Table&nbsp;12.1: Overview of the five experimental groups.
 <div aria-describedby="tbl-experimental-design-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <table class="caption-top table">
 <colgroup>
-<col style="width: 15%">
+<col style="width: 20%">
 <col style="width: 25%">
-<col style="width: 26%">
-<col style="width: 32%">
+<col style="width: 27%">
+<col style="width: 28%">
 </colgroup>
 <thead>
 <tr class="header">
-<th>Experiment</th>
-<th>Varied parameters</th>
-<th>Recorded quantities</th>
+<th>Experimental group</th>
+<th>Parameters varied</th>
+<th>Quantities recorded</th>
 <th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>Convergence histories</td>
-<td>Iteration and representative <span class="math inline">\(\kappa_2(A)\)</span> values</td>
-<td>Forward error, backward error, relative correction</td>
-<td>Examine convergence below, near, and above <span class="math inline">\(\kappa_2(A)u_f=1\)</span>.</td>
+<td>Representative <span class="math inline">\(\kappa_2(A)\)</span> values and precision triples</td>
+<td>Per-iteration forward error, backward error, relative correction; final status</td>
+<td>Examine behavior below, near, and above <span class="math inline">\(\kappa_2(A)u_f=1\)</span>.</td>
 </tr>
 <tr class="even">
 <td>Condition-number sweep</td>
 <td><span class="math inline">\(\kappa_2(A)\)</span> and precision triple</td>
-<td>Final and best errors, iterations, status</td>
+<td>Final forward and backward errors, iteration count, status</td>
 <td>Determine how conditioning affects convergence and accuracy.</td>
 </tr>
 <tr class="odd">
 <td>Residual-precision comparison</td>
-<td>Residual precision <span class="math inline">\(u_r\)</span></td>
-<td>Forward and backward errors</td>
+<td><span class="math inline">\(\kappa_2(A)\)</span> and residual precision</td>
+<td>Final forward and backward errors, final status</td>
 <td>Measure the benefit of higher residual precision.</td>
 </tr>
 <tr class="even">
 <td>Direct-solve comparison</td>
-<td>Solution method</td>
-<td>Forward and backward errors</td>
+<td><span class="math inline">\(\kappa_2(A)\)</span> and solution method</td>
+<td>Final forward and backward errors, final status</td>
 <td>Compare mixed IR with a direct working-precision solve.</td>
 </tr>
 <tr class="odd">
@@ -563,21 +651,21 @@ Table&nbsp;12.1: Overview of the five experimental groups.
 <h2 data-number="13.2" class="anchored" data-anchor-id="condition-number-sweep"><span class="header-section-number">13.2</span> Condition-number sweep</h2>
 <p>…</p>
 </section>
-<section id="residual-precision" class="level2" data-number="13.3">
-<h2 data-number="13.3" class="anchored" data-anchor-id="residual-precision"><span class="header-section-number">13.3</span> Residual precision</h2>
+<section id="residual-precision-comparison" class="level2" data-number="13.3">
+<h2 data-number="13.3" class="anchored" data-anchor-id="residual-precision-comparison"><span class="header-section-number">13.3</span> Residual-precision comparison</h2>
 <p>…</p>
 </section>
-<section id="comparison-with-direct-solution" class="level2" data-number="13.4">
-<h2 data-number="13.4" class="anchored" data-anchor-id="comparison-with-direct-solution"><span class="header-section-number">13.4</span> Comparison with direct solution</h2>
+<section id="direct-solve-comparison" class="level2" data-number="13.4">
+<h2 data-number="13.4" class="anchored" data-anchor-id="direct-solve-comparison"><span class="header-section-number">13.4</span> Direct-solve comparison</h2>
+<p>…</p>
+</section>
+<section id="sec-residual-scaling" class="level2" data-number="13.5">
+<h2 data-number="13.5" class="anchored" data-anchor-id="sec-residual-scaling"><span class="header-section-number">13.5</span> Low-precision limitations and residual scaling</h2>
 <p>…</p>
 </section>
 </section>
-<section id="low-precision-limitation-and-residual-scaling" class="level1" data-number="14">
-<h1 data-number="14"><span class="header-section-number">14</span> Low-precision limitation and residual scaling</h1>
-<p>…</p>
-</section>
-<section id="conclusion" class="level1" data-number="15">
-<h1 data-number="15"><span class="header-section-number">15</span> Conclusion</h1>
+<section id="conclusion" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Conclusion</h1>
 <p>…</p>
 </section>
 <section id="references" class="level1 unnumbered">
