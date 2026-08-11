@@ -61,35 +61,44 @@ configurable robustness checks, optional iterate histories, optional residual di
 and descriptive termination statuses. 
 
 
-## Precision roles
+## Precision roles and theoretical expectations
 
-The algorithm uses three unit roundoffs, typically ordered as
+The three precisions control different aspects of iterative refinement. The factorization precision $u_f$ determines the quality of the LU factors and primarily limits convergence. The working precision $u$ is used for the iterates and updates and sets the target accuracy. The residual precision $u_r$ determines how accurately the residual is computed and influences the attainable forward error.
 
-$$
-u_r \leq u \leq u_f,
-$$
-
-where $u_f$, $u$, and $u_r$ are the unit roundoffs of the factorization, working,
-and residual precisions, respectively.
-
-
-## Convergence and attainable accuracy
-
-Iterative refinement is expected to converge when
+For a stable low-precision factorization, convergence is expected when
 
 $$
-\kappa(A)u_f<1.
+\kappa(A)u_f \ll 1.
 $$
 
-This is a useful approximate condition; convergence generally slows near this boundary. If the iteration converges, $u$ and $u_r$ determine the attainable accuracy. Higher residual precision reduces residual rounding errors and can improve the forward error [@carsonAcceleratingSolutionLinear2018].
+Thus, $u_f^{-1}$ defines an approximate condition-number scale, denoted by
+
+$$
+\kappa_* = u_f^{-1}.
+$$
+
+This is not a strict boundary: the actual convergence rate also depends on LU growth, factorization quality, componentwise conditioning, and norm-dependent constants @highamMixedPrecisionAlgorithms2022 [Section 7.1].
+
+Under suitable convergence conditions, refinement produces a normwise backward error of order $u$. The limiting relative forward error satisfies approximately
+
+$$
+\frac{\lVert \widehat{x}-x\rVert_\infty}
+{\lVert x\rVert_\infty}
+\lesssim
+u+4pu_r\operatorname{cond}(A,x),
+$$
+
+where $p$ is the maximum number of nonzeros in a row of $[A\ b]$ @carsonAcceleratingSolutionLinear2018 [Corollary 3.3]. If $u_r=u$, the condition-dependent term generally limits the attainable forward accuracy. If $u_r$ is sufficiently smaller than $u$, this term becomes negligible and forward errors of order $u$ can be attained.
+
 
 # Experimental setup
 
-The experiments use a common configurable framework in which explicit options configure both the test problem and the mixed-IR algorithm. Each driver selects these configurations, while shared components construct the problem, execute the algorithm, evaluate errors, and record the results.
+All experiments use the same framework for problem construction, iterative refinement, error evaluation, and result recording. Individual experiment groups vary only the condition numbers, precision configurations, and algorithmic options required for their objectives.
 
 ## Configuration and common settings
 
-Each experimental driver specifies the dimension, condition numbers, and precision types and configures the test problem and algorithm through separate option structures. `TestProblemOptions` controls problem construction, including the matrix family, right-hand-side mode, and random seeds, while `MixedIROptions` controls termination, residual scaling, and storage of iterate histories and residual diagnostics. Unless stated otherwise, the experiments use the common settings in @tbl-common-settings.
+@tbl-common-settings summarizes the settings shared across the experiments. Unless stated otherwise, all runs use these values. Experiment-specific variations are described in the corresponding results sections.
+
 
 
 
@@ -114,17 +123,18 @@ Each experimental driver specifies the dimension, condition numbers, and precisi
 The condition numbers and precision triples vary between experimental groups. Residual scaling normalizes the residual before conversion to the factorization precision and rescales the computed correction. It is disabled only for the scaled-unscaled comparison and is discussed later
 under [Low-precision limitations and residual scaling](#sec-residual-scaling).
 
-## Test problems 
+## Test problems
 
-The test-problem generator independently configures the matrix family and right-hand-side construction. It supports structured rotated-SPD, dense random-SPD, and nonsymmetric random-SVD matrices. Right-hand sides can be formed from an all-ones solution, a random-sign solution, or directly sampled normal entries. Unless stated otherwise, the experiments use dense random-SPD matrices and random-normal FP64 right-hand sides.
-
-The random-SPD matrices have the form 
+The experiments use dense random-SPD matrices of the form
 
 $$
 A = Q\Lambda Q^T,
 $$
 
-with orthogonal $Q$ and prescribed condition number $\kappa_2(A)$. An FP256 solve of the stored system provides the reference solution.
+where $Q$ is orthogonal and $\Lambda$ is chosen to produce the prescribed condition number $\kappa_2(A)$. Right-hand sides are sampled in FP64 from the standard normal distribution. An FP256 solve of the stored system provides the reference solution.
+
+The generator also supports rotated-SPD and nonsymmetric random-SVD matrices, together with all-ones and random-sign solution modes.
+.
 
 
 ## Precision formats
@@ -142,7 +152,9 @@ The experiments use the following formats:
 
 : Floating-point formats used in the experiments. {#tbl-precision-formats}
 
-CPFloat simulates bfloat16 and FP16; GMP provides FP128 and FP256. The main experiments use FP64 working precision. Each experiment specifies its factorization and residual precisions.
+CPFloat simulates bfloat16 and FP16, while GMP provides the extended-precision formats. FP128 and FP256 are project labels for `FP<64>` and `FP<192>` and do not denote the corresponding IEEE formats. The main experiments use FP64 working precision. Each experiment specifies its factorization and residual precisions.
+
+For FP64 working precision, $u^2=2^{-106}$, whereas the implemented FP128 format has $u_r=2^{-64}$. The FP128-residual experiment therefore does not realize the commonly analyzed choice $u_r=u^2$, although it uses a residual precision higher than the working precision. The general forward-error bound remains applicable, but the attainment of $O(u)$ forward error is evaluated empirically.
 
 ## Error measures 
 
@@ -184,16 +196,9 @@ growth steps are configurable.
 
 ## Experimental framework and reproducibility
 
-Each C++ driver defines an experimental group by selecting precision types and configuring
-the shared test-problem, mixed-IR, measurement, and output components. 
-Helper functions derive output paths, filenames, and common CSV fields from the configuration
-and algorithm result. Drivers add only experiment-specific fields, such as iteration histories
-or conversion diagnostics.
-
-Each CSV records the run configuration, random seeds, and termination status.
-Python scripts validate the raw data and generate plots without modifying it.
-Fixed seeds and self-describing outputs allow runs to be repeated and figures
-to be regenerated without rerunning the experiments.
+Each run records its precision configuration, requested and measured condition numbers, random seeds,
+termination status, and experiment-specific quantities. Fixed seeds and self-describing CSV files permit
+the experiments to be repeated and the figures to be regenerated independently. 
 
 # Experimental design
 
@@ -341,10 +346,6 @@ Near the transition, some runs retain small errors but reach the 20-update limit
 #### *Omitted configurations*
 
 FP8–FP64–FP128 is omitted as an extreme stress case: only 3 of 25 runs converge, up to approximately $0.10\kappa_*$. The FP16–FP64–FP64 and FP32–FP64–FP64 sweeps mainly reproduce the condition-dependent accuracy floor observed in the preceding experiment group. Only three runs in each sweep converge; most reach the 20-update limit because the correction criterion remains unsatisfied. The residual-precision experiment examines this effect directly.
-
-```{=latex}
-\clearpage
-```
 
 ## Residual-precision comparison
 
