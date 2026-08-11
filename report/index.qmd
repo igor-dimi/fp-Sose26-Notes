@@ -202,7 +202,7 @@ We conducted five groups of experiments to examine how conditioning, precision c
 | Experimental group            | Parameters varied                                         | Quantities recorded                                                  | Purpose                                                       |
 | ----------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------- |
 | Convergence histories         | Representative $\kappa_2(A)$ values and precision triples | Per-iteration forward error, backward error, relative correction; final status | Examine behavior below, near, and above $\kappa_2(A)u_f=1$.   |
-| Condition-number sweep        | $\kappa_2(A)$ and precision triple                        | Final forward and backward errors, iteration count, final status                   | Determine how conditioning affects convergence and accuracy.  |
+| Condition-number sweep        | $\kappa_2(A)$ and precision triple                        | Final forward error, iteration count, final status                   | Determine how conditioning affects convergence and accuracy.  |
 | Residual-precision comparison | $\kappa_2(A)$ and residual precision                                        | Final forward and backward errors, final status                                          | Measure the benefit of higher residual precision.             |
 | Direct-solve comparison       | $\kappa_2(A)$ and solution method                                           | Final forward and backward errors, final status                                          | Compare mixed IR with a direct working-precision solve.       |
 | Residual-scaling experiments  | Residual scaling enabled or disabled                      | Error histories and conversion diagnostics                           | Determine whether scaling prevents residual information loss. |
@@ -237,7 +237,7 @@ factorization formats and are summarized after the main comparison.
 The convergence results are shown in @fig-convergence-histories
 
 
-::: {#fig-convergence-histories layout-ncol=1}
+::: {#fig-convergence-histories layout-ncol=1 fig-pos="p"}
 
 ![](../results/plots/convergence/convergence-history__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp64__um-fp256.png){#fig-convergence-uf_fp16-ur_fp128 width=81%}
 
@@ -264,7 +264,7 @@ The transition occurs at different multiples of $\kappa_*$, consistent with $\ka
 The $2\times2$ design separates the roles of the two precisions: $u_f$ primarily determines the convergence rate and practical convergence region, whereas $u_r$ primarily determines the attainable forward accuracy. The following subsections examine these effects and summarize the omitted FP8 and bfloat16 configurations.
 
 
-#### Effect of residual precision
+#### *Effect of residual precision*
 
 At each factorization precision, the FP64- and FP128-residual histories are initially nearly identical and separate only at the FP64 accuracy floor. Thus, $u_r$ primarily controls attainable accuracy, not the initial convergence rate.
 
@@ -274,7 +274,7 @@ FP128 residuals reduce these plateaus. For FP16, runs through $0.5\kappa_*$ conv
 
 Once factorization limits convergence, both residual precisions produce nearly identical histories: from $2\kappa_*$ upward for FP16 and $10\kappa_*$ upward for FP32. Higher residual precision therefore improves stable runs but cannot prevent factorization-induced instability. Since HDNUM FP128 does not nominally satisfy $u_r=u^2$, these results demonstrate the benefit of $u_r<u$, but not the sufficient theoretical case $u_r=u^2$.
 
-#### Factorization precision and convergence scale
+#### *Factorization precision and convergence scale*
 
 At fixed residual precision, increasing factorization precision shifts convergence to larger absolute condition numbers. The reference values are
 
@@ -290,7 +290,7 @@ Because each format uses its own normalized condition-number grid, the compariso
 
 
 
-#### Alternative low-precision factorization formats
+#### *Alternative low-precision factorization formats*
 
 The bfloat16 and FP8 configurations were omitted to preserve the complete $2\times2$ FP16/FP32 design. They examine distinct low-precision formats and do not form a controlled pair.
 
@@ -301,11 +301,90 @@ FP8 is an extreme stress case. It converges at $\kappa=1$ and $0.1\kappa_*$ in 1
 
 ## Condition-number sweep
 
+This experiment uses a dense logarithmic sweep to map final accuracy and iteration count over a broad condition-number range. For each factorization format, $\kappa_2(A)$ ranges from $1$ to approximately $10\kappa_*$, where $\kappa_*=u_f^{-1}$. The working and residual precisions remain fixed at FP64 and FP128. The upper panels show the final relative forward error; the lower panels show completed refinement updates. Dashed lines mark $\kappa_*$, dotted lines mark $u$ and the 20-update limit, and marker shapes indicate termination status.
 
+Three configurations are shown: bfloat16-FP64-FP128, FP16-FP64-FP128, and FP32-FP64-FP128. Fixing $u$ and $u_r$ isolates the 
+effect of factorization precision. The FP8 configuration is omitted as an extreme stress case and summarized below. The FP64-residual
+configurations are also omitted because their main effect was examined in the preceding experiment group. 
+
+The results are shown in @fig-condition-sweeps
+
+::: {#fig-condition-sweeps layout-ncol=1 fig-pos="p"}
+
+![](../results/plots/condition_sweeps/condition-sweep__random-spd__n-100__random-normal__uf-bfloat16__u-fp64__ur-fp128__um-fp256.png){#fig-condition-sweep-uf_bfloat16 width=70%}
+
+![](../results/plots/condition_sweeps/condition-sweep__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp128__um-fp256.png){#fig-condition-sweep-uf_fp16 width=70%}
+
+
+![](../results/plots/condition_sweeps/condition-sweep__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp128__um-fp256.png){#fig-condition-sweep-uf_fp32 width=70%}
+
+:::
+
+
+### Interpretation
+
+Across the three sweeps, increasing $\kappa_2(A)$ generally increases the required updates. The status totals are $20$ converged, $15$ maximum-iteration, and $2$ diverged runs for bfloat16; $33$ converged, $11$ maximum-iteration, $1$ diverged, and $1$ non-finite run for FP16; and $78$ converged and $7$ maximum-iteration runs for FP32. Since the grids contain different numbers of points, these totals describe each sweep but are not directly comparable success rates. Converged runs retain forward errors near working precision until the practical convergence limit is approached.
+
+#### *Conditioning and practical convergence region*
+
+Within each format, well-conditioned systems converge in few updates, while the update count rises toward the transition region. The first maximum-iteration runs occur at approximately $0.39\kappa_*$ for bfloat16, $0.97\kappa_*$ for FP16, and $2.37\kappa_*$ for FP32. The largest converged values are $0.31\kappa_*$, $0.77\kappa_*$, and $2.99\kappa_*$, respectively. Thus, higher factorization precision expands the practical convergence region on both absolute and normalized scales in these tests.
+
+This trend is consistent with the theoretical convergence factor being of order $u_f\kappa(A)$, but $\kappa_*=u_f^{-1}$ is only an approximate scale. LU growth, factorization quality, componentwise conditioning, and norm-dependent constants also affect convergence. The normalized transition therefore need not occur at $\kappa/\kappa_*=1$ or remain fixed across formats.
+
+
+#### *Final forward accuracy*
+
+Converged runs generally attain forward errors of order $u$. Increasing $\kappa_2(A)$ mainly raises the update count; final accuracy remains near working precision while refinement succeeds. The FP128 residual therefore avoids the condition-dependent floor observed with FP64 residuals.
+
+Near the transition, some runs retain small errors but reach the 20-update limit because termination depends on the relative correction, not the forward error. Beyond this region, errors increase or become irregular. Final error must therefore be interpreted together with termination status.
+
+#### *Omitted configurations*
+
+FP8–FP64–FP128 is omitted as an extreme stress case: only 3 of 25 runs converge, up to approximately $0.10\kappa_*$. The FP16–FP64–FP64 and FP32–FP64–FP64 sweeps mainly reproduce the condition-dependent accuracy floor observed in the preceding experiment group. Only three runs in each sweep converge; most reach the 20-update limit because the correction criterion remains unsatisfied. The residual-precision experiment examines this effect directly.
+
+```{=latex}
+\clearpage
+```
 
 ## Residual-precision comparison
 
-...
+This experiment isolates the effect of residual precision. The factorization and working precisions are fixed at FP32 and FP64, while the residual precision is varied between FP64 and FP128. Both configurations use the same matrices, right-hand sides, condition-number grid, and algorithmic settings. Residual scaling is enabled, and errors are evaluated in FP256.
+
+The upper panel shows the final normwise backward error; the lower panel shows the final relative forward error. The dashed line marks $\kappa_*=u_f^{-1}$, while the dotted lines mark $u$ and the reference $\kappa_2(A)u$. Marker shapes indicate termination status.
+
+The results are shown in @fig-residual-comparison.
+
+![](../results/plots/residual_precision/residual-precision__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp64-vs-fp128__um-fp256.png){#fig-residual-comparison width="75%"}
+
+### Interpretation
+
+Across the stable range, both configurations attain backward errors of order $u$. Their forward errors separate as $\kappa_2(A)$ increases: with FP64 residuals, the error grows approximately in proportion to $\kappa_2(A)$, whereas with FP128 residuals it remains near working precision. Beyond the factorization convergence region, both variants become irregular.
+
+
+#### *Backward error*
+
+Over the stable range $10^2\leq\kappa_2(A)\leq10^7$, both backward-error curves are nearly independent of conditioning. FP64 residuals give errors between $1.2\times10^{-17}$ and $4.2\times10^{-17}$, while FP128 residuals give approximately $1.9\times10^{-18}$ to $6.7\times10^{-18}$. Both remain of order $u$.
+
+FP128 residuals lower the observed values but do not change their theoretical order. This agrees with @carsonAcceleratingSolutionLinear2018 [Corollary 4.2], which predicts a limiting normwise backward error of order $u$, essentially independent of $u_r$. Values below $u$ do not contradict this result, since the estimate specifies an order rather than a lower bound.
+
+
+#### *Forward error and residual precision*
+
+Over the stable range $10^2\leq\kappa_2(A)\leq10^7$, FP64 residuals produce forward errors from approximately $1.5\times10^{-15}$ to $4.3\times10^{-11}$. Their log–log slope is $0.90$, close to the predicted linear dependence on conditioning. With FP128 residuals, the error remains between approximately $3.8\times10^{-17}$ and $8.1\times10^{-17}$, with no systematic dependence on $\kappa_2(A)$ and near working precision.
+
+This agrees with the limiting bound
+
+$$
+\frac{\lVert \widehat{x}-x\rVert_\infty}{\lVert x\rVert_\infty}
+\lesssim
+u+4pu_r\operatorname{cond}(A,x)
+$$
+
+of @carsonAcceleratingSolutionLinear2018 [Corollary 3.3]. When $u_r=u$, the condition-dependent term gives an error of order $\operatorname{cond}(A,x)u$. With sufficiently accurate residuals, this term becomes negligible and the limiting error is of order $u$. Since $\kappa_2(A)$ is used as a proxy for $\operatorname{cond}(A,x)$, the plotted $\kappa_2(A)u$ line represents the expected scaling rather than an exact bound.
+
+Only 3 of the 85 FP64-residual runs satisfy the stopping criterion; the remaining 82 reach the update limit. This mainly reflects the condition-dependent correction floor remaining above the $u$-based tolerance, even after the forward error reaches its expected level. With FP128 residuals, 78 runs converge and 7 reach the update limit. Beyond the FP32 factorization convergence region, however, both variants become irregular. Higher residual precision improves attainable accuracy but cannot compensate for an insufficiently accurate factorization.
+
+
 
 ## Direct-solve comparison
 
