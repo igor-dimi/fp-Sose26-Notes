@@ -77,7 +77,7 @@ $$
 \kappa_* = u_f^{-1}.
 $$
 
-This is not a strict boundary: the actual convergence rate also depends on LU growth, factorization quality, componentwise conditioning, and norm-dependent constants @highamMixedPrecisionAlgorithms2022 [Section 7.1].
+This is not a strict boundary: the actual convergence rate also depends on LU growth, factorization quality, componentwise conditioning, and norm-dependent constants. @highamMixedPrecisionAlgorithms2022 [Section 7.1]
 
 Under suitable convergence conditions, refinement produces a normwise backward error of order $u$. The limiting relative forward error satisfies approximately
 
@@ -134,7 +134,6 @@ $$
 where $Q$ is orthogonal and $\Lambda$ is chosen to produce the prescribed condition number $\kappa_2(A)$. Right-hand sides are sampled in FP64 from the standard normal distribution. An FP256 solve of the stored system provides the reference solution.
 
 The generator also supports rotated-SPD and nonsymmetric random-SVD matrices, together with all-ones and random-sign solution modes.
-.
 
 
 ## Precision formats
@@ -196,7 +195,7 @@ growth steps are configurable.
 
 ## Experimental framework and reproducibility
 
-Each run records its precision configuration, requested and measured condition numbers, random seeds,
+Each run records its precision configuration, requested condition numbers, random seeds,
 termination status, and experiment-specific quantities. Fixed seeds and self-describing CSV files permit
 the experiments to be repeated and the figures to be regenerated independently. 
 
@@ -220,7 +219,7 @@ We conducted five groups of experiments to examine how conditioning, precision c
 
 ## Convergence histories
 
-In this experiment group $u_f$, $u_r$ and $\kappa(A)$ are varied; $u$ and other common settings remain fixed. For each configuration, the forward error, backward error, and relative correction are recorded after every refinement step, Relative corrections are omitted from the final plots.
+In this experimental group $u_f$, $u_r$ and $\kappa(A)$ are varied; $u$ and other common settings remain fixed. For each configuration, the forward error, backward error, and relative correction are recorded after every refinement step. Relative corrections are omitted from the final plots.
 These histories show the convergence rate, attained accuracy, and termination status.
 
 For each factorization precision, the driver defines the reference condition number
@@ -233,13 +232,13 @@ and tests $\kappa_2(A)=1$ together with representative values below, near, and a
 
 Curve labels include termination status. `C`, `M`, `D`, and `F` denote convergence, the iteration limit, detected divergence, and non-finite factorization input, respectively.
 
-Four precision configurations are presented: FP16-FP64-FP64, FP16-FP64-FP128, FP32-FP64-FP64, and FP32-FP64-F128.
+Four precision configurations are presented: FP16-FP64-FP64, FP16-FP64-FP128, FP32-FP64-FP64, and FP32-FP64-FP128.
 They form a $2 \times 2$ precision design with two factorization precisions and two residual precisions. 
 This selection enables matched comparisons of how $u_r$ affects the convergence history and attainable forward error at fixed factorization precision. It also shows how the convergence scale changes with $u_f$.
 The omitted FP8 and bfloat16 configurations examine alternative low-precision
 factorization formats and are summarized after the main comparison. 
 
-The convergence results are shown in @fig-convergence-histories
+The convergence results are shown in @fig-convergence-histories.
 
 
 ::: {#fig-convergence-histories layout-ncol=1 fig-pos="p"}
@@ -312,14 +311,13 @@ Three configurations are shown: bfloat16-FP64-FP128, FP16-FP64-FP128, and FP32-F
 effect of factorization precision. The FP8 configuration is omitted as an extreme stress case and summarized below. The FP64-residual
 configurations are also omitted because their main effect was examined in the preceding experiment group. 
 
-The results are shown in @fig-condition-sweeps
+The results are shown in @fig-condition-sweeps.
 
 ::: {#fig-condition-sweeps layout-ncol=1 fig-pos="p"}
 
 ![](../results/plots/condition_sweeps/condition-sweep__random-spd__n-100__random-normal__uf-bfloat16__u-fp64__ur-fp128__um-fp256.png){#fig-condition-sweep-uf_bfloat16 width=70%}
 
 ![](../results/plots/condition_sweeps/condition-sweep__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp128__um-fp256.png){#fig-condition-sweep-uf_fp16 width=70%}
-
 
 ![](../results/plots/condition_sweeps/condition-sweep__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp128__um-fp256.png){#fig-condition-sweep-uf_fp32 width=70%}
 
@@ -389,14 +387,106 @@ Only 3 of the 85 FP64-residual runs satisfy the stopping criterion; the remainin
 
 ## Direct-solve comparison
 
-...
+
+This experiment compares mixed-precision iterative refinement with a direct solve. Iterative refinement uses FP32 factorization, FP64 working, and FP128 residual precision, with residual scaling enabled. The direct method performs a single LU factorization and solve in FP64. Both methods use the same matrices, right-hand sides, and condition-number grid. Errors are evaluated in FP256.
+
+The upper panel shows the final relative forward error; the lower panel shows the final normwise backward error. The dashed line marks $\kappa_*=u_f^{-1}$, while the dotted lines mark $u$ and the reference $\kappa_2(A)u_{\mathrm{direct}}$. Marker shapes indicate the termination status of iterative refinement.
+
+The results are shown in @fig-direct-comparison.
+
+![](../results/plots/direct_comparison/direct-solve-comparison__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp128__um-fp256__vs-direct-fp64.png){#fig-direct-comparison width="75%"}
+
+### Interpretation
+
+Within its convergence region, iterative refinement attains forward and backward errors near working precision. The direct FP64 solve remains backward stable across the full condition-number range, but its forward error increases with conditioning. Beyond the FP32 factorization limit, iterative refinement becomes irregular and loses its accuracy advantage.
+
+
+#### *Forward error and convergence region*
+
+Over the stable range $10^2\leq\kappa_2(A)\leq10^7$, the IR forward error remains near working precision, between $3.8\times10^{-17}$ and $8.1\times10^{-17}$, with no systematic dependence on $\kappa_2(A)$. In contrast, the direct-LU error increases from $2.5\times10^{-15}$ to $3.4\times10^{-11}$. Its fitted log--log slope is $0.82$, broadly consistent with the expected $O(\kappa_2(A)u)$ behavior.
+
+Of the 85 IR runs, 78 converge and 7 reach the maximum of 20 updates. The first maximum-iteration result occurs at $\kappa_2(A)\approx3.98\times10^7$, while the largest converged result occurs at approximately $5.01\times10^7$. The transition is therefore not a strict condition-number boundary.
+
+Beyond this region, the IR errors become irregular and can exceed those of the direct solve. Accurate residuals and FP64 updates improve the solution only while the FP32 factors provide sufficiently accurate correction equations. The direct FP64 solve therefore becomes more reliable once the low-precision factorization limits IR convergence.
+
+
+#### *Backward error*
+
+Over the stable range $10^2\leq\kappa_2(A)\leq10^7$, both methods attain backward errors of order $u$, with little dependence on conditioning. The IR error lies between $1.9\times10^{-18}$ and $6.7\times10^{-18}$, while the direct-LU error lies mostly between $1.0\times10^{-17}$ and $3.8\times10^{-17}$. IR therefore gives consistently smaller observed errors, although both methods are backward stable.
+
+The direct solve nevertheless exhibits condition-dependent forward error. A small backward error guarantees proximity to a nearby problem, but ill-conditioning can amplify this perturbation into a much larger forward error.
+
+
+
 
 ## Low-precision limitations and residual scaling {#sec-residual-scaling}
 
-...
+For the FP16–FP64–FP128 configuration, the initial convergence histories showed forward and backward errors stagnating well above the expected FP64 accuracy. We attributed this to information loss when the shrinking FP128 residual was converted to FP16 before the correction solve.
 
-# Conclusion
+The smallest positive normal and subnormal FP16 values are $2^{-14}\approx6.10\times10^{-5}$ and $2^{-24}\approx5.96\times10^{-8}$, respectively. Under round-to-nearest, magnitudes below approximately $2^{-25}\approx2.98\times10^{-8}$ round to zero. Moreover, subnormal numbers have constant absolute spacing $2^{-24}$ and therefore increasingly poor relative resolution near zero. Residual conversion can consequently lose information both through rounding to zero and through severe quantization of surviving subnormal components.
 
-...
+To test this hypothesis, we instrumented the residual conversion at each iteration. The diagnostics record the residual infinity norm, its smallest nonzero component, the number of nonzero components before conversion, and how many become zero when converted to FP16. This allows conversion loss to be compared directly with the observed stagnation.
+
+To reduce this loss, we normalize the residual before its conversion to FP16:
+
+$$
+\theta_k=\lVert r_k\rVert_\infty,
+\qquad
+\widehat r_k=\frac{r_k}{\theta_k},
+\qquad
+A\widehat d_k=\widehat r_k,
+\qquad
+d_k=\theta_k\widehat d_k.
+$$
+
+This is equivalent to the original correction equation in exact arithmetic, since $Ad_k=\theta_kA\widehat d_k=\theta_k\widehat r_k=r_k$. Scaling therefore leaves the mathematical correction unchanged while using the FP16 range and resolution more effectively. The factor $\theta_k$ is reapplied after the low-precision solve in FP64.
+
+The experiment compares scaled and unscaled refinement for $n=100$ and $\kappa_2(A)=500$, using the same matrix, right-hand side, and algorithmic settings. Residual scaling is the only varied option. In @fig-residual-scaling, the conversion diagnostics show the residual magnitudes and components lost during conversion, while the convergence histories show the corresponding forward errors, backward errors, and relative corrections.
+
+
+::: {#fig-residual-scaling layout-ncol="1" fig-align="center"}
+
+![](../results/plots/robustness/residual_scaling/residual-scaling__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp128__um-fp256__comparison__diagnostics.png){#fig-scaling-comparison width="100%"}
+
+![](../results/plots/robustness/residual_scaling/error_histories/residual-scaling__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp128__um-fp256__error-history__errors.png){#fig-scaling-error-histories width="100%"}
+
+:::
+
+
+
+### Interpretation
+
+The diagnostics confirm that information loss during unscaled FP16 residual conversion coincides with the onset of stagnation. Residual scaling eliminates the observed conversion loss, allowing the corrections and errors to continue decreasing until the method converges at FP64-level accuracy.
+
+
+#### *Residual-conversion diagnostics*
+
+In the unscaled run, the first conversion loss occurs at iteration 3, when the smallest residual component falls to $1.74\times10^{-9}$ and two components round to zero. From iterations 3–19, all 100 components remain nonzero before conversion, but between one and five components per iteration become zero in FP16.
+
+These counts measure only complete underflow to zero. They do not capture the additional information loss caused by distinct subnormal components being mapped to the same values on the coarse FP16 grid. The small number of zeroed components therefore understates the total effect of conversion.
+
+With scaling, the smallest normalized components remain approximately between $5\times10^{-4}$ and $10^{-2}$, above the smallest FP16 normal value. Consequently, no component rounds to zero during any of the 13 updates, and the normalized residual avoids severe subnormal quantization.
+
+
+#### *Effect on convergence*
+
+Without scaling, the forward error stagnates between approximately $1.2\times10^{-7}$ and $2.3\times10^{-7}$, while the backward error remains between $2.3\times10^{-9}$ and $3.5\times10^{-9}$. The relative correction similarly plateaus near $2\times10^{-7}$, and the run reaches the maximum of 20 updates without converging.
+
+With scaling, all three quantities continue decreasing. The method converges after 13 updates with final forward error $7.25\times10^{-17}$, backward error $4.44\times10^{-18}$, and relative correction $5.57\times10^{-17}$. Residual scaling therefore removes the observed stagnation and restores FP64-level accuracy.
+
+This remedy specifically addresses underflow and quantization when the residual is converted to FP16. It does not prevent overflow when the matrix or right-hand side is converted to FP16, nor does it extend the convergence range imposed by the accuracy of the FP16 factorization.
+
+
+## Conclusion
+
+The experiments broadly confirm the expected behavior of three-precision iterative refinement. Within the convergence region determined by the low-precision factorization, refinement attains FP64-level backward accuracy. Residual precision determines the attainable forward accuracy: with FP64 residuals, where $u_r=u$, the forward error grows with conditioning, whereas FP128 residuals keep it near working precision throughout the stable range.
+
+Compared with a direct FP64 LU solve, iterative refinement produces substantially smaller forward errors as conditioning increases, but becomes unreliable once the FP32 or FP16 factors no longer provide accurate correction equations. The FP16 scaling experiments further show that limited exponent range can cause residual-conversion loss and stagnation; infinity-norm scaling prevents this loss and restores convergence without changing the mathematical correction.
+
+The observed convergence in relatively few updates supports the potential of mixed-precision refinement to reduce computational cost on hardware with efficient low-precision arithmetic. Since the formats used here were partly software-emulated and execution times were not measured, performance gains remain to be evaluated experimentally on suitable hardware.
+
+
+The experiments were implemented within a configurable framework that supports further studies with different precision combinations, test problems, condition-number ranges, and algorithmic options.
+
 
 # References {.unnumbered}
