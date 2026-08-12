@@ -309,8 +309,7 @@ window.Quarto = {
   <li><a href="#three-precision-iterative-refinement" id="toc-three-precision-iterative-refinement" class="nav-link" data-scroll-target="#three-precision-iterative-refinement"><span class="header-section-number">10</span> Three-precision iterative refinement</a>
   <ul class="collapse">
   <li><a href="#algorithm" id="toc-algorithm" class="nav-link" data-scroll-target="#algorithm"><span class="header-section-number">10.1</span> Algorithm</a></li>
-  <li><a href="#precision-roles" id="toc-precision-roles" class="nav-link" data-scroll-target="#precision-roles"><span class="header-section-number">10.2</span> Precision roles</a></li>
-  <li><a href="#convergence-and-attainable-accuracy" id="toc-convergence-and-attainable-accuracy" class="nav-link" data-scroll-target="#convergence-and-attainable-accuracy"><span class="header-section-number">10.3</span> Convergence and attainable accuracy</a></li>
+  <li><a href="#precision-roles-and-theoretical-expectations" id="toc-precision-roles-and-theoretical-expectations" class="nav-link" data-scroll-target="#precision-roles-and-theoretical-expectations"><span class="header-section-number">10.2</span> Precision roles and theoretical expectations</a></li>
   </ul></li>
   <li><a href="#experimental-setup" id="toc-experimental-setup" class="nav-link" data-scroll-target="#experimental-setup"><span class="header-section-number">11</span> Experimental setup</a>
   <ul class="collapse">
@@ -324,13 +323,28 @@ window.Quarto = {
   <li><a href="#experimental-design" id="toc-experimental-design" class="nav-link" data-scroll-target="#experimental-design"><span class="header-section-number">12</span> Experimental design</a></li>
   <li><a href="#results-and-discussion" id="toc-results-and-discussion" class="nav-link" data-scroll-target="#results-and-discussion"><span class="header-section-number">13</span> Results and discussion</a>
   <ul class="collapse">
-  <li><a href="#convergence-histories" id="toc-convergence-histories" class="nav-link" data-scroll-target="#convergence-histories"><span class="header-section-number">13.1</span> Convergence histories</a></li>
-  <li><a href="#condition-number-sweep" id="toc-condition-number-sweep" class="nav-link" data-scroll-target="#condition-number-sweep"><span class="header-section-number">13.2</span> Condition-number sweep</a></li>
-  <li><a href="#residual-precision-comparison" id="toc-residual-precision-comparison" class="nav-link" data-scroll-target="#residual-precision-comparison"><span class="header-section-number">13.3</span> Residual-precision comparison</a></li>
-  <li><a href="#direct-solve-comparison" id="toc-direct-solve-comparison" class="nav-link" data-scroll-target="#direct-solve-comparison"><span class="header-section-number">13.4</span> Direct-solve comparison</a></li>
-  <li><a href="#sec-residual-scaling" id="toc-sec-residual-scaling" class="nav-link" data-scroll-target="#sec-residual-scaling"><span class="header-section-number">13.5</span> Low-precision limitations and residual scaling</a></li>
+  <li><a href="#convergence-histories" id="toc-convergence-histories" class="nav-link" data-scroll-target="#convergence-histories"><span class="header-section-number">13.1</span> Convergence histories</a>
+  <ul class="collapse">
+  <li><a href="#interpretation" id="toc-interpretation" class="nav-link" data-scroll-target="#interpretation">Interpretation</a></li>
   </ul></li>
-  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><span class="header-section-number">14</span> Conclusion</a></li>
+  <li><a href="#condition-number-sweep" id="toc-condition-number-sweep" class="nav-link" data-scroll-target="#condition-number-sweep"><span class="header-section-number">13.2</span> Condition-number sweep</a>
+  <ul class="collapse">
+  <li><a href="#interpretation-1" id="toc-interpretation-1" class="nav-link" data-scroll-target="#interpretation-1">Interpretation</a></li>
+  </ul></li>
+  <li><a href="#residual-precision-comparison" id="toc-residual-precision-comparison" class="nav-link" data-scroll-target="#residual-precision-comparison"><span class="header-section-number">13.3</span> Residual-precision comparison</a>
+  <ul class="collapse">
+  <li><a href="#interpretation-2" id="toc-interpretation-2" class="nav-link" data-scroll-target="#interpretation-2">Interpretation</a></li>
+  </ul></li>
+  <li><a href="#direct-solve-comparison" id="toc-direct-solve-comparison" class="nav-link" data-scroll-target="#direct-solve-comparison"><span class="header-section-number">13.4</span> Direct-solve comparison</a>
+  <ul class="collapse">
+  <li><a href="#interpretation-3" id="toc-interpretation-3" class="nav-link" data-scroll-target="#interpretation-3">Interpretation</a></li>
+  </ul></li>
+  <li><a href="#sec-residual-scaling" id="toc-sec-residual-scaling" class="nav-link" data-scroll-target="#sec-residual-scaling"><span class="header-section-number">13.5</span> Low-precision limitations and residual scaling</a>
+  <ul class="collapse">
+  <li><a href="#interpretation-4" id="toc-interpretation-4" class="nav-link" data-scroll-target="#interpretation-4">Interpretation</a></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><span class="header-section-number">13.6</span> Conclusion</a></li>
+  </ul></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul>
 </nav>
@@ -373,36 +387,41 @@ window.Quarto = {
 <section id="algorithm" class="level2" data-number="10.1">
 <h2 data-number="10.1" class="anchored" data-anchor-id="algorithm"><span class="header-section-number">10.1</span> Algorithm</h2>
 <p>The implemented method is LU-based three-precision iterative refinement <span class="citation" data-cites="highamMixedPrecisionAlgorithms2022">(<a href="#ref-highamMixedPrecisionAlgorithms2022" role="doc-biblioref">Higham and Mary 2022</a>)</span>:</p>
-<div id="algo-mixed-ir" class="pseudocode-container quarto-float" data-indent-lines="false" data-caption-prefix="Algorithm" data-no-end="false" data-line-number-punc=":" data-comment-delimiter="//" data-pseudocode-number="1" data-line-number="true" data-indent-size="1.2em">
+<div id="algo-mixed-ir" class="pseudocode-container quarto-float" data-line-number="true" data-indent-lines="false" data-pseudocode-number="1" data-comment-delimiter="//" data-caption-prefix="Algorithm" data-indent-size="1.2em" data-no-end="false" data-line-number-punc=":">
 <div class="pseudocode">
 \begin{algorithm} \caption{Three-precision iterative refinement} \begin{algorithmic} \Require Nonsingular system $Ax=b$ \State Round $A$ and $b$ to precision $u_f$ \State Compute $PAQ=LU$ in precision $u_f$ \State Solve for $x_0$ using the factors in precision $u_f$ \State Store $x_0$ in precision $u$ \For{$i=0,1,\ldots,i_{\max}-1$} \State Compute $r_i=b-Ax_i$ in precision $u_r$ \State Round $r_i$ to precision $u_f$ \State Solve for $d_i$ using the factors in precision $u_f$ \State Store $d_i$ in precision $u$ \State $x_{i+1} \gets x_i+d_i$ in precision $u$ \If{$\lVert d_i\rVert_2/\lVert x_i\rVert_2 &lt; u$} \State \Return $x_{i+1}$ \EndIf \EndFor \State \Return $x_{i_{\max}}$ \end{algorithmic} \end{algorithm}
 </div>
 </div>
 <p><a href="#algo-mixed-ir" class="quarto-xref">Algorithm 1</a> summarizes the core three-precision method. Our implementation extends the core algorithm with optional residual scaling for limited-range formats, configurable robustness checks, optional iterate histories, optional residual diagnostics, and descriptive termination statuses.</p>
 </section>
-<section id="precision-roles" class="level2" data-number="10.2">
-<h2 data-number="10.2" class="anchored" data-anchor-id="precision-roles"><span class="header-section-number">10.2</span> Precision roles</h2>
-<p>The algorithm uses three unit roundoffs, typically ordered as</p>
+<section id="precision-roles-and-theoretical-expectations" class="level2" data-number="10.2">
+<h2 data-number="10.2" class="anchored" data-anchor-id="precision-roles-and-theoretical-expectations"><span class="header-section-number">10.2</span> Precision roles and theoretical expectations</h2>
+<p>The three precisions control different aspects of iterative refinement. The factorization precision <span class="math inline">\(u_f\)</span> determines the quality of the LU factors and primarily limits convergence. The working precision <span class="math inline">\(u\)</span> is used for the iterates and updates and sets the target accuracy. The residual precision <span class="math inline">\(u_r\)</span> determines how accurately the residual is computed and influences the attainable forward error.</p>
+<p>For a stable low-precision factorization, convergence is expected when</p>
 <p><span class="math display">\[
-u_r \leq u \leq u_f,
+\kappa(A)u_f \ll 1.
 \]</span></p>
-<p>where <span class="math inline">\(u_f\)</span>, <span class="math inline">\(u\)</span>, and <span class="math inline">\(u_r\)</span> are the unit roundoffs of the factorization, working, and residual precisions, respectively.</p>
-</section>
-<section id="convergence-and-attainable-accuracy" class="level2" data-number="10.3">
-<h2 data-number="10.3" class="anchored" data-anchor-id="convergence-and-attainable-accuracy"><span class="header-section-number">10.3</span> Convergence and attainable accuracy</h2>
-<p>Iterative refinement is expected to converge when</p>
+<p>Thus, <span class="math inline">\(u_f^{-1}\)</span> defines an approximate condition-number scale, denoted by</p>
 <p><span class="math display">\[
-\kappa(A)u_f&lt;1
+\kappa_* = u_f^{-1}.
 \]</span></p>
-<p>This is a useful approximate condition; convergence generally slows near this boundary. If the iteration converges, <span class="math inline">\(u\)</span> and <span class="math inline">\(u_r\)</span> determine the attainable accuracy. Higher residual precision reduces residual rounding errors and can improve the forward error <span class="citation" data-cites="carsonAcceleratingSolutionLinear2018">(<a href="#ref-carsonAcceleratingSolutionLinear2018" role="doc-biblioref">Carson and Higham 2018</a>)</span>.</p>
+<p>This is not a strict boundary: the actual convergence rate also depends on LU growth, factorization quality, componentwise conditioning, and norm-dependent constants. <span class="citation" data-cites="highamMixedPrecisionAlgorithms2022">Higham and Mary (<a href="#ref-highamMixedPrecisionAlgorithms2022" role="doc-biblioref">2022, sec. 7.1</a>)</span></p>
+<p>Under suitable convergence conditions, refinement produces a normwise backward error of order <span class="math inline">\(u\)</span>. The limiting relative forward error satisfies approximately</p>
+<p><span class="math display">\[
+\frac{\lVert \widehat{x}-x\rVert_\infty}
+{\lVert x\rVert_\infty}
+\lesssim
+u+4pu_r\operatorname{cond}(A,x),
+\]</span></p>
+<p>where <span class="math inline">\(p\)</span> is the maximum number of nonzeros in a row of <span class="math inline">\([A\ b]\)</span> <span class="citation" data-cites="carsonAcceleratingSolutionLinear2018">Carson and Higham (<a href="#ref-carsonAcceleratingSolutionLinear2018" role="doc-biblioref">2018</a>, Corollary 3.3)</span>. If <span class="math inline">\(u_r=u\)</span>, the condition-dependent term generally limits the attainable forward accuracy. If <span class="math inline">\(u_r\)</span> is sufficiently smaller than <span class="math inline">\(u\)</span>, this term becomes negligible and forward errors of order <span class="math inline">\(u\)</span> can be attained.</p>
 </section>
 </section>
 <section id="experimental-setup" class="level1" data-number="11">
 <h1 data-number="11"><span class="header-section-number">11</span> Experimental setup</h1>
-<p>The experiments use a common configurable framework in which explicit options configure both the test problem and the mixed-IR algorithm. Each driver selects these configurations, while shared components construct the problem, execute the algorithm, evaluate errors, and record the results.</p>
+<p>All experiments use the same framework for problem construction, iterative refinement, error evaluation, and result recording. Individual experiment groups vary only the condition numbers, precision configurations, and algorithmic options required for their objectives.</p>
 <section id="configuration-and-common-settings" class="level2" data-number="11.1">
 <h2 data-number="11.1" class="anchored" data-anchor-id="configuration-and-common-settings"><span class="header-section-number">11.1</span> Configuration and common settings</h2>
-<p>Each driver selects the matrix family, dimension, condition numbers, and precision types. <code>TestProblemOptions</code> controls right-hand-side construction and random seeds, while <code>MixedIROptions</code> controls termination, residual scaling, and storage of iterate histories and residual diagnostics. Unless stated otherwise, the experiments use the common settings in <a href="#tbl-common-settings" class="quarto-xref">Table&nbsp;<span>11.1</span></a>.</p>
+<p><a href="#tbl-common-settings" class="quarto-xref">Table&nbsp;<span>11.1</span></a> summarizes the settings shared across the experiments. Unless stated otherwise, all runs use these values. Experiment-specific variations are described in the corresponding results sections.</p>
 <div id="tbl-common-settings" class="quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-common-settings-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
@@ -423,7 +442,7 @@ Table&nbsp;11.1: Common experimental settings.
 <tbody>
 <tr class="odd">
 <td>Matrix family</td>
-<td>Random dense SPD</td>
+<td>Dense random SPD</td>
 </tr>
 <tr class="even">
 <td>Dimension</td>
@@ -474,12 +493,12 @@ Table&nbsp;11.1: Common experimental settings.
 </section>
 <section id="test-problems" class="level2" data-number="11.2">
 <h2 data-number="11.2" class="anchored" data-anchor-id="test-problems"><span class="header-section-number">11.2</span> Test problems</h2>
-<p>The test-problem generator independently configures the matrix family and right-hand-side construction. It supports structured rotated-SPD, dense random-SPD, and nonsymmetric random-SVD matrices. Right-hand sides can be formed from an all-ones solution, a random-sign solution, or directly sampled normal entries. Unless stated otherwise, the experiments use dense random-SPD matrices and random-normal FP64 right-hand sides.</p>
-<p>The random-SPD matrices have the form</p>
+<p>The experiments use dense random-SPD matrices of the form</p>
 <p><span class="math display">\[
 A = Q\Lambda Q^T,
 \]</span></p>
-<p>with orthogonal <span class="math inline">\(Q\)</span> and prescribed condition number <span class="math inline">\(\kappa_2(A)\)</span>. An FP256 solve of the stored system provides the reference solution.</p>
+<p>where <span class="math inline">\(Q\)</span> is orthogonal and <span class="math inline">\(\Lambda\)</span> is chosen to produce the prescribed condition number <span class="math inline">\(\kappa_2(A)\)</span>. Right-hand sides are sampled in FP64 from the standard normal distribution. An FP256 solve of the stored system provides the reference solution.</p>
+<p>The generator also supports rotated-SPD and nonsymmetric random-SVD matrices, together with all-ones and random-sign solution modes.</p>
 </section>
 <section id="precision-formats" class="level2" data-number="11.3">
 <h2 data-number="11.3" class="anchored" data-anchor-id="precision-formats"><span class="header-section-number">11.3</span> Precision formats</h2>
@@ -547,7 +566,8 @@ Table&nbsp;11.2: Floating-point formats used in the experiments.
 </div>
 </figure>
 </div>
-<p>CPFloat simulates bfloat16 and FP16; GMP provides FP128 and FP256. The main experiments use FP64 working precision. Each experiment specifies its factorization and residual precisions.</p>
+<p>CPFloat simulates bfloat16 and FP16, while GMP provides the extended-precision formats. FP128 and FP256 are project labels for <code>FP&lt;64&gt;</code> and <code>FP&lt;192&gt;</code> and do not denote the corresponding IEEE formats. The main experiments use FP64 working precision. Each experiment specifies its factorization and residual precisions.</p>
+<p>For FP64 working precision, <span class="math inline">\(u^2=2^{-106}\)</span>, whereas the implemented FP128 format has <span class="math inline">\(u_r=2^{-64}\)</span>. The FP128-residual experiment therefore does not realize the commonly analyzed choice <span class="math inline">\(u_r=u^2\)</span>, although it uses a residual precision higher than the working precision. The general forward-error bound remains applicable, but the attainment of <span class="math inline">\(O(u)\)</span> forward error is evaluated empirically.</p>
 </section>
 <section id="error-measures" class="level2" data-number="11.4">
 <h2 data-number="11.4" class="anchored" data-anchor-id="error-measures"><span class="header-section-number">11.4</span> Error measures</h2>
@@ -576,8 +596,7 @@ e_i &amp;=
 </section>
 <section id="experimental-framework-and-reproducibility" class="level2" data-number="11.6">
 <h2 data-number="11.6" class="anchored" data-anchor-id="experimental-framework-and-reproducibility"><span class="header-section-number">11.6</span> Experimental framework and reproducibility</h2>
-<p>Each C++ driver defines an experimental group by selecting precision types and configuring the shared test-problem, mixed-IR, measurement, and output components. Helper functions derive output paths, filenames, and common CSV fields from the configuration and algorithm result. Drivers add only experiment-specific fields, such as iteration histories or conversion diagnostics.</p>
-<p>Each CSV records the run configuration, random seeds, and termination status. Python scripts validate the raw data and generate plots without modifying it. Fixed seeds and self-describing outputs allow runs to be repeated and figures to be regenerated without rerunning the experiments.</p>
+<p>Each run records its precision configuration, requested condition numbers, random seeds, termination status, and experiment-specific quantities. Fixed seeds and self-describing CSV files permit the experiments to be repeated and the figures to be regenerated independently.</p>
 </section>
 </section>
 <section id="experimental-design" class="level1" data-number="12">
@@ -614,7 +633,7 @@ Table&nbsp;12.1: Overview of the five experimental groups.
 <tr class="even">
 <td>Condition-number sweep</td>
 <td><span class="math inline">\(\kappa_2(A)\)</span> and precision triple</td>
-<td>Final forward and backward errors, iteration count, status</td>
+<td>Final forward error, iteration count, final status</td>
 <td>Determine how conditioning affects convergence and accuracy.</td>
 </tr>
 <tr class="odd">
@@ -645,28 +664,280 @@ Table&nbsp;12.1: Overview of the five experimental groups.
 <h1 data-number="13"><span class="header-section-number">13</span> Results and discussion</h1>
 <section id="convergence-histories" class="level2" data-number="13.1">
 <h2 data-number="13.1" class="anchored" data-anchor-id="convergence-histories"><span class="header-section-number">13.1</span> Convergence histories</h2>
-<p>…</p>
+<p>In this experimental group <span class="math inline">\(u_f\)</span>, <span class="math inline">\(u_r\)</span> and <span class="math inline">\(\kappa(A)\)</span> are varied; <span class="math inline">\(u\)</span> and other common settings remain fixed. For each configuration, the forward error, backward error, and relative correction are recorded after every refinement step. Relative corrections are omitted from the final plots. These histories show the convergence rate, attained accuracy, and termination status.</p>
+<p>For each factorization precision, the driver defines the reference condition number</p>
+<p><span class="math display">\[
+\kappa_* = u_f^{-1}
+\]</span></p>
+<p>and tests <span class="math inline">\(\kappa_2(A)=1\)</span> together with representative values below, near, and above <span class="math inline">\(\kappa_*\)</span>. Condition numbers are chosen as multiples of <span class="math inline">\(\kappa_*\)</span> to provide a common relative scale across factorization formats. The condition <span class="math inline">\(\kappa_2(A)u_f&lt;1\)</span> serves as an approximate theoretical reference.</p>
+<p>Curve labels include termination status. <code>C</code>, <code>M</code>, <code>D</code>, and <code>F</code> denote convergence, the iteration limit, detected divergence, and non-finite factorization input, respectively.</p>
+<p>Four precision configurations are presented: FP16-FP64-FP64, FP16-FP64-FP128, FP32-FP64-FP64, and FP32-FP64-FP128. They form a <span class="math inline">\(2 \times 2\)</span> precision design with two factorization precisions and two residual precisions. This selection enables matched comparisons of how <span class="math inline">\(u_r\)</span> affects the convergence history and attainable forward error at fixed factorization precision. It also shows how the convergence scale changes with <span class="math inline">\(u_f\)</span>. The omitted FP8 and bfloat16 configurations examine alternative low-precision factorization formats and are summarized after the main comparison.</p>
+<p>The convergence results are shown in <a href="#fig-convergence-histories" class="quarto-xref">Figure&nbsp;<span>13.1</span></a>.</p>
+<div id="fig-convergence-histories" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-convergence-histories-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-convergence-histories" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-convergence-uf_fp16-ur_fp128" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-convergence-uf_fp16-ur_fp128-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../results/plots/convergence/convergence-history__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp64__um-fp256.png" id="fig-convergence-uf_fp16-ur_fp128" class="img-fluid figure-img" style="width:81.0%" data-ref-parent="fig-convergence-histories">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-convergence-uf_fp16-ur_fp128-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-convergence-histories" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-convergence-uf_fp16-ur_fp128" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-convergence-uf_fp16-ur_fp128-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../results/plots/convergence/convergence-history__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp128__um-fp256.png" id="fig-convergence-uf_fp16-ur_fp128" class="img-fluid figure-img" style="width:81.0%" data-ref-parent="fig-convergence-histories">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-convergence-uf_fp16-ur_fp128-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-convergence-histories" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-convergence-uf_fp32-ur_fp128" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-convergence-uf_fp32-ur_fp128-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../results/plots/convergence/convergence-history__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp64__um-fp256.png" id="fig-convergence-uf_fp32-ur_fp128" class="img-fluid figure-img" style="width:81.0%" data-ref-parent="fig-convergence-histories">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-convergence-uf_fp32-ur_fp128-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(c)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-convergence-histories-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13.1: <img src="../results/plots/convergence/convergence-history__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp128__um-fp256.png" id="fig-convergence-uf_fp32-ur_fp64" class="img-fluid figure-img" style="width:81.0%">
+</figcaption>
+</figure>
+</div>
+<section id="interpretation" class="level3">
+<h3 class="anchored" data-anchor-id="interpretation">Interpretation</h3>
+<p>Across all four displayed triples, convergence slows as the condition number increases. Runs well below <span class="math inline">\(\kappa_*\)</span> converge rapidly; runs near <span class="math inline">\(\kappa_*\)</span> require more iterations, while runs sufficiently far above it reach the iteration limit or diverge. The transition occurs at different multiples of <span class="math inline">\(\kappa_*\)</span>, consistent with <span class="math inline">\(\kappa_*=u_f^{-1}\)</span> being an approximate reference rather than a fixed convergence boundary.</p>
+<p>The <span class="math inline">\(2\times2\)</span> design separates the roles of the two precisions: <span class="math inline">\(u_f\)</span> primarily determines the convergence rate and practical convergence region, whereas <span class="math inline">\(u_r\)</span> primarily determines the attainable forward accuracy. The following subsections examine these effects and summarize the omitted FP8 and bfloat16 configurations.</p>
+<section id="effect-of-residual-precision" class="level4">
+<h4 class="anchored" data-anchor-id="effect-of-residual-precision"><em>Effect of residual precision</em></h4>
+<p>At each factorization precision, the FP64- and FP128-residual histories are initially nearly identical and separate only at the FP64 accuracy floor. Thus, <span class="math inline">\(u_r\)</span> primarily controls attainable accuracy, not the initial convergence rate.</p>
+<p>With FP64 residuals, <span class="math inline">\(u_r=u\)</span>, and the forward error reaches a condition-dependent plateau. For FP16 factorization, runs from <span class="math inline">\(0.01\kappa_*\)</span> through <span class="math inline">\(\kappa_*\)</span> stagnate between <span class="math inline">\(10^{-15}\)</span> and <span class="math inline">\(10^{-14}\)</span> and reach the iteration limit. For FP32, the larger absolute condition numbers produce clearer plateaus, rising from approximately <span class="math inline">\(10^{-12}\)</span> at <span class="math inline">\(0.01\kappa_*\)</span> to <span class="math inline">\(10^{-10}\)</span> at <span class="math inline">\(2\kappa_*\)</span>. The backward errors still approach working-precision accuracy. This agrees with the expected forward-error limit <span class="math inline">\(O(\operatorname{cond}(A,x)u)\)</span>.</p>
+<p>FP128 residuals reduce these plateaus. For FP16, runs through <span class="math inline">\(0.5\kappa_*\)</span> converge with forward errors of order <span class="math inline">\(10^{-16}\)</span>; at <span class="math inline">\(\kappa_*\)</span>, the error reaches approximately <span class="math inline">\(8\times10^{-16}\)</span> without satisfying the stopping criterion within 20 iterations. For FP32, all runs through <span class="math inline">\(2\kappa_*\)</span> converge with errors between <span class="math inline">\(4\times10^{-17}\)</span> and <span class="math inline">\(7\times10^{-17}\)</span>. Backward errors are also lower, and more runs converge.</p>
+<p>Once factorization limits convergence, both residual precisions produce nearly identical histories: from <span class="math inline">\(2\kappa_*\)</span> upward for FP16 and <span class="math inline">\(10\kappa_*\)</span> upward for FP32. Higher residual precision therefore improves stable runs but cannot prevent factorization-induced instability. Since HDNUM FP128 does not nominally satisfy <span class="math inline">\(u_r=u^2\)</span>, these results demonstrate the benefit of <span class="math inline">\(u_r&lt;u\)</span>, but not the sufficient theoretical case <span class="math inline">\(u_r=u^2\)</span>.</p>
+</section>
+<section id="factorization-precision-and-convergence-scale" class="level4">
+<h4 class="anchored" data-anchor-id="factorization-precision-and-convergence-scale"><em>Factorization precision and convergence scale</em></h4>
+<p>At fixed residual precision, increasing factorization precision shifts convergence to larger absolute condition numbers. The reference values are</p>
+<p><span class="math display">\[
+\kappa_*^{\mathrm{FP16}}=2^{11}=2{,}048,
+\qquad
+\kappa_*^{\mathrm{FP32}}=2^{24}=16{,}777{,}216,
+\]</span></p>
+<p>giving FP32 an <span class="math inline">\(8{,}192\)</span> times larger convergence scale. At comparable <span class="math inline">\(\kappa/\kappa_*\)</span>, both formats converge rapidly below <span class="math inline">\(\kappa_*\)</span>, more slowly near it, and slowly or not at all sufficiently far above it. With FP128 residuals, FP16 converges through <span class="math inline">\(0.5\kappa_*\)</span> and FP32 through <span class="math inline">\(2\kappa_*\)</span>. This is consistent with <span class="math inline">\(\kappa_*\)</span> being an approximate reference rather than a fixed boundary.</p>
+<p>Because each format uses its own normalized condition-number grid, the comparison involves different matrices and absolute condition numbers. It therefore shows convergence relative to each format’s scale, not the effect of changing <span class="math inline">\(u_f\)</span> for the same system.</p>
+</section>
+<section id="alternative-low-precision-factorization-formats" class="level4">
+<h4 class="anchored" data-anchor-id="alternative-low-precision-factorization-formats"><em>Alternative low-precision factorization formats</em></h4>
+<p>The bfloat16 and FP8 configurations were omitted to preserve the complete <span class="math inline">\(2\times2\)</span> FP16/FP32 design. They examine distinct low-precision formats and do not form a controlled pair.</p>
+<p>Bfloat16 has lower significand precision than FP16 but a larger exponent range. It converges through <span class="math inline">\(0.1\kappa_*\)</span> but not from <span class="math inline">\(0.5\kappa_*\)</span> upward; divergence is detected at <span class="math inline">\(10\kappa_*\)</span>. On the normalized grid, it converges more slowly than FP16. Its larger range provides no visible advantage here because residual scaling prevents underflow and no factorization-input range failure occurs.</p>
+<p>FP8 is an extreme stress case. It converges at <span class="math inline">\(\kappa=1\)</span> and <span class="math inline">\(0.1\kappa_*\)</span> in 10 and 17 steps, respectively, but reaches the iteration limit from <span class="math inline">\(0.5\kappa_*\)</span> through <span class="math inline">\(10\kappa_*\)</span>. At <span class="math inline">\(100\kappa_*\)</span>, conversion to FP8 produces non-finite input and factorization stops before refinement. These results expose the limitations of very low factorization precision but are secondary to the isolated <span class="math inline">\(u_f\)</span> and <span class="math inline">\(u_r\)</span> comparisons.</p>
+</section>
+</section>
 </section>
 <section id="condition-number-sweep" class="level2" data-number="13.2">
 <h2 data-number="13.2" class="anchored" data-anchor-id="condition-number-sweep"><span class="header-section-number">13.2</span> Condition-number sweep</h2>
-<p>…</p>
+<p>This experiment uses a dense logarithmic sweep to map final accuracy and iteration count over a broad condition-number range. For each factorization format, <span class="math inline">\(\kappa_2(A)\)</span> ranges from <span class="math inline">\(1\)</span> to approximately <span class="math inline">\(10\kappa_*\)</span>, where <span class="math inline">\(\kappa_*=u_f^{-1}\)</span>. The working and residual precisions remain fixed at FP64 and FP128. The upper panels show the final relative forward error; the lower panels show completed refinement updates. Dashed lines mark <span class="math inline">\(\kappa_*\)</span>, dotted lines mark <span class="math inline">\(u\)</span> and the 20-update limit, and marker shapes indicate termination status.</p>
+<p>Three configurations are shown: bfloat16-FP64-FP128, FP16-FP64-FP128, and FP32-FP64-FP128. Fixing <span class="math inline">\(u\)</span> and <span class="math inline">\(u_r\)</span> isolates the effect of factorization precision. The FP8 configuration is omitted as an extreme stress case and summarized below. The FP64-residual configurations are also omitted because their main effect was examined in the preceding experiment group.</p>
+<p>The results are shown in <a href="#fig-condition-sweeps" class="quarto-xref">Figure&nbsp;<span>13.2</span></a>.</p>
+<div id="fig-condition-sweeps" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-condition-sweeps-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-condition-sweeps" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-condition-sweep-uf_bfloat16" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-condition-sweep-uf_bfloat16-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../results/plots/condition_sweeps/condition-sweep__random-spd__n-100__random-normal__uf-bfloat16__u-fp64__ur-fp128__um-fp256.png" id="fig-condition-sweep-uf_bfloat16" class="img-fluid figure-img" style="width:70.0%" data-ref-parent="fig-condition-sweeps">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-condition-sweep-uf_bfloat16-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell-subref quarto-layout-cell" data-ref-parent="fig-condition-sweeps" style="flex-basis: 100.0%;justify-content: flex-start;">
+<div id="fig-condition-sweep-uf_fp16" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-condition-sweep-uf_fp16-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../results/plots/condition_sweeps/condition-sweep__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp128__um-fp256.png" id="fig-condition-sweep-uf_fp16" class="img-fluid figure-img" style="width:70.0%" data-ref-parent="fig-condition-sweeps">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-condition-sweep-uf_fp16-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-condition-sweeps-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13.2: <img src="../results/plots/condition_sweeps/condition-sweep__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp128__um-fp256.png" id="fig-condition-sweep-uf_fp32" class="img-fluid figure-img" style="width:70.0%">
+</figcaption>
+</figure>
+</div>
+<section id="interpretation-1" class="level3">
+<h3 class="anchored" data-anchor-id="interpretation-1">Interpretation</h3>
+<p>Across the three sweeps, increasing <span class="math inline">\(\kappa_2(A)\)</span> generally increases the required updates. The status totals are <span class="math inline">\(20\)</span> converged, <span class="math inline">\(15\)</span> maximum-iteration, and <span class="math inline">\(2\)</span> diverged runs for bfloat16; <span class="math inline">\(33\)</span> converged, <span class="math inline">\(11\)</span> maximum-iteration, <span class="math inline">\(1\)</span> diverged, and <span class="math inline">\(1\)</span> non-finite run for FP16; and <span class="math inline">\(78\)</span> converged and <span class="math inline">\(7\)</span> maximum-iteration runs for FP32. Since the grids contain different numbers of points, these totals describe each sweep but are not directly comparable success rates. Converged runs retain forward errors near working precision until the practical convergence limit is approached.</p>
+<section id="conditioning-and-practical-convergence-region" class="level4">
+<h4 class="anchored" data-anchor-id="conditioning-and-practical-convergence-region"><em>Conditioning and practical convergence region</em></h4>
+<p>Within each format, well-conditioned systems converge in few updates, while the update count rises toward the transition region. The first maximum-iteration runs occur at approximately <span class="math inline">\(0.39\kappa_*\)</span> for bfloat16, <span class="math inline">\(0.97\kappa_*\)</span> for FP16, and <span class="math inline">\(2.37\kappa_*\)</span> for FP32. The largest converged values are <span class="math inline">\(0.31\kappa_*\)</span>, <span class="math inline">\(0.77\kappa_*\)</span>, and <span class="math inline">\(2.99\kappa_*\)</span>, respectively. Thus, higher factorization precision expands the practical convergence region on both absolute and normalized scales in these tests.</p>
+<p>This trend is consistent with the theoretical convergence factor being of order <span class="math inline">\(u_f\kappa(A)\)</span>, but <span class="math inline">\(\kappa_*=u_f^{-1}\)</span> is only an approximate scale. LU growth, factorization quality, componentwise conditioning, and norm-dependent constants also affect convergence. The normalized transition therefore need not occur at <span class="math inline">\(\kappa/\kappa_*=1\)</span> or remain fixed across formats.</p>
+</section>
+<section id="final-forward-accuracy" class="level4">
+<h4 class="anchored" data-anchor-id="final-forward-accuracy"><em>Final forward accuracy</em></h4>
+<p>Converged runs generally attain forward errors of order <span class="math inline">\(u\)</span>. Increasing <span class="math inline">\(\kappa_2(A)\)</span> mainly raises the update count; final accuracy remains near working precision while refinement succeeds. The FP128 residual therefore avoids the condition-dependent floor observed with FP64 residuals.</p>
+<p>Near the transition, some runs retain small errors but reach the 20-update limit because termination depends on the relative correction, not the forward error. Beyond this region, errors increase or become irregular. Final error must therefore be interpreted together with termination status.</p>
+</section>
+<section id="omitted-configurations" class="level4">
+<h4 class="anchored" data-anchor-id="omitted-configurations"><em>Omitted configurations</em></h4>
+<p>FP8–FP64–FP128 is omitted as an extreme stress case: only 3 of 25 runs converge, up to approximately <span class="math inline">\(0.10\kappa_*\)</span>. The FP16–FP64–FP64 and FP32–FP64–FP64 sweeps mainly reproduce the condition-dependent accuracy floor observed in the preceding experiment group. Only three runs in each sweep converge; most reach the 20-update limit because the correction criterion remains unsatisfied. The residual-precision experiment examines this effect directly.</p>
+</section>
+</section>
 </section>
 <section id="residual-precision-comparison" class="level2" data-number="13.3">
 <h2 data-number="13.3" class="anchored" data-anchor-id="residual-precision-comparison"><span class="header-section-number">13.3</span> Residual-precision comparison</h2>
-<p>…</p>
+<p>This experiment isolates the effect of residual precision. The factorization and working precisions are fixed at FP32 and FP64, while the residual precision is varied between FP64 and FP128. Both configurations use the same matrices, right-hand sides, condition-number grid, and algorithmic settings. Residual scaling is enabled, and errors are evaluated in FP256.</p>
+<p>The upper panel shows the final normwise backward error; the lower panel shows the final relative forward error. The dashed line marks <span class="math inline">\(\kappa_*=u_f^{-1}\)</span>, while the dotted lines mark <span class="math inline">\(u\)</span> and the reference <span class="math inline">\(\kappa_2(A)u\)</span>. Marker shapes indicate termination status.</p>
+<p>The results are shown in <a href="#fig-residual-comparison" class="quarto-xref">Figure&nbsp;<span>13.3</span></a>.</p>
+<div id="fig-residual-comparison" class="quarto-float quarto-figure quarto-figure-center anchored" width="75%">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-residual-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../results/plots/residual_precision/residual-precision__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp64-vs-fp128__um-fp256.png" id="fig-residual-comparison" class="img-fluid figure-img" style="width:75.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig quarto-uncaptioned" id="fig-residual-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13.3
+</figcaption>
+</figure>
+</div>
+<section id="interpretation-2" class="level3">
+<h3 class="anchored" data-anchor-id="interpretation-2">Interpretation</h3>
+<p>Across the stable range, both configurations attain backward errors of order <span class="math inline">\(u\)</span>. Their forward errors separate as <span class="math inline">\(\kappa_2(A)\)</span> increases: with FP64 residuals, the error grows approximately in proportion to <span class="math inline">\(\kappa_2(A)\)</span>, whereas with FP128 residuals it remains near working precision. Beyond the factorization convergence region, both variants become irregular.</p>
+<section id="backward-error" class="level4">
+<h4 class="anchored" data-anchor-id="backward-error"><em>Backward error</em></h4>
+<p>Over the stable range <span class="math inline">\(10^2\leq\kappa_2(A)\leq10^7\)</span>, both backward-error curves are nearly independent of conditioning. FP64 residuals give errors between <span class="math inline">\(1.2\times10^{-17}\)</span> and <span class="math inline">\(4.2\times10^{-17}\)</span>, while FP128 residuals give approximately <span class="math inline">\(1.9\times10^{-18}\)</span> to <span class="math inline">\(6.7\times10^{-18}\)</span>. Both remain of order <span class="math inline">\(u\)</span>.</p>
+<p>FP128 residuals lower the observed values but do not change their theoretical order. This agrees with <span class="citation" data-cites="carsonAcceleratingSolutionLinear2018">Carson and Higham (<a href="#ref-carsonAcceleratingSolutionLinear2018" role="doc-biblioref">2018</a>, Corollary 4.2)</span>, which predicts a limiting normwise backward error of order <span class="math inline">\(u\)</span>, essentially independent of <span class="math inline">\(u_r\)</span>. Values below <span class="math inline">\(u\)</span> do not contradict this result, since the estimate specifies an order rather than a lower bound.</p>
+</section>
+<section id="forward-error-and-residual-precision" class="level4">
+<h4 class="anchored" data-anchor-id="forward-error-and-residual-precision"><em>Forward error and residual precision</em></h4>
+<p>Over the stable range <span class="math inline">\(10^2\leq\kappa_2(A)\leq10^7\)</span>, FP64 residuals produce forward errors from approximately <span class="math inline">\(1.5\times10^{-15}\)</span> to <span class="math inline">\(4.3\times10^{-11}\)</span>. Their log–log slope is <span class="math inline">\(0.90\)</span>, close to the predicted linear dependence on conditioning. With FP128 residuals, the error remains between approximately <span class="math inline">\(3.8\times10^{-17}\)</span> and <span class="math inline">\(8.1\times10^{-17}\)</span>, with no systematic dependence on <span class="math inline">\(\kappa_2(A)\)</span> and near working precision.</p>
+<p>This agrees with the limiting bound</p>
+<p><span class="math display">\[
+\frac{\lVert \widehat{x}-x\rVert_\infty}{\lVert x\rVert_\infty}
+\lesssim
+u+4pu_r\operatorname{cond}(A,x)
+\]</span></p>
+<p>of <span class="citation" data-cites="carsonAcceleratingSolutionLinear2018">Carson and Higham (<a href="#ref-carsonAcceleratingSolutionLinear2018" role="doc-biblioref">2018</a>, Corollary 3.3)</span>. When <span class="math inline">\(u_r=u\)</span>, the condition-dependent term gives an error of order <span class="math inline">\(\operatorname{cond}(A,x)u\)</span>. With sufficiently accurate residuals, this term becomes negligible and the limiting error is of order <span class="math inline">\(u\)</span>. Since <span class="math inline">\(\kappa_2(A)\)</span> is used as a proxy for <span class="math inline">\(\operatorname{cond}(A,x)\)</span>, the plotted <span class="math inline">\(\kappa_2(A)u\)</span> line represents the expected scaling rather than an exact bound.</p>
+<p>Only 3 of the 85 FP64-residual runs satisfy the stopping criterion; the remaining 82 reach the update limit. This mainly reflects the condition-dependent correction floor remaining above the <span class="math inline">\(u\)</span>-based tolerance, even after the forward error reaches its expected level. With FP128 residuals, 78 runs converge and 7 reach the update limit. Beyond the FP32 factorization convergence region, however, both variants become irregular. Higher residual precision improves attainable accuracy but cannot compensate for an insufficiently accurate factorization.</p>
+</section>
+</section>
 </section>
 <section id="direct-solve-comparison" class="level2" data-number="13.4">
 <h2 data-number="13.4" class="anchored" data-anchor-id="direct-solve-comparison"><span class="header-section-number">13.4</span> Direct-solve comparison</h2>
-<p>…</p>
+<p>This experiment compares mixed-precision iterative refinement with a direct solve. Iterative refinement uses FP32 factorization, FP64 working, and FP128 residual precision, with residual scaling enabled. The direct method performs a single LU factorization and solve in FP64. Both methods use the same matrices, right-hand sides, and condition-number grid. Errors are evaluated in FP256.</p>
+<p>The upper panel shows the final relative forward error; the lower panel shows the final normwise backward error. The dashed line marks <span class="math inline">\(\kappa_*=u_f^{-1}\)</span>, while the dotted lines mark <span class="math inline">\(u\)</span> and the reference <span class="math inline">\(\kappa_2(A)u_{\mathrm{direct}}\)</span>. Marker shapes indicate the termination status of iterative refinement.</p>
+<p>The results are shown in <a href="#fig-direct-comparison" class="quarto-xref">Figure&nbsp;<span>13.4</span></a>.</p>
+<div id="fig-direct-comparison" class="quarto-float quarto-figure quarto-figure-center anchored" width="75%">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-direct-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="../results/plots/direct_comparison/direct-solve-comparison__random-spd__n-100__random-normal__uf-fp32__u-fp64__ur-fp128__um-fp256__vs-direct-fp64.png" id="fig-direct-comparison" class="img-fluid figure-img" style="width:75.0%">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig quarto-uncaptioned" id="fig-direct-comparison-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13.4
+</figcaption>
+</figure>
+</div>
+<section id="interpretation-3" class="level3">
+<h3 class="anchored" data-anchor-id="interpretation-3">Interpretation</h3>
+<p>Within its convergence region, iterative refinement attains forward and backward errors near working precision. The direct FP64 solve remains backward stable across the full condition-number range, but its forward error increases with conditioning. Beyond the FP32 factorization limit, iterative refinement becomes irregular and loses its accuracy advantage.</p>
+<section id="forward-error-and-convergence-region" class="level4">
+<h4 class="anchored" data-anchor-id="forward-error-and-convergence-region"><em>Forward error and convergence region</em></h4>
+<p>Over the stable range <span class="math inline">\(10^2\leq\kappa_2(A)\leq10^7\)</span>, the IR forward error remains near working precision, between <span class="math inline">\(3.8\times10^{-17}\)</span> and <span class="math inline">\(8.1\times10^{-17}\)</span>, with no systematic dependence on <span class="math inline">\(\kappa_2(A)\)</span>. In contrast, the direct-LU error increases from <span class="math inline">\(2.5\times10^{-15}\)</span> to <span class="math inline">\(3.4\times10^{-11}\)</span>. Its fitted log–log slope is <span class="math inline">\(0.82\)</span>, broadly consistent with the expected <span class="math inline">\(O(\kappa_2(A)u)\)</span> behavior.</p>
+<p>Of the 85 IR runs, 78 converge and 7 reach the maximum of 20 updates. The first maximum-iteration result occurs at <span class="math inline">\(\kappa_2(A)\approx3.98\times10^7\)</span>, while the largest converged result occurs at approximately <span class="math inline">\(5.01\times10^7\)</span>. The transition is therefore not a strict condition-number boundary.</p>
+<p>Beyond this region, the IR errors become irregular and can exceed those of the direct solve. Accurate residuals and FP64 updates improve the solution only while the FP32 factors provide sufficiently accurate correction equations. The direct FP64 solve therefore becomes more reliable once the low-precision factorization limits IR convergence.</p>
+</section>
+<section id="backward-error-1" class="level4">
+<h4 class="anchored" data-anchor-id="backward-error-1"><em>Backward error</em></h4>
+<p>Over the stable range <span class="math inline">\(10^2\leq\kappa_2(A)\leq10^7\)</span>, both methods attain backward errors of order <span class="math inline">\(u\)</span>, with little dependence on conditioning. The IR error lies between <span class="math inline">\(1.9\times10^{-18}\)</span> and <span class="math inline">\(6.7\times10^{-18}\)</span>, while the direct-LU error lies mostly between <span class="math inline">\(1.0\times10^{-17}\)</span> and <span class="math inline">\(3.8\times10^{-17}\)</span>. IR therefore gives consistently smaller observed errors, although both methods are backward stable.</p>
+<p>The direct solve nevertheless exhibits condition-dependent forward error. A small backward error guarantees proximity to a nearby problem, but ill-conditioning can amplify this perturbation into a much larger forward error.</p>
+</section>
+</section>
 </section>
 <section id="sec-residual-scaling" class="level2" data-number="13.5">
 <h2 data-number="13.5" class="anchored" data-anchor-id="sec-residual-scaling"><span class="header-section-number">13.5</span> Low-precision limitations and residual scaling</h2>
-<p>…</p>
+<p>For the FP16–FP64–FP128 configuration, the initial convergence histories showed forward and backward errors stagnating well above the expected FP64 accuracy. We attributed this to information loss when the shrinking FP128 residual was converted to FP16 before the correction solve.</p>
+<p>The smallest positive normal and subnormal FP16 values are <span class="math inline">\(2^{-14}\approx6.10\times10^{-5}\)</span> and <span class="math inline">\(2^{-24}\approx5.96\times10^{-8}\)</span>, respectively. Under round-to-nearest, magnitudes below approximately <span class="math inline">\(2^{-25}\approx2.98\times10^{-8}\)</span> round to zero. Moreover, subnormal numbers have constant absolute spacing <span class="math inline">\(2^{-24}\)</span> and therefore increasingly poor relative resolution near zero. Residual conversion can consequently lose information both through rounding to zero and through severe quantization of surviving subnormal components.</p>
+<p>To test this hypothesis, we instrumented the residual conversion at each iteration. The diagnostics record the residual infinity norm, its smallest nonzero component, the number of nonzero components before conversion, and how many become zero when converted to FP16. This allows conversion loss to be compared directly with the observed stagnation.</p>
+<p>To reduce this loss, we normalize the residual before its conversion to FP16:</p>
+<p><span class="math display">\[
+\theta_k=\lVert r_k\rVert_\infty,
+\qquad
+\widehat r_k=\frac{r_k}{\theta_k},
+\qquad
+A\widehat d_k=\widehat r_k,
+\qquad
+d_k=\theta_k\widehat d_k.
+\]</span></p>
+<p>This is equivalent to the original correction equation in exact arithmetic, since <span class="math inline">\(Ad_k=\theta_kA\widehat d_k=\theta_k\widehat r_k=r_k\)</span>. Scaling therefore leaves the mathematical correction unchanged while using the FP16 range and resolution more effectively. The factor <span class="math inline">\(\theta_k\)</span> is reapplied after the low-precision solve in FP64.</p>
+<p>The experiment compares scaled and unscaled refinement for <span class="math inline">\(n=100\)</span> and <span class="math inline">\(\kappa_2(A)=500\)</span>, using the same matrix, right-hand side, and algorithmic settings. Residual scaling is the only varied option. In <a href="#fig-residual-scaling" class="quarto-xref">Figure&nbsp;<span>13.5</span></a>, the conversion diagnostics show the residual magnitudes and components lost during conversion, while the convergence histories show the corresponding forward errors, backward errors, and relative corrections.</p>
+<div id="fig-residual-scaling" class="quarto-layout-panel">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-residual-scaling-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: flex-start;">
+<img src="../results/plots/robustness/residual_scaling/residual-scaling__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp128__um-fp256__comparison__diagnostics.png" id="fig-scaling-comparison" class="img-fluid figure-img" style="width:100.0%">
+</div>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-residual-scaling-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;13.5: <img src="../results/plots/robustness/residual_scaling/error_histories/residual-scaling__random-spd__n-100__random-normal__uf-fp16__u-fp64__ur-fp128__um-fp256__error-history__errors.png" id="fig-scaling-error-histories" class="img-fluid figure-img" style="width:100.0%">
+</figcaption>
+</figure>
+</div>
+<section id="interpretation-4" class="level3">
+<h3 class="anchored" data-anchor-id="interpretation-4">Interpretation</h3>
+<p>The diagnostics confirm that information loss during unscaled FP16 residual conversion coincides with the onset of stagnation. Residual scaling eliminates the observed conversion loss, allowing the corrections and errors to continue decreasing until the method converges at FP64-level accuracy.</p>
+<section id="residual-conversion-diagnostics" class="level4">
+<h4 class="anchored" data-anchor-id="residual-conversion-diagnostics"><em>Residual-conversion diagnostics</em></h4>
+<p>In the unscaled run, the first conversion loss occurs at iteration 3, when the smallest residual component falls to <span class="math inline">\(1.74\times10^{-9}\)</span> and two components round to zero. From iterations 3–19, all 100 components remain nonzero before conversion, but between one and five components per iteration become zero in FP16.</p>
+<p>These counts measure only complete underflow to zero. They do not capture the additional information loss caused by distinct subnormal components being mapped to the same values on the coarse FP16 grid. The small number of zeroed components therefore understates the total effect of conversion.</p>
+<p>With scaling, the smallest normalized components remain approximately between <span class="math inline">\(5\times10^{-4}\)</span> and <span class="math inline">\(10^{-2}\)</span>, above the smallest FP16 normal value. Consequently, no component rounds to zero during any of the 13 updates, and the normalized residual avoids severe subnormal quantization.</p>
+</section>
+<section id="effect-on-convergence" class="level4">
+<h4 class="anchored" data-anchor-id="effect-on-convergence"><em>Effect on convergence</em></h4>
+<p>Without scaling, the forward error stagnates between approximately <span class="math inline">\(1.2\times10^{-7}\)</span> and <span class="math inline">\(2.3\times10^{-7}\)</span>, while the backward error remains between <span class="math inline">\(2.3\times10^{-9}\)</span> and <span class="math inline">\(3.5\times10^{-9}\)</span>. The relative correction similarly plateaus near <span class="math inline">\(2\times10^{-7}\)</span>, and the run reaches the maximum of 20 updates without converging.</p>
+<p>With scaling, all three quantities continue decreasing. The method converges after 13 updates with final forward error <span class="math inline">\(7.25\times10^{-17}\)</span>, backward error <span class="math inline">\(4.44\times10^{-18}\)</span>, and relative correction <span class="math inline">\(5.57\times10^{-17}\)</span>. Residual scaling therefore removes the observed stagnation and restores FP64-level accuracy.</p>
+<p>This remedy specifically addresses underflow and quantization when the residual is converted to FP16. It does not prevent overflow when the matrix or right-hand side is converted to FP16, nor does it extend the convergence range imposed by the accuracy of the FP16 factorization.</p>
 </section>
 </section>
-<section id="conclusion" class="level1" data-number="14">
-<h1 data-number="14"><span class="header-section-number">14</span> Conclusion</h1>
-<p>…</p>
+</section>
+<section id="conclusion" class="level2" data-number="13.6">
+<h2 data-number="13.6" class="anchored" data-anchor-id="conclusion"><span class="header-section-number">13.6</span> Conclusion</h2>
+<p>The experiments broadly confirm the expected behavior of three-precision iterative refinement. Within the convergence region determined by the low-precision factorization, refinement attains FP64-level backward accuracy. Residual precision determines the attainable forward accuracy: with FP64 residuals, where <span class="math inline">\(u_r=u\)</span>, the forward error grows with conditioning, whereas FP128 residuals keep it near working precision throughout the stable range.</p>
+<p>Compared with a direct FP64 LU solve, iterative refinement produces substantially smaller forward errors as conditioning increases, but becomes unreliable once the FP32 or FP16 factors no longer provide accurate correction equations. The FP16 scaling experiments further show that limited exponent range can cause residual-conversion loss and stagnation; infinity-norm scaling prevents this loss and restores convergence without changing the mathematical correction.</p>
+<p>The observed convergence in relatively few updates supports the potential of mixed-precision refinement to reduce computational cost on hardware with efficient low-precision arithmetic. Since the formats used here were partly software-emulated and execution times were not measured, performance gains remain to be evaluated experimentally on suitable hardware.</p>
+<p>The experiments were implemented within a configurable framework that supports further studies with different precision combinations, test problems, condition-number ranges, and algorithmic options.</p>
+</section>
 </section>
 <section id="references" class="level1 unnumbered">
 <h1 class="unnumbered">References</h1>
