@@ -223,3 +223,17 @@ The required result directories are created automatically as needed.
 ## Project Guide
 
 For a more detailed description of the implementation, experiment framework, setup, and extension workflow, see the project guide in `manual/`.
+
+## Generating the Report and the Project Guide
+
+The report can be generated with
+
+```bash
+make report
+```
+ 
+similarly, the manual with
+
+```bash
+make manual
+```
