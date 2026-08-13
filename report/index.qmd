@@ -77,7 +77,7 @@ $$
 \kappa_* = u_f^{-1}.
 $$
 
-This is not a strict boundary: the actual convergence rate also depends on LU growth, factorization quality, componentwise conditioning, and norm-dependent constants. @highamMixedPrecisionAlgorithms2022 [Section 7.1]
+This is not a strict boundary: the actual convergence rate also depends on LU growth, factorization quality, componentwise conditioning, and norm-dependent constants. @highamMixedPrecisionAlgorithms2022.
 
 Under suitable convergence conditions, refinement produces a normwise backward error of order $u$. The limiting relative forward error satisfies approximately
 
@@ -88,7 +88,7 @@ $$
 u+4pu_r\operatorname{cond}(A,x),
 $$
 
-where $p$ is the maximum number of nonzeros in a row of $[A\ b]$ @carsonAcceleratingSolutionLinear2018 [Corollary 3.3]. If $u_r=u$, the condition-dependent term generally limits the attainable forward accuracy. If $u_r$ is sufficiently smaller than $u$, this term becomes negligible and forward errors of order $u$ can be attained.
+ If $u_r=u$, the condition-dependent term generally limits the attainable forward accuracy. If $u_r$ is sufficiently smaller than $u$, this term becomes negligible and forward errors of order $u$ can be attained.  @carsonAcceleratingSolutionLinear2018 [Corollary 3.3].
 
 
 # Experimental setup
@@ -288,17 +288,13 @@ $$
 \kappa_*^{\mathrm{FP32}}=2^{24}=16{,}777{,}216,
 $$
 
-giving FP32 an $8{,}192$ times larger convergence scale. At comparable $\kappa/\kappa_*$, both formats converge rapidly below $\kappa_*$, more slowly near it, and slowly or not at all sufficiently far above it. With FP128 residuals, FP16 converges through $0.5\kappa_*$ and FP32 through $2\kappa_*$. This is consistent with $\kappa_*$ being an approximate reference rather than a fixed boundary.
-
-Because each format uses its own normalized condition-number grid, the comparison involves different matrices and absolute condition numbers. It therefore shows convergence relative to each format’s scale, not the effect of changing $u_f$ for the same system.
-
-
+At comparable $\kappa/\kappa_*$, both formats converge rapidly below $\kappa_*$, more slowly near it, and slowly or not at all sufficiently far above it. With FP128 residuals, FP16 converges through $0.5\kappa_*$ and FP32 through $2\kappa_*$. This is consistent with $\kappa_*$ being an approximate reference rather than a fixed boundary.
 
 #### *Alternative low-precision factorization formats*
 
 The bfloat16 and FP8 configurations were omitted to preserve the complete $2\times2$ FP16/FP32 design. They examine distinct low-precision formats and do not form a controlled pair.
 
-Bfloat16 has lower significand precision than FP16 but a larger exponent range. It converges through $0.1\kappa_*$ but not from $0.5\kappa_*$ upward; divergence is detected at $10\kappa_*$. On the normalized grid, it converges more slowly than FP16. Its larger range provides no visible advantage here because residual scaling prevents underflow and no factorization-input range failure occurs.
+Bfloat16 has lower significand precision than FP16 but a larger exponent range. It converges through $0.1\kappa_*$ but not from $0.5\kappa_*$ upward; divergence is detected at $10\kappa_*$. On the normalized grid, it converges more slowly than FP16. Its larger range provides no significant advantage here because residual scaling prevents underflow for FP16.
 
 FP8 is an extreme stress case. It converges at $\kappa=1$ and $0.1\kappa_*$ in 10 and 17 steps, respectively, but reaches the iteration limit from $0.5\kappa_*$ through $10\kappa_*$. At $100\kappa_*$, conversion to FP8 produces non-finite input and factorization stops before refinement. These results expose the limitations of very low factorization precision but are secondary to the isolated $u_f$ and $u_r$ comparisons.
 
@@ -339,7 +335,7 @@ This trend is consistent with the theoretical convergence factor being of order 
 
 Converged runs generally attain forward errors of order $u$. Increasing $\kappa_2(A)$ mainly raises the update count; final accuracy remains near working precision while refinement succeeds. The FP128 residual therefore avoids the condition-dependent floor observed with FP64 residuals.
 
-Near the transition, some runs retain small errors but reach the 20-update limit because termination depends on the relative correction, not the forward error. Beyond this region, errors increase or become irregular. Final error must therefore be interpreted together with termination status.
+Near the transition, some runs retain small errors but reach the 20-update limit because termination depends on the relative correction, not the forward error. Beyond this region, errors increase or become irregular. 
 
 #### *Omitted configurations*
 
@@ -379,7 +375,7 @@ $$
 u+4pu_r\operatorname{cond}(A,x)
 $$
 
-of @carsonAcceleratingSolutionLinear2018 [Corollary 3.3]. When $u_r=u$, the condition-dependent term gives an error of order $\operatorname{cond}(A,x)u$. With sufficiently accurate residuals, this term becomes negligible and the limiting error is of order $u$. Since $\kappa_2(A)$ is used as a proxy for $\operatorname{cond}(A,x)$, the plotted $\kappa_2(A)u$ line represents the expected scaling rather than an exact bound.
+of @carsonAcceleratingSolutionLinear2018 [Corollary 3.3]. When $u_r=u$, the condition-dependent term gives an error of order $\operatorname{cond}(A,x)u$. With sufficiently accurate residuals, this term becomes negligible and the limiting error is of order $u$. 
 
 Only 3 of the 85 FP64-residual runs satisfy the stopping criterion; the remaining 82 reach the update limit. This mainly reflects the condition-dependent correction floor remaining above the $u$-based tolerance, even after the forward error reaches its expected level. With FP128 residuals, 78 runs converge and 7 reach the update limit. Beyond the FP32 factorization convergence region, however, both variants become irregular. Higher residual precision improves attainable accuracy but cannot compensate for an insufficiently accurate factorization.
 
