@@ -8,7 +8,11 @@
 
 CMAKE  ?= cmake
 PYTHON ?= python3
+QUARTO ?= quarto
 PRESET ?= release
+
+REPORT_PROFILE ?= report
+MANUAL_PROFILE ?= manual
 
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 CODE_DIR  := $(REPO_ROOT)/code
@@ -26,6 +30,41 @@ $(error PRESET must be either 'release' or 'debug')
 endif
 
 BIN_DIR := $(BUILD_DIR)/bin
+
+STAMP_DIR        := $(BUILD_DIR)/make-stamps
+EXPERIMENTS_STAMP := $(STAMP_DIR)/experiments.stamp
+PLOTS_STAMP       := $(STAMP_DIR)/plots.stamp
+REPORT_STAMP      := $(STAMP_DIR)/report.stamp
+MANUAL_STAMP      := $(STAMP_DIR)/manual.stamp
+
+REPORT_INDEX := $(REPO_ROOT)/report/index.qmd
+MANUAL_INDEX := $(REPO_ROOT)/manual/index.qmd
+
+# Inputs used to decide whether generated results are still current.
+EXPERIMENT_INPUTS := \
+	$(wildcard $(CODE_DIR)/CMakeLists.txt) \
+	$(wildcard $(CODE_DIR)/experiments/*.cc) \
+	$(wildcard $(CODE_DIR)/include/*.hpp)
+
+PLOT_INPUTS := \
+	$(wildcard $(SCRIPT_DIR)/*.py) \
+	$(wildcard $(SCRIPT_DIR)/mpir_plotting/*.py)
+
+RAW_RESULTS := $(shell find "$(RAW_RESULTS_DIR)" -type f -name '*.csv' 2>/dev/null)
+GENERATED_PLOTS := $(shell find "$(PLOT_RESULTS_DIR)" -type f \
+	\( -name '*.png' -o -name '*.pdf' -o -name '*.svg' \) 2>/dev/null)
+
+REPORT_INPUTS := \
+	$(REPORT_INDEX) \
+	$(wildcard $(REPO_ROOT)/_quarto.yml) \
+	$(wildcard $(REPO_ROOT)/_quarto-$(REPORT_PROFILE).yml) \
+	$(wildcard $(REPO_ROOT)/references.bib) \
+	$(GENERATED_PLOTS)
+
+MANUAL_INPUTS := \
+	$(MANUAL_INDEX) \
+	$(wildcard $(REPO_ROOT)/_quarto.yml) \
+	$(wildcard $(REPO_ROOT)/_quarto-$(MANUAL_PROFILE).yml)
 
 
 # --------------------------------------------------------------------
@@ -66,7 +105,8 @@ EXP_RESIDUAL_SCALING := \
 	plot-residual-precision \
 	plot-residual-scaling-diagnostics \
 	plot-residual-scaling-errors \
-	reproduce
+	reproduce \
+	report manual
 
 
 # --------------------------------------------------------------------
@@ -91,6 +131,10 @@ help:
 	@echo
 	@echo "Plots:"
 	@echo "  make plots                         Generate all report plots"
+	@echo
+	@echo "Documents:"
+	@echo "  make report                        Reproduce results and render the report"
+	@echo "  make manual                        Render the manual"
 	@echo
 	@echo "Complete workflow:"
 	@echo "  make reproduce                     Build, run experiments, plot results"
@@ -148,6 +192,8 @@ experiments: \
 	experiment-direct-solve-comparison \
 	experiment-residual-precision \
 	experiment-residual-scaling
+	@mkdir -p "$(STAMP_DIR)"
+	@touch "$(EXPERIMENTS_STAMP)"
 
 
 # --------------------------------------------------------------------
@@ -199,11 +245,44 @@ plots: \
 	plot-residual-precision \
 	plot-residual-scaling-diagnostics \
 	plot-residual-scaling-errors
+	@mkdir -p "$(STAMP_DIR)"
+	@touch "$(PLOTS_STAMP)"
 
 
 # --------------------------------------------------------------------
 # Complete reproducibility workflow
 # --------------------------------------------------------------------
 
-reproduce: experiments
-	@$(MAKE) plots
+$(STAMP_DIR):
+	@mkdir -p "$@"
+
+# Re-run the experiments only when their C++ inputs have changed.
+$(EXPERIMENTS_STAMP): $(EXPERIMENT_INPUTS) | $(STAMP_DIR)
+	@$(MAKE) -f "$(firstword $(MAKEFILE_LIST))" experiments
+
+# Recreate the plots when experiments, raw CSV files, or plotting code change.
+$(PLOTS_STAMP): $(EXPERIMENTS_STAMP) $(RAW_RESULTS) $(PLOT_INPUTS) | $(STAMP_DIR)
+	@$(MAKE) -f "$(firstword $(MAKEFILE_LIST))" plots
+
+reproduce: $(PLOTS_STAMP)
+
+
+# --------------------------------------------------------------------
+# Documents
+# --------------------------------------------------------------------
+
+# Render the report when its source or generated plots change.
+$(REPORT_STAMP): $(REPORT_INPUTS) $(PLOTS_STAMP) | $(STAMP_DIR)
+	@echo "==> Rendering report"
+	@cd "$(REPO_ROOT)" && $(QUARTO) render --profile "$(REPORT_PROFILE)"
+	@touch "$@"
+
+report: $(REPORT_STAMP)
+
+# The manual depends only on its own source and Quarto configuration.
+$(MANUAL_STAMP): $(MANUAL_INPUTS) | $(STAMP_DIR)
+	@echo "==> Rendering manual"
+	@cd "$(REPO_ROOT)" && $(QUARTO) render --profile "$(MANUAL_PROFILE)"
+	@touch "$@"
+
+manual: $(MANUAL_STAMP)
