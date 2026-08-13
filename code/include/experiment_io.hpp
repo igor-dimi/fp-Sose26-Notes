@@ -5,10 +5,9 @@
  * @brief Shared descriptions and I/O utilities for numerical experiments.
  *
  * This header defines the common metadata used to identify experiments,
- * matrix families, problem dimensions, and precision configurations.
- *
- * It also provides filename generation, output-path construction, and common
- * CSV-writing utilities
+ * matrix families, problem dimensions, and precision configurations. It also
+ * provides stable textual identifiers, filename generation, output-directory
+ * construction, and common CSV-writing utilities.
  */
 
 #include <cstddef>
@@ -108,6 +107,9 @@ struct ExperimentDescription {
  * The returned identifiers are suitable for CSV metadata, directory names,
  * and automatically generated filenames.
  *
+ * @param kind Experiment kind to convert.
+ * @return Stable textual identifier.
+ *
  * @throws std::invalid_argument if kind does not contain a valid enumerator.
  */
 [[nodiscard]] inline std::string_view
@@ -140,6 +142,9 @@ to_string(ExperimentKind kind)
 /**
  * @brief Returns the stable textual identifier of a matrix family.
  *
+ * @param family Matrix family to convert.
+ * @return Stable textual identifier.
+ *
  * @throws std::invalid_argument if family does not contain a valid enumerator.
  */
 [[nodiscard]] inline std::string_view
@@ -166,6 +171,9 @@ to_string(MatrixFamily family)
  * The identifiers distinguish modes that construct a known solution from
  * the mode that generates the right-hand side directly.
  *
+ * @param mode Right-hand-side mode to convert.
+ * @return Stable textual identifier.
+ *
  * @throws std::invalid_argument if mode does not contain a valid enumerator.
  */
 [[nodiscard]] inline std::string_view
@@ -189,6 +197,9 @@ to_string(RightHandSideMode mode)
 /**
  * @brief Returns the stable textual identifier of an iterative-refinement
  *        termination status.
+ *
+ * @param status Termination status to convert.
+ * @return Stable textual identifier.
  *
  * @throws std::invalid_argument if status does not contain a valid enumerator.
  */
@@ -216,7 +227,7 @@ to_string(MixedIRStatus status)
 }
 
 /**
- * @brief Verifies that a string can be used as one filename component.
+ * @brief Applies the filename-component validation used by this header.
  *
  * Empty components and path separators are rejected. The function does not
  * modify or normalize the supplied component.
@@ -252,7 +263,8 @@ inline void validate_filename_component(
  * right-hand-side mode, and precision configuration. An optional tag can
  * distinguish variants or comparisons belonging to the same experiment.
  *
- * The generated filename has the form
+ * The generated filename has the form shown below. It is split across lines
+ * only for readability.
  *
  * @code
  * <experiment>__<matrix>__n-<dimension>__<rhs>
@@ -268,8 +280,8 @@ inline void validate_filename_component(
  *
  * @return Generated filename, including the `.csv` extension.
  *
- * @throws std::invalid_argument if a precision name or nonempty tag contains
- *         an invalid filename component.
+ * @throws std::invalid_argument if an enum value is invalid, or if a precision
+ *         name or nonempty tag is not a valid filename component.
  */
 [[nodiscard]] inline std::string make_experiment_filename(
     const ExperimentDescription& experiment,
@@ -436,6 +448,9 @@ inline void write_common_csv_header(std::ostream& out)
  *
  * The field is enclosed in double quotes. Embedded double quotes are
  * represented by two consecutive double quotes.
+ *
+ * @param out Output stream receiving the field.
+ * @param value Text to quote and escape.
  */
 inline void write_csv_text(
     std::ostream& out,
@@ -467,6 +482,9 @@ inline void write_csv_text(
  *
  * Run-level values, such as the termination status and final relative
  * correction, are repeated in every row of a convergence-history file.
+ * The effective correction tolerance is the configured positive tolerance,
+ * or the working-precision unit roundoff otherwise. Boolean values are written
+ * as 0 or 1.
  *
  * @tparam T_work Working-precision scalar type.
  *
@@ -478,6 +496,9 @@ inline void write_csv_text(
  * @param variant           Algorithm variant, such as `"scaled"` or
  *                          `"unscaled"`.
  * @param result            Result of the iterative-refinement run.
+ *
+ * @throws std::invalid_argument if an enum value is invalid.
+ * @note Numeric formatting follows the current state of out.
  */
 template<class T_work>
 void write_common_csv_fields(

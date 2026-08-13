@@ -9,7 +9,9 @@
  *
  *     kappa_* = 1 / u_f,
  *
- * where u_f is the unit roundoff of the factorization precision.
+ * where u_f is the unit roundoff of the factorization precision. The boundary
+ * is evaluated in double, and all generated condition numbers are returned as
+ * double values.
  */
 
 #include <algorithm>
@@ -69,6 +71,8 @@ template<class T_factor>
 
 /**
  * @brief Sorts condition numbers and removes exact duplicates.
+ *
+ * @param[in,out] kappas Condition numbers to normalize in place.
  */
 inline void sort_and_remove_duplicates(
     std::vector<double>& kappas)
@@ -100,7 +104,8 @@ inline void sort_and_remove_duplicates(
  *     0.5  kappa_*,
  *     kappa_*,
  *     2    kappa_*,
- *     10   kappa_*.
+ *     10   kappa_*,
+ *     100  kappa_*.
  *
  * Values below 1 are omitted because a matrix condition number cannot be
  * smaller than 1. The returned values are sorted and contain no duplicates.

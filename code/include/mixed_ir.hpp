@@ -1,5 +1,19 @@
 #pragma once
 
+/**
+ * @file mixed_ir.hpp
+ * @brief Three-precision LU iterative refinement for linear systems.
+ *
+ * This header implements mixed-precision iterative refinement for
+ *
+ *     A*x = b.
+ *
+ * The LU factorization and correction solves use T_factor, the system data
+ * and iterates use T_work, and residuals are computed in T_residual. The
+ * implementation also provides optional residual scaling, convergence and
+ * divergence diagnostics, and non-finite-value checks.
+ */
+
 #include <cstddef>
 #include <stdexcept>
 #include <vector>
@@ -13,12 +27,7 @@ namespace mpir {
 
 
 /**
- * @brief Describes why the mixed-precision iterative-refinement
- *        algorithm terminated.
- *
- * The status distinguishes successful convergence, exhaustion of the
- * iteration limit, non-finite factorization input, non-finite values
- * produced during the algorithm, and detected divergence.
+ * @brief Termination status of mixed-precision iterative refinement.
  */
 enum class MixedIRStatus {
     converged,                     ///< The convergence criterion was satisfied.
@@ -29,132 +38,126 @@ enum class MixedIRStatus {
 };
 
 
+/**
+ * @brief Configuration options for mixed-precision iterative refinement.
+ *
+ * @tparam T_work Working-precision scalar type.
+ */
 template<class T_work>
 struct MixedIROptions {
+    /// Maximum number of refinement updates.
     std::size_t max_iterations = 10;
 
-    // A value <= 0 means that the unit roundoff of T_work is used.
+    /// Relative-correction tolerance. A value <= 0 selects u_work.
     T_work rel_correction_tol = T_work(0);
 
-    // Enable detection of persistent growth in the correction norms.
+    /// Enable detection of persistent correction growth.
     bool detect_divergence = true;
 
-    // A correction-growth step is detected when
-    //
-    //     ||d_k||_2 >
-    //         divergence_growth_factor * ||d_{k-1}||_2.
-    //
-    // This value should be greater than 1.
+    /// Growth factor in ||d_k||_2 > factor * ||d_{k-1}||_2.
     T_work divergence_growth_factor = T_work(10);
 
-    // Number of consecutive correction-growth comparisons required
-    // before the algorithm terminates with status diverged.
-    //
-    // For example, 3 growth steps require 4 computed corrections.
+    /// Consecutive growth steps required to report divergence.
     std::size_t divergence_growth_steps = 3;
 
-    // Store x0, x1, x2, ... for convergence-history experiments.
-    // This can be disabled for large parameter sweeps to save memory.
+    /// Store x0, x1, ... for convergence-history experiments.
     bool store_iterates = false;
 
-    // Normalize each residual by its infinity norm before narrowing it
-    // to T_factor. The correction is rescaled in T_work after the
-    // triangular solve. Disabled by default so existing experiments
-    // preserve their previous behavior unless scaling is requested.
+    /// Scale residuals by their infinity norm before conversion to T_factor.
     bool scale_residual = false;
 
-    // Record componentwise residual-conversion diagnostics.
+    /// Record diagnostics for residual narrowing to T_factor.
     bool record_residual_diagnostics = false;
 };
 
 
+/**
+ * @brief Diagnostics for narrowing one residual to factor precision.
+ */
 struct ResidualDiagnostic {
-    // This record describes r_k = b - A*x_k.
+    /// Refinement index k for r_k = b - A*x_k.
     std::size_t iteration = 0;
 
-    // Statistics of the original residual in T_residual.
+    /// Infinity norm of the original residual.
     double residual_inf_norm = 0.0;
+
+    /// Smallest nonzero absolute component of the original residual.
     double min_nonzero_abs = 0.0;
+
+    /// Number of nonzero components in the original residual.
     std::size_t nonzero_components = 0;
 
-    // Number of nonzero components in the right-hand side presented
-    // for conversion that became exactly zero in T_factor.
+    /// Nonzero correction-RHS components rounded to zero in T_factor.
     std::size_t zeroed_by_conversion = 0;
 };
 
 
+/**
+ * @brief Result and optional diagnostics from mixed-precision refinement.
+ *
+ * @tparam T_work Working-precision scalar type.
+ */
 template<class T_work>
 struct MixedIRResult {
-    // Final approximate solution in working precision.
+    /// Final accepted iterate in working precision.
     hdnum::Vector<T_work> x;
 
-    // Number of refinement updates performed.
-    // The initial low-precision solve for x0 is not counted.
+    /// Number of completed refinement updates; the initial solve is excluded.
     std::size_t iterations = 0;
 
-    /**
-     * @brief Reason why the algorithm terminated.
-     */
+    /// Reason why the algorithm terminated.
     MixedIRStatus status = MixedIRStatus::max_iterations;
 
     /**
-     * @brief Returns whether iterative refinement converged successfully.
-     *
-     * Convergence is derived from the termination status, avoiding a
-     * separate Boolean state that could become inconsistent with it.
+     * @brief Returns true iff the termination status is converged.
      */
     [[nodiscard]] bool converged() const noexcept
     {
         return status == MixedIRStatus::converged;
     }
 
-    // Last computed value of
-    //
-    //     ||d_k||_2 / ||x_k||_2.
-    //
-    // Stored as double for diagnostics and CSV output.
+    /// Relative correction of the last completed update.
     double final_rel_correction = 0.0;
 
-    // One entry for every completed refinement update.
-    //
-    // rel_corrections[k] is the relative correction that
-    // produced x_{k+1} from x_k.
+    /// Relative correction ||d_k||_2 / ||x_k||_2 for each completed update.
     std::vector<double> rel_corrections;
 
-
-    // Absolute 2-norms of the computed refinement corrections.
-    //
-    // correction_norms[k] stores ||d_k||_2. If divergence is detected,
-    // the history includes the correction that triggered termination,
-    // even though that correction is not applied to the iterate.
+    /**
+     * @brief Absolute correction norms ||d_k||_2.
+     *
+     * A divergence-triggering correction is recorded even if it is not
+     * applied to the iterate.
+     */
     std::vector<double> correction_norms;
 
-    // Optional iterate history.
-    //
-    // iterates[0] = x0
-    // iterates[1] = x1
-    // ...
-    //
-    // If enabled:
-    //
-    //     iterates.size() == iterations + 1.
+    /**
+     * @brief Optional iterate history x0, x1, ... .
+     *
+     * When enabled, iterates.size() == iterations + 1.
+     */
     std::vector<hdnum::Vector<T_work>> iterates;
 
-    // Optional diagnostics for residual narrowing. When residual
-    // scaling is enabled, zeroed_by_conversion refers to conversion
-    // of the normalized residual; the magnitude statistics above
-    // still refer to the original residual.
+    /**
+     * @brief Optional residual-conversion diagnostics.
+     *
+     * With residual scaling, magnitude statistics refer to the original
+     * residual while zeroed_by_conversion refers to the normalized one.
+     */
     std::vector<ResidualDiagnostic> residual_diagnostics;
 };
 
 
-// Compute
-//
-//     ||d||_2 / ||x||_2
-//
-// using arithmetic in T.
-//
-// If ||x||_2 is zero, use 1 as the denominator.
+/**
+ * @brief Computes the relative correction ||d||_2 / ||x||_2 in type T.
+ *
+ * If ||x||_2 is zero, the denominator is replaced by 1.
+ *
+ * @param d Correction vector.
+ * @param x Current iterate.
+ * @return Relative correction in type T.
+ *
+ * @throws std::invalid_argument if d and x have different sizes.
+ */
 template<class T>
 T relative_correction_2(
     const hdnum::Vector<T>& d,
@@ -176,13 +179,20 @@ T relative_correction_2(
 }
 
 
-// Solve A*x = b using an already computed full-pivoting
-// LU factorization
-//
-//     P*A*Q = L*U.
-//
-// LU contains the combined L and U factors. The vectors p and q
-// contain the row and column permutation information.
+/**
+ * @brief Solves A*x = b from a full-pivoting LU factorization.
+ *
+ * Uses the factorization P*A*Q = L*U stored in HDNUM's combined LU form.
+ *
+ * @param LU Combined L/U factors.
+ * @param p Row-permutation data.
+ * @param q Column-permutation data.
+ * @param b Right-hand side.
+ * @return Solution vector x.
+ *
+ * @throws std::invalid_argument if matrix, vector, or permutation sizes
+ *         are incompatible.
+ */
 template<class T>
 hdnum::Vector<T>
 solve_with_lu_fullpivot(
@@ -225,14 +235,20 @@ solve_with_lu_fullpivot(
 }
 
 
-// Compute
-//
-//     r = b - A*x
-//
-// in residual precision T_residual.
-//
-// A, b, and x are stored in working precision and are converted
-// to residual precision before the matrix-vector product.
+/**
+ * @brief Computes r = b - A*x in residual precision.
+ *
+ * A, b, and x are converted from T_work to T_residual before evaluation.
+ *
+ * @tparam T_residual Residual-precision scalar type.
+ * @tparam T_work Working-precision scalar type.
+ * @param A System matrix.
+ * @param b Right-hand side.
+ * @param x Current iterate.
+ * @return Residual in T_residual.
+ *
+ * @throws std::invalid_argument if dimensions are incompatible.
+ */
 template<class T_residual, class T_work>
 hdnum::Vector<T_residual>
 compute_residual(
@@ -266,13 +282,11 @@ compute_residual(
 }
 
 /**
- * @brief Checks whether every entry of a vector is finite.
+ * @brief Checks whether every vector entry is finite.
  *
- * For ordinary IEEE types and CPFloat, values are converted to double
- * and tested for NaN or infinity.
- *
- * HDNUM's GMP-backed FP type does not represent NaN or infinity, so
- * every successfully constructed FP value is finite.
+ * IEEE-like and CPFloat values are tested after conversion to double.
+ * GMP-backed HDNUM FP values are treated as finite because the type has
+ * no NaN or infinity representation.
  */
 template<class T>
 bool all_finite(const hdnum::Vector<T>& v)
@@ -292,7 +306,9 @@ bool all_finite(const hdnum::Vector<T>& v)
 
 
 /**
- * @brief Checks whether every entry of a dense matrix is finite.
+ * @brief Checks whether every dense-matrix entry is finite.
+ *
+ * GMP-backed HDNUM FP values are treated as finite.
  */
 template<class T>
 bool all_finite(const hdnum::DenseMatrix<T>& A)
@@ -317,8 +333,7 @@ bool all_finite(const hdnum::DenseMatrix<T>& A)
 /**
  * @brief Checks whether a scalar value is finite.
  *
- * GMP-backed FP values cannot represent NaN or infinity, so every
- * successfully constructed value of that type is treated as finite.
+ * GMP-backed HDNUM FP values are treated as finite.
  */
 template<class T>
 bool scalar_is_finite(const T& value)
@@ -332,16 +347,32 @@ bool scalar_is_finite(const T& value)
     }
 }
 
-// Three-precision iterative refinement.
-//
-// T_factor:
-//     precision used for LU factorization and correction solves.
-//
-// T_work:
-//     precision in which A, b, and the iterates are stored.
-//
-// T_residual:
-//     precision used to compute the residual.
+/**
+ * @brief Solves A*x = b by three-precision LU iterative refinement.
+ *
+ * The algorithm computes a full-pivoting LU factorization in T_factor,
+ * stores and updates the solution in T_work, and evaluates residuals in
+ * T_residual. The same LU factors are reused for all correction solves.
+ *
+ * Refinement stops when
+ *
+ *     ||d_k||_2 / ||x_k||_2 < tol,
+ *
+ * where tol defaults to the unit roundoff of T_work, or when another
+ * termination condition is reached. Optional residual scaling normalizes
+ * r_k before conversion to T_factor and rescales the correction in T_work.
+ *
+ * @tparam T_factor Factorization and correction-solve scalar type.
+ * @tparam T_work System-data, iterate, and update scalar type.
+ * @tparam T_residual Residual-computation scalar type.
+ * @param A Square nonempty system matrix in working precision.
+ * @param b Right-hand side in working precision.
+ * @param options Algorithm and diagnostic options.
+ * @return Final solution, termination status, and requested diagnostics.
+ *
+ * @throws std::invalid_argument if A is empty, nonsquare, or incompatible
+ *         with b.
+ */
 template<class T_factor, class T_work, class T_residual>
 MixedIRResult<T_work>
 mixed_ir(
@@ -378,8 +409,7 @@ mixed_ir(
     convert(A_f, A);
     convert(b_f, b);
 
-    // The conversion may overflow if A or b exceeds the numerical
-    // range of T_factor. In that case, do not attempt LU factorization.
+    // Conversion to T_factor may overflow; reject non-finite input.
     if (!all_finite(A_f) || !all_finite(b_f)) {
         result.status =
             MixedIRStatus::factorization_input_non_finite;
@@ -402,8 +432,7 @@ mixed_ir(
     hdnum::Vector<T_factor> x0_f =
         solve_with_lu_fullpivot(A_f, p, q, b_f);
 
-    // LU factorization or the triangular solve may produce NaN or Inf,
-    // even when the original factorization inputs were finite.
+    // Reject non-finite values produced by factorization or the initial solve.
     if (!all_finite(x0_f)) {
         result.status = MixedIRStatus::non_finite;
         return result;
@@ -438,7 +467,7 @@ mixed_ir(
     }
 
 
-    // Local state used to detect persistent growth in correction norms
+    // State for persistent correction-growth detection.
     T_work previous_correction_norm = T_work(0);
     bool have_previous_correction_norm = false;
     std::size_t consecutive_growth_steps = 0;
@@ -461,16 +490,14 @@ mixed_ir(
                 result.x
             );
 
-        // Useful when T_residual is an IEEE-like type.
+        // Reject a non-finite residual.
         if (!all_finite(r_r)) {
             result.status = MixedIRStatus::non_finite;
             return result;
         }
 
 
-        // The infinity norm is needed either as the scaling factor or
-        // as a recorded diagnostic. The remaining statistics are only
-        // collected when diagnostics are enabled.
+        // Compute the scaling norm and, if requested, residual statistics.
         T_residual residual_inf_norm_r = T_residual(0);
         T_residual min_nonzero_abs_r = T_residual(0);
         std::size_t nonzero_components = 0;
@@ -498,12 +525,7 @@ mixed_ir(
             }
         }
 
-        // Form the right-hand side that will be narrowed to T_factor.
-        // If scaling is enabled and r_k is nonzero, use
-        //
-        //     r_hat_k = r_k / ||r_k||_infinity.
-        //
-        // Every component of r_hat_k then has magnitude at most one.
+        // If enabled, normalize r_k so every component has magnitude <= 1.
         hdnum::Vector<T_residual> correction_rhs_r(r_r);
         T_residual residual_scale_r = T_residual(1);
         bool residual_was_scaled = false;
@@ -519,14 +541,11 @@ mixed_ir(
             }
         }
 
-        // The triangular correction solve uses T_factor LU
-        // factors, so its right-hand side must be in T_factor.
+        // Narrow the correction right-hand side to factor precision.
         hdnum::Vector<T_factor> r_f(n);
         convert(r_f, correction_rhs_r);
 
-        // Narrowing the normalized residual should not overflow because
-        // its components have magnitude at most one. Keep this check for
-        // the unscaled path and as a defensive check for custom types.
+        // Check both the unscaled path and custom scalar types defensively.
         if (!all_finite(r_f)) {
             result.status = MixedIRStatus::non_finite;
             return result;
@@ -560,12 +579,7 @@ mixed_ir(
             );
         }
 
-        // Solve the correction system using the existing low-precision
-        // LU factors. With scaling enabled this computes
-        //
-        //     A*d_hat_k = r_k / theta_k;
-        //
-        // otherwise it computes A*d_k = r_k directly.
+        // Reuse the low-precision LU factors for the correction solve.
         hdnum::Vector<T_factor> d_f =
             solve_with_lu_fullpivot(
                 A_f,
@@ -575,8 +589,7 @@ mixed_ir(
             );
 
         
-        // The low-precision triangular solve may produce NaN or Inf,
-        // for example because of invalid LU factors or a zero pivot.
+        // Reject a non-finite correction from the triangular solve.
         if (!all_finite(d_f)) {
             result.status = MixedIRStatus::non_finite;
             return result;
@@ -586,20 +599,13 @@ mixed_ir(
         hdnum::Vector<T_work> d_w(n);
         convert(d_w, d_f);
 
-        // This is mostly defensive because T_work is normally at least as
-        // capable as T_factor.
+        // Defensively validate the converted working-precision correction.
         if (!all_finite(d_w)) {
             result.status = MixedIRStatus::non_finite;
             return result;
         }
 
-        // The normalized solve produced d_hat_k satisfying
-        //
-        //     A*d_hat_k = r_k / theta_k.
-        //
-        // Recover d_k = theta_k*d_hat_k in working precision. The small
-        // absolute scale theta_k is therefore never represented in
-        // T_factor.
+        // Undo residual scaling in T_work: d_k = theta_k * d_hat_k.
         if (residual_was_scaled) {
             const T_work residual_scale_w =
                 scalar_cast<T_work>(residual_scale_r);
@@ -619,10 +625,7 @@ mixed_ir(
             }
         }
 
-        // Compute the absolute correction norm
-        //
-        //     ||d_k||_2
-        // used by the divergence detector
+        // Compute ||d_k||_2 for divergence detection.
         const T_work correction_norm_w = 
             hdnum::norm(d_w);
 
@@ -632,22 +635,20 @@ mixed_ir(
         );
 
 
-        // Detect overflow during the norm calculation or conversion
-        // to the diagnostic double representation.
+        // Reject overflow in the norm or its diagnostic conversion.
         if (!std::isfinite(correction_norm)) {
             result.status = MixedIRStatus::non_finite;
             return result;
         }
 
 
-        // Record every finite computed correction norm. This includes a
-        // correction that may subsequently trigger divergence detection.
+        // Record the norm before divergence detection.
         result.correction_norms.push_back(
             correction_norm
         );
 
 
-        // Detect persistent excessive growth in the correction norms.
+        // Stop after the configured number of consecutive growth steps.
         if (options.detect_divergence) {
             if (have_previous_correction_norm) {
                 const bool excessive_growth =
@@ -690,9 +691,7 @@ mixed_ir(
                 result.x
             );
         
-        // Although d_w and result.x contain finite entries, the norm
-        // calculation itself can overflow, for example while forming
-        // sums of squares.
+        // The norm calculation can overflow even for finite entries.
         if (!scalar_is_finite(rel_correction_w)) {
             result.status = MixedIRStatus::non_finite;
             return result;
@@ -715,8 +714,7 @@ mixed_ir(
             x_next[i] += d_w[i];
         }
 
-        // Two finite values can produce infinity when their sum exceeds the
-        // range of T_work. Only accept the update if every entry is finite.
+        // Accept the candidate update only if every entry remains finite.
         if (!all_finite(x_next)) {
             result.status = MixedIRStatus::non_finite;
             return result;
@@ -725,7 +723,7 @@ mixed_ir(
         // The update was successful, so commit x_{k + 1}
         result.x = x_next;
 
-        // record diagnostics only for a successfully completed update
+        // Record diagnostics only after a successful update.
         result.rel_corrections.push_back(
             rel_correction
         );

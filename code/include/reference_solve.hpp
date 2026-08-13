@@ -1,5 +1,15 @@
 #pragma once
 
+/**
+ * @file reference_solve.hpp
+ * @brief Direct full-pivoting LU solves in a selected reference precision.
+ *
+ * This header provides the direct solve used to construct reference solutions
+ * for the numerical experiments. The coefficient matrix and right-hand side
+ * are stored in T_data, converted to T_reference, and then factorized and
+ * solved entirely in T_reference. The input system is not modified.
+ */
+
 #include <cstddef>
 #include <stdexcept>
 
@@ -15,6 +25,10 @@ namespace mpir {
  * factorization, permutations, and triangular solves in `T_reference`.
  * The inputs are unchanged. Use equal template types for a direct solve in the
  * data precision.
+ *
+ * The routine solves the supplied stored system; increasing T_reference does
+ * not recover information already lost when `A` or `b` were stored in
+ * `T_data`.
  *
  * @tparam T_reference Arithmetic and result precision.
  * @tparam T_data Input storage precision.

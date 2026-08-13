@@ -1,5 +1,16 @@
 #pragma once
 
+/**
+ * @file test_matrices.hpp
+ * @brief Construction of reproducible linear systems for numerical experiments.
+ *
+ * This header provides a common interface for generating the structured
+ * rotated-SPD, random-SPD, and random-SVD test problems used by the project.
+ * Matrices and right-hand sides are stored in T_data, while reference solutions
+ * are computed by solving the stored system in T_reference. Right-hand-side
+ * construction and random seeds are controlled through TestProblemOptions.
+ */
+
 #include <cmath>
 #include <cstddef>
 #include <random>
@@ -14,44 +25,81 @@
 namespace mpir {
 
 
+/**
+ * @brief Available constructions of the right-hand side.
+ */
 enum class RightHandSideMode {
-    ones_solution,
-    random_sign_solution,
-    random_normal_rhs
+    ones_solution,        ///< Form b = A*x with x = (1, ..., 1).
+    random_sign_solution, ///< Form b = A*x with reproducible entries x_i in {-1, 1}.
+    random_normal_rhs     ///< Draw the entries of b from the standard normal distribution.
 };
 
 
+/**
+ * @brief Configuration for reproducible test-problem generation.
+ */
 struct TestProblemOptions {
+    /// Method used to construct the right-hand side.
     RightHandSideMode rhs_mode =
         RightHandSideMode::ones_solution;
 
+    /// Seed for the first random orthogonal factor.
     unsigned int matrix_seed_u = 42;
+
+    /// Seed for the second random orthogonal factor of random-SVD matrices.
     unsigned int matrix_seed_v = 137;
+
+    /// Seed for a random solution or right-hand side.
     unsigned int vector_seed = 2718;
 
+    /// Rotation angle, in radians, for the structured rotated-SPD matrix.
     double rotation_theta = 0.3;
 };
 
 
+/**
+ * @brief Complete linear system and its reference solution.
+ *
+ * @tparam T_data Storage precision of the matrix and right-hand side.
+ * @tparam T_reference Arithmetic and storage precision of the reference
+ *         solution.
+ */
 template<class T_data, class T_reference = T_data>
 struct LinearSystem {
+    /// Coefficient matrix in data precision.
     hdnum::DenseMatrix<T_data> A;
+
+    /// Right-hand side in data precision.
     hdnum::Vector<T_data> b;
+
+    /// Reference solution of the stored system A*x = b.
     hdnum::Vector<T_reference> x_true;
+
+    /// Requested condition number; not recomputed after storage rounding.
     double kappa;
 };
 
 
-// Complete a problem after its matrix A has been generated.
-//
-// Depending on options.rhs_mode, this function either:
-//
-//   1. constructs x = (1,...,1) and forms b = A*x,
-//   2. constructs a random-sign x and forms b = A*x, or
-//   3. constructs a normally distributed random b.
-//
-// In every case, x_true is computed by solving the stored system
-// A*x = b in T_reference.
+/**
+ * @brief Completes a test problem after its coefficient matrix is generated.
+ *
+ * Depending on TestProblemOptions::rhs_mode, this function forms b from an
+ * all-ones or random-sign solution, or draws b directly from a standard normal
+ * distribution. It then recomputes the solution of the stored system in
+ * T_reference, thereby accounting for rounding in A and b.
+ *
+ * @tparam T_data Storage precision of the matrix and right-hand side.
+ * @tparam T_reference Arithmetic and result precision of the reference solve.
+ * @param A Nonempty square coefficient matrix. The matrix is moved into the
+ *        returned system.
+ * @param kappa Requested condition number stored as problem metadata.
+ * @param options Right-hand-side mode and random seeds.
+ * @return Complete test system containing A, b, the reference solution, and
+ *         the requested condition number.
+ *
+ * @throws std::invalid_argument If the reference solve rejects the stored
+ *         system as empty, nonsquare, or dimensionally incompatible.
+ */
 template<class T_data, class T_reference>
 LinearSystem<T_data, T_reference>
 complete_problem(
@@ -110,7 +158,23 @@ complete_problem(
 }
 
 
-// Structured block-rotated SPD problem.
+/**
+ * @brief Constructs a structured symmetric positive-definite test problem.
+ *
+ * The eigenvalues are logarithmically spaced from kappa^(-1/2) to
+ * kappa^(1/2). Adjacent pairs are mixed by equal planar rotations, producing a
+ * block-diagonal SPD matrix with the requested spectral condition number.
+ *
+ * @tparam T_data Storage precision of the matrix and right-hand side.
+ * @tparam T_reference Arithmetic and result precision of the reference solve.
+ * @param n Matrix dimension.
+ * @param kappa Requested spectral condition number.
+ * @param options Right-hand-side settings and rotation angle.
+ * @return Complete structured rotated-SPD test system.
+ *
+ * @pre kappa > 0.
+ * @throws std::invalid_argument If n is zero during the reference solve.
+ */
 template<class T_data, class T_reference = T_data>
 LinearSystem<T_data, T_reference>
 make_rotated_spd_problem(
@@ -131,8 +195,7 @@ make_rotated_spd_problem(
                 static_cast<double>(i) /
                 static_cast<double>(n - 1);
 
-            // Eigenvalues from kappa^(-1/2)
-            // to kappa^(+1/2).
+            // Center the spectrum geometrically around one.
             lambda[i] =
                 std::pow(kappa, alpha - 0.5);
         }
@@ -147,6 +210,7 @@ make_rotated_spd_problem(
             const double a = lambda[i];
             const double d = lambda[i + 1];
 
+            // Form R*diag(a,d)*R^T for the current 2-by-2 block.
             const double A00 =
                 c * c * a + s * s * d;
 
@@ -182,8 +246,22 @@ make_rotated_spd_problem(
 }
 
 
-// Dense random SPD problem generated with the supervisor's
-// randspd implementation.
+/**
+ * @brief Constructs a dense random symmetric positive-definite test problem.
+ *
+ * The matrix is generated by hdnum::randspd with logarithmically spaced
+ * eigenvalues and the requested spectral condition number.
+ *
+ * @tparam T_data Storage precision of the matrix and right-hand side.
+ * @tparam T_reference Arithmetic and result precision of the reference solve.
+ * @param n Matrix dimension.
+ * @param kappa Requested spectral condition number.
+ * @param options Right-hand-side settings and matrix seed.
+ * @return Complete random-SPD test system.
+ *
+ * @pre n > 0 and kappa > 0.
+ * @note Invalid generator inputs are reported by hdnum::randspd.
+ */
 template<class T_data, class T_reference = T_data>
 LinearSystem<T_data, T_reference>
 make_random_spd_problem(
@@ -207,8 +285,22 @@ make_random_spd_problem(
 }
 
 
-// Dense random general matrix generated with the supervisor's
-// randsvd implementation.
+/**
+ * @brief Constructs a dense random general test problem by SVD.
+ *
+ * The matrix is generated by hdnum::randsvd with logarithmically spaced
+ * singular values and the requested 2-norm condition number.
+ *
+ * @tparam T_data Storage precision of the matrix and right-hand side.
+ * @tparam T_reference Arithmetic and result precision of the reference solve.
+ * @param n Matrix dimension.
+ * @param kappa Requested 2-norm condition number.
+ * @param options Right-hand-side settings and seeds for both orthogonal factors.
+ * @return Complete random-SVD test system.
+ *
+ * @pre n > 0 and kappa > 0.
+ * @note Invalid generator inputs are reported by hdnum::randsvd.
+ */
 template<class T_data, class T_reference = T_data>
 LinearSystem<T_data, T_reference>
 make_random_svd_problem(
