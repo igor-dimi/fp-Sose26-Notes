@@ -26,3 +26,5 @@ build/
 notes/conversions_files/figure-latex/mermaid-figure-1.png
 
 __pycache__
+
+_output/

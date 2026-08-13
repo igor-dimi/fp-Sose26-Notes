@@ -24,6 +24,10 @@ book:
       chapters:
         - report/index.qmd
 
+    - part: "Project Guide"
+      chapters:
+        - manual/index.qmd
+
   appendices:
     - appendices/gdb.qmd
 

@@ -1,0 +1,1338 @@
+---
+title: "Mixed-Precision Iterative Refinement: Project Guide"
+author: "Igor Dimitrov"
+---
+
+# Overview
+
+This repository contains the implementation and experimental framework for three-precision LU-based iterative refinement.
+
+The project uses HDNUM for numerical linear algebra, CPFloat for simulated low-precision arithmetic, and GMP for high-precision arithmetic.
+
+This guide describes the repository structure, setup and build process, implementation components, experiments, plotting workflow, and how to extend the framework with a new experiment.
+
+# Repository Structure
+
+The repository is organized as follows:
+
+```text
+.
+├── code
+│   ├── CMakeLists.txt
+│   ├── CMakePresets.json
+│   ├── experiments
+│   ├── external
+│   ├── include
+│   ├── scripts
+│   └── tests
+├── Makefile
+├── manual
+├── report
+├── results
+│   ├── plots
+│   └── raw
+└── working_notes
+```
+
+The main directories are:
+
+* `code/`: C++ implementation, experiments, tests, and plotting scripts.
+  * `include/`: our mixed iterative refinement implementation and auxiliary headers.
+  * `experiments/`: our experimental drivers used to generate the report data.
+  * `scripts/`: our Python scripts and shared utilities for plotting the results.
+  * `tests/`: correctness and sanity tests.
+  * `external/`: external dependencies, in particular the HDNUM submodule.
+  * `CMakeLists.txt` and `CMakePresets.json`: CMake build configuration.
+* `results/`: generated experimental output. Raw CSV files are stored in `results/raw/` and generated figures in `results/plots/`.
+* `report/`: final project report.
+* `manual/`: this project guide.
+* `working_notes/`: detailed development notes and intermediate documentation.
+* `appendices/`: supplementary material.
+* `Makefile`: convenience interface for building, testing, running experiments, and generating plots.
+
+The most important folders are `include`, `experiments`, and `scripts`. These contain our implementations, experiments and plotting scripts.
+
+# Setup and Dependencies
+
+The project depends on HDNUM, CPFloat, GMP, and a small set of Python packages for plotting.
+HDNUM is included as a Git submodule; CPFloat is built inside the HDNUM directory;
+GMP is provided by the system.
+
+## Prerequisites
+
+The following tools are required:
+
+* a C++17-compatible compiler,
+* CMake 3.20 or newer,
+* Ninja,
+* Git,
+* GNU Make,
+* GMP with C++ support (`gmp` and `gmpxx`),
+* Python 3 for plotting.
+
+Additional Python packages are listed in the plotting setup below.
+
+## Clone and Initialize the Repository
+
+Clone the repository together with its Git submodules:
+
+```bash
+git clone --recurse-submodules <repository-url>
+cd <repository>
+```
+
+HDNUM is included as a submodule under:
+
+```text
+code/external/hdnum/
+```
+
+If the repository was cloned without `--recurse-submodules`, initialize it afterwards with:
+
+```bash
+git submodule update --init --recursive
+```
+
+CPFloat is not part of the HDNUM submodule and is set up separately in the next step.
+
+## HDNUM
+
+HDNUM is a header-only C++ library and requires no separate build or installation.
+
+It is included in this repository as a Git submodule at:
+
+```text
+code/external/hdnum/
+```
+
+After the submodule has been initialized, the required header is available as:
+
+```text
+code/external/hdnum/hdnum.hh
+```
+
+The project CMake configuration adds this directory to the include path automatically. CPFloat support requires an additional setup inside the HDNUM directory, described next.
+
+## CPFloat
+
+CPFloat provides the simulated low-precision formats used by the project. It must be cloned inside the HDNUM directory and built separately.
+
+From the repository root:
+
+```bash
+cd code/external/hdnum
+git clone https://github.com/north-numerical-computing/cpfloat.git
+cd cpfloat
+make lib
+```
+
+The project expects the resulting files at:
+
+```text
+code/external/hdnum/cpfloat/build/include/
+code/external/hdnum/cpfloat/build/lib/libcpfloat.a
+```
+
+These paths are used directly by the CMake configuration.
+
+## CPFloat
+
+CPFloat provides the simulated low-precision formats used by the project. It must be cloned inside the HDNUM directory and built separately.
+
+From the repository root:
+
+```bash
+cd code/external/hdnum
+git clone https://github.com/north-numerical-computing/cpfloat.git
+cd cpfloat
+make lib
+```
+
+The project expects the resulting files at:
+
+```text
+code/external/hdnum/cpfloat/build/include/
+code/external/hdnum/cpfloat/build/lib/libcpfloat.a
+```
+
+These paths are used directly by the CMake configuration.
+
+## GMP
+
+GMP provides the high-precision number types used by HDNUM. The project links against both `gmp` and `gmpxx`.
+
+On Debian/Ubuntu systems, install the development package with:
+
+```bash
+sudo apt install libgmp-dev
+```
+
+GMP is installed system-wide; no repository-local build is required.
+
+
+## Python Dependencies
+
+The plotting scripts require Python 3.10 or newer and the following packages:
+
+* NumPy
+* pandas
+* Matplotlib
+
+They can be installed with:
+
+```bash
+python3 -m pip install numpy pandas matplotlib
+```
+
+Optionally, use a virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install numpy pandas matplotlib
+```
+
+The shared `mpir_plotting` package under `code/scripts/` requires no separate installation; it is imported directly by the plotting scripts.
+
+
+
+# Building the Project
+
+The C++ project is configured with CMake and built using the presets defined in `code/CMakePresets.json`.
+
+
+## Release Build
+
+From the repository root, configure and build the release preset with:
+
+```bash
+cd code
+cmake --preset release
+cmake --build --preset release
+cd ..
+```
+
+The build files are written to:
+
+```text
+build/fp-release/
+```
+
+and executables to:
+
+```text
+build/fp-release/bin/
+```
+
+The repository-level `Makefile` provides the equivalent convenience command:
+
+```bash
+make build
+```
+
+which uses the release preset by default.
+
+## Debug Build
+
+To configure and build the debug preset:
+
+```bash
+cd code
+cmake --preset debug
+cmake --build --preset debug
+cd ..
+```
+
+The build files are written to:
+
+```text
+build/fp-debug/
+```
+
+and executables to:
+
+```text
+build/fp-debug/bin/
+```
+
+The equivalent convenience command is:
+
+```bash
+make PRESET=debug build
+```
+
+## Running the Tests
+
+After building, run the test suite with CTest:
+
+```bash
+cd code
+ctest --preset release
+cd ..
+```
+
+For the debug build:
+
+```bash
+cd code
+ctest --preset debug
+cd ..
+```
+
+The repository-level `Makefile` can build and run the tests directly:
+
+```bash
+make tests
+```
+
+or, for debug:
+
+```bash
+make PRESET=debug tests
+```
+
+CTest reports failed tests with their output.
+
+
+# Implementation Overview
+
+The core implementation is header-only and located in `code/include/`. The following sections summarize the purpose of the main algorithm and helper headers.
+
+
+## `mixed_ir.hpp`
+
+`mixed_ir.hpp` contains the core three-precision iterative-refinement algorithm for solving (Ax=b). The precision roles are represented by three template parameters:
+
+* `T_factor`: LU factorization and correction solves,
+* `T_work`: solution storage and updates,
+* `T_residual`: residual computation.
+
+The main interface is `mixed_ir<T_factor, T_work, T_residual>()`. It performs a full-pivoting LU factorization in factorization precision, computes an initial solution, and repeatedly computes a high-precision residual, solves for a low-precision correction, and updates the solution in working precision.
+
+`MixedIROptions<T_work>` controls the iteration limit, relative-correction tolerance, divergence detection, residual scaling, and optional diagnostic recording. If no positive tolerance is specified, the unit roundoff of `T_work` is used.
+
+`MixedIRResult<T_work>` stores the computed solution, termination status, iteration count, correction history, and optional iterates and residual-conversion diagnostics. The implementation also detects non-finite values and rapid divergence. Optional residual scaling reduces information loss when the residual is converted to a low factorization precision.
+
+
+
+## `hdnum_conversions.hpp`
+
+`hdnum_conversions.hpp` provides conversions between the numerical types used by the project, including native C++ types, CPFloat types, and GMP-backed HDNUM types.
+
+The central function is `scalar_cast<T_out>()`. It uses a direct constructor when the source and destination types support one. For GMP-backed inputs without a direct conversion, it falls back to conversion through `double`; this fallback is therefore limited by the range and precision of `double`.
+
+The header also provides element-wise `convert()` functions for `hdnum::Vector` and `hdnum::DenseMatrix`. The destination container must already have the correct dimensions. Convenience functions `convert_vector<T_out>()` and `convert_matrix<T_out>()` allocate the destination container and return the converted result.
+
+
+## `unit_roundoff.hpp`
+
+`unit_roundoff.hpp` provides compile-time unit-roundoff values for the numerical types used by the project.
+
+The `unit_roundoff_traits<T>` template handles native `FP32` and `FP64`, CPFloat types `CPFloat<m,e>`, and GMP-backed `FP<m>` types. For the parameterized formats, the unit roundoff is computed as $u=2^{-m}$. Unsupported scalar types produce a compile-time error.
+
+The convenience function
+
+```cpp
+default_unit_roundoff<T>()
+```
+
+returns the corresponding value. `mixed_ir.hpp` uses it as the default relative-correction tolerance when no explicit tolerance is supplied.
+
+## `test_matrices.hpp`
+
+`test_matrices.hpp` provides reproducible test problems for the numerical experiments. It supports three matrix families: structured rotated SPD, dense random SPD, and dense random SVD matrices with prescribed condition numbers.
+
+`TestProblemOptions` controls the right-hand-side construction and random seeds. The available right-hand-side modes are:
+
+* `ones_solution`: constructs $x=(1,\ldots,1)^T$ and forms $b=Ax$,
+* `random_sign_solution`: constructs a reproducible vector with $x_i\in{-1,1}$ and forms $b=Ax$,
+* `random_normal_rhs`: draws the entries of $b$ directly from a standard normal distribution.
+
+Generated problems are returned as `LinearSystem<T_data, T_reference>`, containing `A`, `b`, the reference solution `x_true`, and the requested condition number. The shared `complete_problem()` function constructs the right-hand side and computes the reference solution in `T_reference` from the stored system.
+
+The main generator functions are `make_rotated_spd_problem()`, `make_random_spd_problem()`, and `make_random_svd_problem()`.
+
+
+## `reference_solve.hpp`
+
+`reference_solve.hpp` provides the direct solver used to compute reference solutions for the experiments.
+
+The main function,
+
+```cpp
+high_precision_solve<T_reference, T_data>(A, b)
+```
+
+converts `A` and `b` from `T_data` to `T_reference` and solves the system entirely in `T_reference`. It uses HDNUM's full-pivoting LU factorization, permutation operations, and triangular solves.
+
+The input system is not modified. Increasing `T_reference` improves the accuracy of the solve, but cannot recover information already lost when `A` or `b` were stored in `T_data`.
+
+The function also checks that `A` is nonempty and square and that the dimensions of `A` and `b` are compatible.
+
+## `error_metrics.hpp`
+
+`error_metrics.hpp` provides the infinity-norm error measures used by the experiments. All metric calculations are performed in an independently selected measurement precision `T_measure`, and the final scalar values are converted to `double` for output.
+
+The header provides vector and matrix infinity norms,
+
+$$
+|x|_\infty = \max_i |x_i|,
+\qquad
+|A|_\infty = \max_i \sum_j |a_{ij}|,
+$$
+
+together with the relative forward error
+
+$$
+\frac{|x-x_{\mathrm{ref}}|_\infty}
+{|x_{\mathrm{ref}}|_\infty},
+$$
+
+and the normwise backward error
+
+$$
+\frac{|b-Ax|_\infty}
+{|A|_\infty|x|_\infty+|b|_\infty}.
+$$
+
+The main functions are `vector_norm_inf()`, `matrix_norm_inf()`, `relative_forward_error_inf()`, and `normwise_backward_error_inf()`. Inputs may use different storage precisions; their components are converted to `T_measure` before the corresponding metric is evaluated.
+
+
+## `condition_grids.hpp`
+
+`condition_grids.hpp` provides condition-number grids for the iterative-refinement experiments. The grids are defined relative to the approximate factorization boundary
+
+$$
+\kappa_* = \frac{1}{u_f},
+$$
+
+where $u_f$ is the unit roundoff of the factorization precision.
+
+`representative_kappas<T_factor>()` returns a small set of values below, at, and above this boundary, together with the baseline $\kappa=1$. The candidate values are
+
+$$
+1,; 0.01\kappa_*,; 0.1\kappa_*,; 0.5\kappa_*,;
+\kappa_*,; 2\kappa_*,; 10\kappa_*,; 100\kappa_*.
+$$
+
+Values below $1$ are omitted, and the result is sorted with duplicates removed.
+
+`kappa_sweep<T_factor>()` generates a denser logarithmic sweep from a configurable minimum condition number to a configurable multiple of $\kappa_*$. The number of points per decade can also be specified. The upper endpoint and $\kappa_*$ itself are inserted exactly when they lie in the requested range.
+
+Both utilities return condition numbers as `double` values and validate their inputs and representability.
+
+## `experiment_io.hpp`
+
+`experiment_io.hpp` provides shared metadata and output utilities for the experimental drivers. It defines `ExperimentKind`, `MatrixFamily`, `PrecisionNames`, and `ExperimentDescription`, which describe an experiment independently of a particular run.
+
+The `to_string()` overloads provide stable textual identifiers for experiment kinds, matrix families, right-hand-side modes, and iterative-refinement termination statuses. These identifiers are used consistently in CSV files, directory names, and generated filenames.
+
+`make_experiment_filename()` generates descriptive CSV filenames from the experiment configuration, while `make_output_directory()` maps each experiment kind to its corresponding directory under `results/raw/` and creates it when necessary.
+
+`write_common_csv_header()` and `write_common_csv_fields()` provide the common CSV schema shared by the experiments. The recorded metadata includes the problem configuration, precision roles, algorithm options, requested condition number, termination status, iteration count, and final relative correction. Experiment-specific columns can be appended by the individual driver.
+
+
+# Experiments
+
+The experimental drivers are located in `code/experiments/`. Each driver studies a specific aspect of mixed-precision iterative refinement and writes its results as CSV files under `results/raw/`. The following sections summarize the purpose and structure of the five experiments.
+
+
+## Convergence Histories
+
+`exp_convergence_histories.cc` records the behavior of iterative refinement across individual refinement steps. For each precision configuration, it solves random SPD systems with representative condition numbers below, near, and above the approximate factorization boundary
+
+$$
+\kappa_* = \frac{1}{u_f}.
+$$
+
+The driver uses $n=100$, a random-normal right-hand side, at most 20 refinement steps, and residual scaling. It stores every available iterate and records the relative forward error, normwise backward error, and relative correction after each step.
+
+The experiment covers FP16, FP32, bfloat16, and FP8 factorization configurations together with an FP64 baseline. For FP16 and FP32, both FP64 and FP128 residual precisions are included. Each precision configuration is written to a separate CSV file under `results/raw/convergence/`.
+
+
+## Condition-Number Sweeps
+
+`exp_condition_sweeps.cc` studies how iterative refinement behaves as the condition number increases. For each factorization precision, it generates a logarithmic sweep from $\kappa=1$ to $10\kappa_*$, with
+
+$$
+\kappa_*=\frac{1}{u_f},
+$$
+
+using ten points per decade and including $\kappa_*$ exactly.
+
+The experiment uses random SPD systems with $n=100$, a random-normal right-hand side, at most 20 refinement steps, fixed seeds, divergence detection, and residual scaling. Only the requested condition number varies within each sweep.
+
+The tested configurations include FP32–FP64–FP64, FP32–FP64–FP128, FP16–FP64–FP64, FP16–FP64–FP128, bfloat16–FP64–FP128, and FP8–FP64–FP128, together with an FP64 same-precision baseline. Each condition number contributes one summary row containing the termination status, number of completed updates, final relative correction, and final relative forward error when a solution is available. Results are written under `results/raw/condition_sweeps/`.
+
+
+## Residual Precision
+
+`exp_residual_precision.cc` isolates the effect of residual precision. The factorization and working precisions are fixed at FP32 and FP64, while the residual precision is varied between FP64 and FP128. Both configurations use the same matrices, right-hand sides, condition-number grid, and algorithmic settings, so residual precision is the only changed variable.
+
+The experiment uses random SPD systems with $n=100$, a random-normal right-hand side, residual scaling, and at most 20 refinement steps. The condition-number sweep extends from $\kappa=1$ to $10\kappa_*$ for FP32 factorization, with ten points per decade. Errors are evaluated in FP256.
+
+For each condition number, the driver records the termination status, number of completed updates, final relative correction, final relative forward error, and final normwise backward error. The FP64- and FP128-residual sweeps are written as separate CSV files under `results/raw/residual_precision/`.
+
+
+## Direct-Solve Comparison
+
+`exp_direct_solve_comparison.cc` compares FP32–FP64–FP128 iterative refinement with a direct FP64 LU solve. Both methods solve exactly the same generated systems and use the same FP256 reference solution.
+
+The experiment uses random SPD systems with $n=100$, a random-normal right-hand side, and a condition-number sweep from $\kappa=1$ to $10\kappa_*$ for FP32 factorization,
+
+$$
+\kappa_*=\frac{1}{u_f}.
+$$
+
+The mixed method uses at most 20 refinement steps, divergence detection, and residual scaling. The direct baseline performs a single full-pivoting LU factorization and solve entirely in FP64.
+
+For each condition number, the driver records the final relative forward error and normwise backward error for both methods, together with their respective status information. Both variants are written to the same CSV file under `results/raw/direct_comparison/`.
+
+## Residual Scaling
+
+`exp_residual_scaling_fp16_fp64_fp128.cc` studies the effect of residual scaling when the FP128 residual is converted to FP16 for the correction solve. It compares two runs on exactly the same system: an `unscaled` variant and a `scaled` variant.
+
+The experiment uses an FP16–FP64–FP128 precision triple, FP256 measurement precision, a random SPD system with $n=100$ and $\kappa=10$, a random-normal right-hand side, divergence detection, and at most 20 refinement steps. Both stored iterates and residual-conversion diagnostics are enabled.
+
+For each iteration, the diagnostic output records the residual infinity norm, smallest nonzero residual component, number of nonzero components, number of components rounded to zero during conversion, and relative correction. A separate error-history file records the relative forward and normwise backward errors for every available iterate.
+
+The diagnostic CSV is written under `results/raw/robustness/residual_scaling/`, while the error history is stored in its `error_histories/` subdirectory.
+
+# Running the Experiments
+
+The repository-level `Makefile` provides convenience targets for running the experimental drivers. The project is built automatically before an experiment is executed.
+
+All experiments can be run with:
+
+```bash
+make experiments
+```
+
+Individual experiments can be run with:
+
+```bash
+make experiment-convergence-histories
+make experiment-condition-sweeps
+make experiment-residual-precision
+make experiment-direct-solve-comparison
+make experiment-residual-scaling
+```
+
+The generated CSV files are written to the corresponding subdirectories under `results/raw/`.
+
+By default, the release build is used. A different CMake preset can be selected with `PRESET`, for example:
+
+```bash
+make PRESET=debug experiment-convergence-histories
+```
+
+# Plotting the Results
+
+The repository-level `Makefile` provides convenience targets for generating figures from the CSV files in `results/raw/`.
+
+All plots can be generated with:
+
+```bash
+make plots
+```
+
+Individual plotting tasks can be run with:
+
+```bash
+make plot-convergence-histories
+make plot-condition-sweeps
+make plot-residual-precision
+make plot-direct-solve-comparison
+make plot-residual-scaling-diagnostics
+make plot-residual-scaling-errors
+```
+
+The generated figures are written to the corresponding subdirectories under `results/plots/`.
+
+To regenerate both the experimental data and all plots in one step, use:
+
+```bash
+make reproduce
+```
+
+# Results Directory
+
+Generated experimental data and figures are stored under the repository-level `results/` directory:
+
+```text
+results/
+├── raw/
+└── plots/
+```
+
+`results/raw/` contains the CSV files produced by the C++ experiment drivers. Its subdirectories correspond to the different experiment groups.
+
+`results/plots/` contains the figures generated from these CSV files. The plotting scripts mirror the relevant `results/raw/` directory structure when constructing their output paths.
+
+The results directories are created automatically as needed by the C++ and Python utilities. They should therefore be treated as generated output rather than as part of the implementation itself.
+
+# Tutorial: Implementing a New Experiment
+
+This section demonstrates how to extend the experimental framework with a new experiment. As a worked example, we construct a dimension sweep that varies the system size while reusing the existing problem-generation, iterative-refinement, error-measurement, and output utilities.
+
+## Experiment Goal
+
+The goal of the example experiment is to study how iterative refinement behaves as the system dimension $n$ changes.
+
+All other settings are kept fixed:
+
+* matrix family: random SPD,
+* condition number: $\kappa = 10^4$,
+* right-hand side: random normal,
+* precision triple: FP32–FP64–FP128,
+* measurement precision: FP256,
+* maximum refinement steps: 20,
+* residual scaling: enabled.
+
+The experiment evaluates several dimensions, for example
+
+$$
+n \in {25,50,100,200}.
+$$
+
+For each dimension, the driver records the termination status, number of completed updates, final relative correction, relative forward error, and normwise backward error.
+
+The purpose is primarily to demonstrate how a new experiment can be assembled from the existing framework components while varying only one experimental parameter.
+
+
+## Creating the Driver
+
+Create a new experimental driver under `code/experiments/`:
+
+```text
+code/experiments/exp_dimension_sweep.cc
+```
+
+Experiment drivers follow the naming convention `exp_*.cc`. The CMake configuration discovers files matching this pattern automatically, so no additional CMake target is required.
+
+The driver uses the existing algorithm and experiment helpers:
+
+```cpp
+#include "error_metrics.hpp"
+#include "experiment_io.hpp"
+#include "mixed_ir.hpp"
+#include "test_matrices.hpp"
+
+int main()
+{
+    // Experiment configuration and dimension sweep are added below.
+    return 0;
+}
+```
+
+Keeping the experiment in a separate driver isolates its configuration and output logic while reusing the shared implementation in `code/include/`.
+
+
+## Configuring the Experiment
+
+First define the fixed precision configuration, condition number, and dimensions:
+
+```cpp
+using T_factor   = hdnum::FP32;
+using T_work     = hdnum::FP64;
+using T_residual = hdnum::FP128;
+using T_measure  = hdnum::FP256;
+
+constexpr double requested_kappa = 1.0e4;
+
+const std::vector<std::size_t> dimensions{
+    25, 50, 100, 200
+};
+
+const mpir::PrecisionNames precision_names{
+    "fp32",
+    "fp64",
+    "fp128",
+    "fp256"
+};
+```
+
+The problem generator is configured to use a reproducible random-normal right-hand side:
+
+```cpp
+mpir::TestProblemOptions problem_options;
+problem_options.rhs_mode =
+    mpir::RightHandSideMode::random_normal_rhs;
+```
+
+The iterative-refinement options are configured in the same way as in the main experiments:
+
+```cpp
+mpir::MixedIROptions<T_work> algorithm_options;
+algorithm_options.max_iterations = 20;
+algorithm_options.store_iterates = false;
+algorithm_options.detect_divergence = true;
+algorithm_options.scale_residual = true;
+algorithm_options.record_residual_diagnostics = false;
+
+constexpr std::string_view variant = "scaled";
+```
+
+The random seeds retain their defaults, so the experiment is reproducible. Only the system dimension changes between runs. The existing experiment drivers use the same `TestProblemOptions`, `PrecisionNames`, and `MixedIROptions` structures to separate experimental configuration from the numerical implementation.
+
+
+## Generating the Test Problems
+
+For each dimension, generate a random SPD system in working precision and compute its reference solution in measurement precision:
+
+```cpp
+for (const std::size_t n : dimensions) {
+    auto problem =
+        mpir::make_random_spd_problem<T_work, T_measure>(
+            n,
+            requested_kappa,
+            problem_options
+        );
+
+    // Iterative refinement and measurement are added below.
+}
+```
+
+`make_random_spd_problem()` constructs a matrix with the requested condition number and uses `problem_options` to generate the right-hand side. It returns a `LinearSystem<T_work, T_measure>` containing the matrix `problem.A`, right-hand side `problem.b`, reference solution `problem.x_true`, and requested condition number `problem.kappa`.
+
+The reference solution is computed automatically in `T_measure` by solving the stored system $Ax=b$. No separate reference solve is required in the experiment driver.
+
+Because the generator settings and seeds remain fixed, the system dimension is the only experimental parameter changed by the loop.
+
+
+## Running Iterative Refinement
+
+## Running Iterative-Refinement
+
+With the problem and algorithm options defined, run the mixed-precision solver:
+
+```cpp
+const auto result =
+    mpir::mixed_ir<T_factor, T_work, T_residual>(
+        problem.A,
+        problem.b,
+        algorithm_options
+    );
+```
+
+The template parameters determine the three arithmetic roles: `T_factor` is used for the LU factorization and correction solves, `T_work` for the iterates and updates, and `T_residual` for residual computation.
+
+The returned `MixedIRResult<T_work>` contains the final solution `result.x`, termination status, number of completed updates, and final relative correction. Since this experiment only measures the final result, storing the complete iterate history is unnecessary.
+
+
+## Measuring the Result
+
+When a valid solution is available, compute the final forward and backward errors in `T_measure`:
+
+```cpp
+const double forward_error =
+    mpir::relative_forward_error_inf<T_measure>(
+        result.x,
+        problem.x_true
+    );
+
+const double backward_error =
+    mpir::normwise_backward_error_inf<T_measure>(
+        problem.A,
+        problem.b,
+        result.x
+    );
+```
+
+The forward error compares the computed solution with the reference solution,
+
+$$
+\frac{|x-x_{\mathrm{ref}}|*\infty}
+{|x*{\mathrm{ref}}|_\infty},
+$$
+
+while the backward error measures the residual relative to the problem data,
+
+$$
+\frac{|b-Ax|*\infty}
+{|A|*\infty|x|*\infty+|b|*\infty}.
+$$
+
+Both metrics are evaluated internally in FP256 and returned as `double` values for experiment output.
+
+The error functions should only be called when `result.x` contains a solution of the expected dimension. An early failure may occur before an initial solution is constructed; in that case the status should still be recorded and the unavailable error fields left empty.
+
+
+## Writing the Output
+
+## Writing the Output
+
+The shared output utilities identify experiments through `ExperimentKind`. Since the dimension sweep is a new experiment category, first extend `experiment_io.hpp`.
+
+Add the new enumerator:
+
+```cpp
+enum class ExperimentKind {
+    convergence_history,
+    condition_sweep,
+    residual_precision,
+    direct_solve_comparison,
+    residual_scaling,
+    range_failure,
+    dimension_sweep
+};
+```
+
+Add its textual identifier in `to_string()`:
+
+```cpp
+case ExperimentKind::dimension_sweep:
+    return "dimension-sweep";
+```
+
+and its output directory in `make_output_directory()`:
+
+```cpp
+case ExperimentKind::dimension_sweep:
+    output_directory =
+        raw_results_root / "dimension_sweeps";
+    break;
+```
+
+No change to `make_experiment_filename()` or the common CSV-writing functions is required.
+
+Inside the dimension loop, describe the current dataset and construct its output path:
+
+```cpp
+const mpir::ExperimentDescription experiment{
+    mpir::ExperimentKind::dimension_sweep,
+    mpir::MatrixFamily::random_spd,
+    n,
+    precision_names
+};
+
+const auto output_directory =
+    mpir::make_output_directory(
+        MPIR_RESULTS_RAW_DIR,
+        experiment.kind
+    );
+
+const auto output_file =
+    output_directory /
+    mpir::make_experiment_filename(
+        experiment,
+        problem_options
+    );
+```
+
+Each dimension receives its own CSV file because `dimension` is part of the common experiment metadata and generated filename.
+
+Open the file and write the common header together with the two experiment-specific error columns:
+
+```cpp
+std::ofstream out(output_file);
+
+if (!out) {
+    throw std::runtime_error(
+        "Could not open output file: " + output_file.string()
+    );
+}
+
+out << std::scientific
+    << std::setprecision(
+           std::numeric_limits<double>::max_digits10
+       );
+
+mpir::write_common_csv_header(out);
+out << ",final_forward_error_inf,final_backward_error_inf\n";
+```
+
+After iterative refinement, write the common fields and append the measured errors:
+
+```cpp
+mpir::write_common_csv_fields(
+    out,
+    experiment,
+    problem_options,
+    algorithm_options,
+    requested_kappa,
+    variant,
+    result
+);
+
+out << ',';
+
+if (result.x.size() == n) {
+    const double forward_error =
+        mpir::relative_forward_error_inf<T_measure>(
+            result.x,
+            problem.x_true
+        );
+
+    const double backward_error =
+        mpir::normwise_backward_error_inf<T_measure>(
+            problem.A,
+            problem.b,
+            result.x
+        );
+
+    out << forward_error << ',' << backward_error;
+}
+else {
+    // Keep the status row while leaving unavailable errors empty.
+    out << ',';
+}
+
+out << '\n';
+```
+
+The resulting files are written under:
+
+```text
+results/raw/dimension_sweeps/
+```
+
+and contain the standard experiment metadata together with the final forward and backward errors.
+
+
+## Complete Example Driver
+
+Combining the preceding steps gives the complete `exp_dimension_sweep.cc` driver below. It assumes that `ExperimentKind::dimension_sweep` and its output directory have already been added to `experiment_io.hpp` as described above.
+
+```cpp
+#include <cstddef>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <stdexcept>
+#include <string_view>
+#include <vector>
+
+#include "error_metrics.hpp"
+#include "experiment_io.hpp"
+#include "hdnum.hh"
+#include "mixed_ir.hpp"
+#include "test_matrices.hpp"
+
+
+int main()
+{
+    try {
+        using T_factor   = hdnum::FP32;
+        using T_work     = hdnum::FP64;
+        using T_residual = hdnum::FP128;
+        using T_measure  = hdnum::FP256;
+
+        constexpr double requested_kappa = 1.0e4;
+
+        const std::vector<std::size_t> dimensions{
+            25, 50, 100, 200
+        };
+
+        const mpir::PrecisionNames precision_names{
+            "fp32",
+            "fp64",
+            "fp128",
+            "fp256"
+        };
+
+        mpir::TestProblemOptions problem_options;
+        problem_options.rhs_mode =
+            mpir::RightHandSideMode::random_normal_rhs;
+
+        mpir::MixedIROptions<T_work> algorithm_options;
+        algorithm_options.max_iterations = 20;
+        algorithm_options.store_iterates = false;
+        algorithm_options.detect_divergence = true;
+        algorithm_options.scale_residual = true;
+        algorithm_options.record_residual_diagnostics = false;
+
+        constexpr std::string_view variant = "scaled";
+
+        for (const std::size_t n : dimensions) {
+            const auto problem =
+                mpir::make_random_spd_problem<T_work, T_measure>(
+                    n,
+                    requested_kappa,
+                    problem_options
+                );
+
+            const auto result =
+                mpir::mixed_ir<T_factor, T_work, T_residual>(
+                    problem.A,
+                    problem.b,
+                    algorithm_options
+                );
+
+            if (result.rel_corrections.size() != result.iterations) {
+                throw std::logic_error(
+                    "Relative-correction count is inconsistent "
+                    "with completed updates"
+                );
+            }
+
+            if (result.x.size() != 0 && result.x.size() != n) {
+                throw std::logic_error(
+                    "Returned solution has an unexpected dimension"
+                );
+            }
+
+            const mpir::ExperimentDescription experiment{
+                mpir::ExperimentKind::dimension_sweep,
+                mpir::MatrixFamily::random_spd,
+                n,
+                precision_names
+            };
+
+            const auto output_directory =
+                mpir::make_output_directory(
+                    MPIR_RESULTS_RAW_DIR,
+                    experiment.kind
+                );
+
+            const auto output_file =
+                output_directory /
+                mpir::make_experiment_filename(
+                    experiment,
+                    problem_options
+                );
+
+            std::ofstream out(output_file);
+
+            if (!out) {
+                throw std::runtime_error(
+                    "Could not open output file: "
+                    + output_file.string()
+                );
+            }
+
+            out << std::scientific
+                << std::setprecision(
+                       std::numeric_limits<double>::max_digits10
+                   );
+
+            mpir::write_common_csv_header(out);
+            out
+                << ",final_forward_error_inf"
+                << ",final_backward_error_inf\n";
+
+            mpir::write_common_csv_fields(
+                out,
+                experiment,
+                problem_options,
+                algorithm_options,
+                requested_kappa,
+                variant,
+                result
+            );
+
+            if (result.x.size() == n) {
+                const double forward_error =
+                    mpir::relative_forward_error_inf<T_measure>(
+                        result.x,
+                        problem.x_true
+                    );
+
+                const double backward_error =
+                    mpir::normwise_backward_error_inf<T_measure>(
+                        problem.A,
+                        problem.b,
+                        result.x
+                    );
+
+                out << ','
+                    << forward_error
+                    << ','
+                    << backward_error;
+            }
+            else {
+                // Preserve the status row when no solution is available.
+                out << ",,";
+            }
+
+            out << '\n';
+
+            if (!out) {
+                throw std::runtime_error(
+                    "Failed while writing output file: "
+                    + output_file.string()
+                );
+            }
+
+            std::cout
+                << "n = " << n
+                << ", status = " << mpir::to_string(result.status)
+                << ", iterations = " << result.iterations
+                << ", final_rel_correction = "
+                << result.final_rel_correction
+                << '\n';
+
+            std::cout
+                << "Writing results to: "
+                << output_file
+                << '\n';
+        }
+    }
+    catch (const std::exception& error) {
+        std::cerr << "Error: " << error.what() << '\n';
+        return 1;
+    }
+
+    return 0;
+}
+```
+
+The driver produces one CSV file for each dimension under `results/raw/dimension_sweeps/`. Each file contains the standard experiment metadata and one result row with the final forward and backward errors when a valid solution is available.
+
+
+## Building and Running the Experiment
+
+Because the driver is named `exp_dimension_sweep.cc`, the existing CMake configuration discovers it automatically. No change to the CMake files is required.
+
+From the repository root, rebuild the project:
+
+```bash
+cd code
+cmake --preset release
+cmake --build --preset release
+cd ..
+```
+
+The new executable is generated as:
+
+```text
+build/fp-release/bin/mp_exp_dimension_sweep
+```
+
+Run it from the repository root with:
+
+```bash
+./build/fp-release/bin/mp_exp_dimension_sweep
+```
+
+The generated CSV files are written to:
+
+```text
+results/raw/dimension_sweeps/
+```
+
+### Adding a Makefile target
+
+The repository-level `Makefile` lists its experiment targets explicitly. To expose the new experiment through the same interface, add a target for the new executable:
+
+```makefile
+.PHONY: experiment-dimension-sweep
+
+experiment-dimension-sweep: build
+	$(BUILD_DIR)/bin/mp_exp_dimension_sweep
+```
+
+The experiment can then be run with:
+
+```bash
+make experiment-dimension-sweep
+```
+
+To include it when running the complete experiment suite, also add `experiment-dimension-sweep` to the dependencies of the existing `experiments` target.
+
+The debug version can be built and run through the same Makefile target with:
+
+```bash
+make PRESET=debug experiment-dimension-sweep
+```
+
+## Optional Plotting Script
+
+A plotting script is not required for the experiment itself, but it demonstrates how a new experiment can also reuse the shared Python plotting utilities.
+
+Create:
+
+```text
+code/scripts/plot_dimension_sweep.py
+```
+
+The following example reads all dimension-sweep CSV files and plots the final forward and backward errors as functions of the system dimension:
+
+```python
+#!/usr/bin/env python3
+"""Plot the dimension-sweep experiment."""
+
+from __future__ import annotations
+
+from argparse import ArgumentParser
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+from mpir_plotting.csv_validation import (
+    coerce_numeric_columns,
+    read_csv_checked,
+)
+from mpir_plotting.paths import (
+    discover_csv_files,
+    resolve_results_roots,
+)
+
+
+CSV_PATTERN = "dimension-sweep__*.csv"
+DEFAULT_RAW_SUBDIRECTORY = Path("dimension_sweeps")
+
+REQUIRED_COLUMNS = {
+    "dimension",
+    "final_forward_error_inf",
+    "final_backward_error_inf",
+}
+
+NUMERIC_COLUMNS = (
+    "dimension",
+    "final_forward_error_inf",
+    "final_backward_error_inf",
+)
+
+
+def parse_arguments():
+    """Parse command-line arguments."""
+    parser = ArgumentParser(
+        description="Plot the dimension-sweep experiment."
+    )
+    parser.add_argument(
+        "inputs",
+        nargs="*",
+        type=Path,
+        help="Optional CSV files or directories.",
+    )
+    parser.add_argument("--raw-root", type=Path, default=None)
+    parser.add_argument("--plots-root", type=Path, default=None)
+    parser.add_argument(
+        "--format",
+        choices=("png", "pdf", "svg"),
+        default="png",
+    )
+    parser.add_argument("--dpi", type=int, default=200)
+    return parser.parse_args()
+
+
+def main() -> int:
+    """Load all dimension-sweep results and generate the figure."""
+    args = parse_arguments()
+
+    raw_root, plots_root = resolve_results_roots(
+        args.raw_root,
+        args.plots_root,
+    )
+
+    csv_files = discover_csv_files(
+        args.inputs,
+        raw_root,
+        DEFAULT_RAW_SUBDIRECTORY,
+        CSV_PATTERN,
+    )
+
+    rows = []
+
+    for csv_path in csv_files:
+        dataframe = read_csv_checked(
+            csv_path,
+            REQUIRED_COLUMNS,
+        )
+        coerce_numeric_columns(
+            dataframe,
+            NUMERIC_COLUMNS,
+            csv_path,
+            require_complete=True,
+        )
+
+        rows.append(dataframe.iloc[0])
+
+    results = (
+        pd.DataFrame(rows)
+        .sort_values("dimension")
+        .reset_index(drop=True)
+    )
+
+    figure, (forward_axis, backward_axis) = plt.subplots(
+        2,
+        1,
+        figsize=(8.0, 6.5),
+        sharex=True,
+    )
+
+    forward_axis.plot(
+        results["dimension"],
+        results["final_forward_error_inf"],
+        marker="o",
+    )
+    forward_axis.set_yscale("log")
+    forward_axis.set_ylabel("Relative forward error")
+    forward_axis.set_title("(a) Final relative forward error")
+    forward_axis.grid(True, which="both")
+
+    backward_axis.plot(
+        results["dimension"],
+        results["final_backward_error_inf"],
+        marker="o",
+    )
+    backward_axis.set_yscale("log")
+    backward_axis.set_xlabel("System dimension n")
+    backward_axis.set_ylabel("Relative backward error")
+    backward_axis.set_title("(b) Final normwise backward error")
+    backward_axis.grid(True, which="both")
+
+    figure.suptitle("Dimension sweep: FP32–FP64–FP128")
+    figure.tight_layout()
+
+    output_directory = plots_root / DEFAULT_RAW_SUBDIRECTORY
+    output_directory.mkdir(parents=True, exist_ok=True)
+
+    output_path = (
+        output_directory
+        / f"dimension-sweep.{args.format}"
+    )
+
+    save_options = {"bbox_inches": "tight"}
+    if args.format == "png":
+        save_options["dpi"] = args.dpi
+
+    figure.savefig(output_path, **save_options)
+    plt.close(figure)
+
+    print(f"Wrote {output_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+```
+
+The script follows the same general structure as the existing plotting programs: it uses the shared CSV validation and path utilities, reads generated data from `results/raw/`, and writes figures under `results/plots/`.
+Run it from the repository root with:
+
+```bash
+python3 code/scripts/plot_dimension_sweep.py
+```
+
+The generated figure is written to:
+
+```text
+results/plots/dimension_sweeps/dimension-sweep.png
+```
+
+Optionally, add a corresponding Makefile target:
+
+```makefile
+.PHONY: plot-dimension-sweep
+
+plot-dimension-sweep:
+	$(PYTHON) code/scripts/plot_dimension_sweep.py \
+		--raw-root "$(RAW_RESULTS_DIR)" \
+		--plots-root "$(PLOT_RESULTS_DIR)"
+```
+
+It can then be run with:
+
+```bash
+make plot-dimension-sweep
+```
+
+The target may also be added to `plots`, and the new experiment and plotting targets can be included in `reproduce` if the dimension sweep should become part of the standard reproducibility workflow.

@@ -1,0 +1,22 @@
+project:
+  type: default
+  output-dir: manual/_output
+  render:
+    - manual/index.qmd
+
+format:
+  html:
+    toc: true
+    number-sections: true
+
+  pdf:
+    documentclass: article
+    include-in-header: preamble.tex
+    geometry:
+      - left=24mm
+      - right=24mm
+      - top=25mm
+      - bottom=25mm
+    papersize: a4
+    toc: true
+    number-sections: true

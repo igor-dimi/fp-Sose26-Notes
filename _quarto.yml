@@ -1,6 +1,6 @@
 profile:
   group:
-    - [book, report]
+    - [book, report, manual]
 
 bibliography: references.bib
 
