@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Igor Dimitrov">
+
+<title>9&nbsp; Mixed-Precision Iterative Refinement: Project Guide – Advanced Praktika SoSe 26 Notes</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../appendices/gdb.html" rel="next">
+<link href="../report/index.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-bf132de45b538d253cd2e2da5fec6016.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="../site_libs/quarto-contrib/pseudocode-2.4.1/pseudocode.min.js"></script>
+<link href="../site_libs/quarto-contrib/pseudocode-2.4.1/pseudocode.min.css" rel="stylesheet">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script>
+window.MathJax = {
+  loader: {
+    load: ["[tex]/boldsymbol"]
+  },
+  tex: {
+    tags: "all",
+    inlineMath: [["$", "$"], ["\\(", "\\)"]],
+    displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+    processEscapes: true,
+    processEnvironments: true,
+    packages: {
+      "[+]": ["boldsymbol"]
+    },
+    macros: {
+      norm: ["\\left\\lVert #1 \\right\\rVert", 1],
+      normsub: ["\\left\\lVert #1 \\right\\rVert_{#2}", 2]
+    }
+  }
+};
+</script>
+
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js">
+</script>
+    <style type="text/css">
+    .ps-root .ps-algorithm {
+      border-top: 2px solid;
+      border-bottom: 2px solid;
+    }
+    .pseudocode-container {
+      text-align: left;
+    }
+    </style>
+  
+      <style type="text/css">
+      .ps-algorithm > .ps-line {
+        text-align: left;
+      }
+      </style>
+    
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../manual/index.html">Project Guide</a></li><li class="breadcrumb-item"><a href="../manual/index.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Project Guide</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Advanced Praktika SoSe 26 Notes</a> 
+        <div class="sidebar-tools-main">
+    <a href="../Advanced-Praktika-SoSe-26-Notes.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Notes</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../working_notes/project_setup.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Project Setup</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../working_notes/project_overview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Project Summary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../working_notes/conversions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Conversions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../working_notes/mixed_ir.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Implementation of the Mixed IR Algorithm</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../working_notes/experiments.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Implementing the Experiments &amp; Robustness Improvements</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../working_notes/experiment_plan.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Experiment Plan</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../working_notes/framework.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Experimental Framework</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Report</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../report/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Project Guide</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../manual/index.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Project Guide</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/gdb.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">GDB usage Notes</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview"><span class="header-section-number">10</span> Overview</a></li>
+  <li><a href="#repository-structure" id="toc-repository-structure" class="nav-link" data-scroll-target="#repository-structure"><span class="header-section-number">11</span> Repository Structure</a></li>
+  <li><a href="#setup-and-dependencies" id="toc-setup-and-dependencies" class="nav-link" data-scroll-target="#setup-and-dependencies"><span class="header-section-number">12</span> Setup and Dependencies</a>
+  <ul class="collapse">
+  <li><a href="#prerequisites" id="toc-prerequisites" class="nav-link" data-scroll-target="#prerequisites"><span class="header-section-number">12.1</span> Prerequisites</a></li>
+  <li><a href="#clone-and-initialize-the-repository" id="toc-clone-and-initialize-the-repository" class="nav-link" data-scroll-target="#clone-and-initialize-the-repository"><span class="header-section-number">12.2</span> Clone and Initialize the Repository</a></li>
+  <li><a href="#hdnum" id="toc-hdnum" class="nav-link" data-scroll-target="#hdnum"><span class="header-section-number">12.3</span> HDNUM</a></li>
+  <li><a href="#cpfloat" id="toc-cpfloat" class="nav-link" data-scroll-target="#cpfloat"><span class="header-section-number">12.4</span> CPFloat</a></li>
+  <li><a href="#cpfloat-1" id="toc-cpfloat-1" class="nav-link" data-scroll-target="#cpfloat-1"><span class="header-section-number">12.5</span> CPFloat</a></li>
+  <li><a href="#gmp" id="toc-gmp" class="nav-link" data-scroll-target="#gmp"><span class="header-section-number">12.6</span> GMP</a></li>
+  <li><a href="#python-dependencies" id="toc-python-dependencies" class="nav-link" data-scroll-target="#python-dependencies"><span class="header-section-number">12.7</span> Python Dependencies</a></li>
+  </ul></li>
+  <li><a href="#building-the-project" id="toc-building-the-project" class="nav-link" data-scroll-target="#building-the-project"><span class="header-section-number">13</span> Building the Project</a>
+  <ul class="collapse">
+  <li><a href="#release-build" id="toc-release-build" class="nav-link" data-scroll-target="#release-build"><span class="header-section-number">13.1</span> Release Build</a></li>
+  <li><a href="#debug-build" id="toc-debug-build" class="nav-link" data-scroll-target="#debug-build"><span class="header-section-number">13.2</span> Debug Build</a></li>
+  <li><a href="#running-the-tests" id="toc-running-the-tests" class="nav-link" data-scroll-target="#running-the-tests"><span class="header-section-number">13.3</span> Running the Tests</a></li>
+  </ul></li>
+  <li><a href="#implementation-overview" id="toc-implementation-overview" class="nav-link" data-scroll-target="#implementation-overview"><span class="header-section-number">14</span> Implementation Overview</a>
+  <ul class="collapse">
+  <li><a href="#mixed_ir.hpp" id="toc-mixed_ir.hpp" class="nav-link" data-scroll-target="#mixed_ir.hpp"><span class="header-section-number">14.1</span> <code>mixed_ir.hpp</code></a></li>
+  <li><a href="#hdnum_conversions.hpp" id="toc-hdnum_conversions.hpp" class="nav-link" data-scroll-target="#hdnum_conversions.hpp"><span class="header-section-number">14.2</span> <code>hdnum_conversions.hpp</code></a></li>
+  <li><a href="#unit_roundoff.hpp" id="toc-unit_roundoff.hpp" class="nav-link" data-scroll-target="#unit_roundoff.hpp"><span class="header-section-number">14.3</span> <code>unit_roundoff.hpp</code></a></li>
+  <li><a href="#test_matrices.hpp" id="toc-test_matrices.hpp" class="nav-link" data-scroll-target="#test_matrices.hpp"><span class="header-section-number">14.4</span> <code>test_matrices.hpp</code></a></li>
+  <li><a href="#reference_solve.hpp" id="toc-reference_solve.hpp" class="nav-link" data-scroll-target="#reference_solve.hpp"><span class="header-section-number">14.5</span> <code>reference_solve.hpp</code></a></li>
+  <li><a href="#error_metrics.hpp" id="toc-error_metrics.hpp" class="nav-link" data-scroll-target="#error_metrics.hpp"><span class="header-section-number">14.6</span> <code>error_metrics.hpp</code></a></li>
+  <li><a href="#condition_grids.hpp" id="toc-condition_grids.hpp" class="nav-link" data-scroll-target="#condition_grids.hpp"><span class="header-section-number">14.7</span> <code>condition_grids.hpp</code></a></li>
+  <li><a href="#experiment_io.hpp" id="toc-experiment_io.hpp" class="nav-link" data-scroll-target="#experiment_io.hpp"><span class="header-section-number">14.8</span> <code>experiment_io.hpp</code></a></li>
+  </ul></li>
+  <li><a href="#experiments" id="toc-experiments" class="nav-link" data-scroll-target="#experiments"><span class="header-section-number">15</span> Experiments</a>
+  <ul class="collapse">
+  <li><a href="#convergence-histories" id="toc-convergence-histories" class="nav-link" data-scroll-target="#convergence-histories"><span class="header-section-number">15.1</span> Convergence Histories</a></li>
+  <li><a href="#condition-number-sweeps" id="toc-condition-number-sweeps" class="nav-link" data-scroll-target="#condition-number-sweeps"><span class="header-section-number">15.2</span> Condition-Number Sweeps</a></li>
+  <li><a href="#residual-precision" id="toc-residual-precision" class="nav-link" data-scroll-target="#residual-precision"><span class="header-section-number">15.3</span> Residual Precision</a></li>
+  <li><a href="#direct-solve-comparison" id="toc-direct-solve-comparison" class="nav-link" data-scroll-target="#direct-solve-comparison"><span class="header-section-number">15.4</span> Direct-Solve Comparison</a></li>
+  <li><a href="#residual-scaling" id="toc-residual-scaling" class="nav-link" data-scroll-target="#residual-scaling"><span class="header-section-number">15.5</span> Residual Scaling</a></li>
+  </ul></li>
+  <li><a href="#running-the-experiments" id="toc-running-the-experiments" class="nav-link" data-scroll-target="#running-the-experiments"><span class="header-section-number">16</span> Running the Experiments</a></li>
+  <li><a href="#plotting-the-results" id="toc-plotting-the-results" class="nav-link" data-scroll-target="#plotting-the-results"><span class="header-section-number">17</span> Plotting the Results</a></li>
+  <li><a href="#results-directory" id="toc-results-directory" class="nav-link" data-scroll-target="#results-directory"><span class="header-section-number">18</span> Results Directory</a></li>
+  <li><a href="#tutorial-implementing-a-new-experiment" id="toc-tutorial-implementing-a-new-experiment" class="nav-link" data-scroll-target="#tutorial-implementing-a-new-experiment"><span class="header-section-number">19</span> Tutorial: Implementing a New Experiment</a>
+  <ul class="collapse">
+  <li><a href="#experiment-goal" id="toc-experiment-goal" class="nav-link" data-scroll-target="#experiment-goal"><span class="header-section-number">19.1</span> Experiment Goal</a></li>
+  <li><a href="#creating-the-driver" id="toc-creating-the-driver" class="nav-link" data-scroll-target="#creating-the-driver"><span class="header-section-number">19.2</span> Creating the Driver</a></li>
+  <li><a href="#configuring-the-experiment" id="toc-configuring-the-experiment" class="nav-link" data-scroll-target="#configuring-the-experiment"><span class="header-section-number">19.3</span> Configuring the Experiment</a></li>
+  <li><a href="#generating-the-test-problems" id="toc-generating-the-test-problems" class="nav-link" data-scroll-target="#generating-the-test-problems"><span class="header-section-number">19.4</span> Generating the Test Problems</a></li>
+  <li><a href="#running-iterative-refinement" id="toc-running-iterative-refinement" class="nav-link" data-scroll-target="#running-iterative-refinement"><span class="header-section-number">19.5</span> Running Iterative Refinement</a></li>
+  <li><a href="#running-iterative-refinement-1" id="toc-running-iterative-refinement-1" class="nav-link" data-scroll-target="#running-iterative-refinement-1"><span class="header-section-number">19.6</span> Running Iterative-Refinement</a></li>
+  <li><a href="#measuring-the-result" id="toc-measuring-the-result" class="nav-link" data-scroll-target="#measuring-the-result"><span class="header-section-number">19.7</span> Measuring the Result</a></li>
+  <li><a href="#writing-the-output" id="toc-writing-the-output" class="nav-link" data-scroll-target="#writing-the-output"><span class="header-section-number">19.8</span> Writing the Output</a></li>
+  <li><a href="#writing-the-output-1" id="toc-writing-the-output-1" class="nav-link" data-scroll-target="#writing-the-output-1"><span class="header-section-number">19.9</span> Writing the Output</a></li>
+  <li><a href="#complete-example-driver" id="toc-complete-example-driver" class="nav-link" data-scroll-target="#complete-example-driver"><span class="header-section-number">19.10</span> Complete Example Driver</a></li>
+  <li><a href="#building-and-running-the-experiment" id="toc-building-and-running-the-experiment" class="nav-link" data-scroll-target="#building-and-running-the-experiment"><span class="header-section-number">19.11</span> Building and Running the Experiment</a>
+  <ul class="collapse">
+  <li><a href="#adding-a-makefile-target" id="toc-adding-a-makefile-target" class="nav-link" data-scroll-target="#adding-a-makefile-target">Adding a Makefile target</a></li>
+  </ul></li>
+  <li><a href="#optional-plotting-script" id="toc-optional-plotting-script" class="nav-link" data-scroll-target="#optional-plotting-script"><span class="header-section-number">19.12</span> Optional Plotting Script</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../manual/index.html">Project Guide</a></li><li class="breadcrumb-item"><a href="../manual/index.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Project Guide</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Project Guide</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Igor Dimitrov </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="overview" class="level1" data-number="10">
+<h1 data-number="10"><span class="header-section-number">10</span> Overview</h1>
+<p>This repository contains the implementation and experimental framework for three-precision LU-based iterative refinement.</p>
+<p>The project uses HDNUM for numerical linear algebra, CPFloat for simulated low-precision arithmetic, and GMP for high-precision arithmetic.</p>
+<p>This guide describes the repository structure, setup and build process, implementation components, experiments, plotting workflow, and how to extend the framework with a new experiment.</p>
+</section>
+<section id="repository-structure" class="level1" data-number="11">
+<h1 data-number="11"><span class="header-section-number">11</span> Repository Structure</h1>
+<p>The repository is organized as follows:</p>
+<pre class="text"><code>.
+├── code
+│   ├── CMakeLists.txt
+│   ├── CMakePresets.json
+│   ├── experiments
+│   ├── external
+│   ├── include
+│   ├── scripts
+│   └── tests
+├── Makefile
+├── manual
+├── report
+├── results
+│   ├── plots
+│   └── raw
+└── working_notes</code></pre>
+<p>The main directories are:</p>
+<ul>
+<li><code>code/</code>: C++ implementation, experiments, tests, and plotting scripts.
+<ul>
+<li><code>include/</code>: our mixed iterative refinement implementation and auxiliary headers.</li>
+<li><code>experiments/</code>: our experimental drivers used to generate the report data.</li>
+<li><code>scripts/</code>: our Python scripts and shared utilities for plotting the results.</li>
+<li><code>tests/</code>: correctness and sanity tests.</li>
+<li><code>external/</code>: external dependencies, in particular the HDNUM submodule.</li>
+<li><code>CMakeLists.txt</code> and <code>CMakePresets.json</code>: CMake build configuration.</li>
+</ul></li>
+<li><code>results/</code>: generated experimental output. Raw CSV files are stored in <code>results/raw/</code> and generated figures in <code>results/plots/</code>.</li>
+<li><code>report/</code>: final project report.</li>
+<li><code>manual/</code>: this project guide.</li>
+<li><code>working_notes/</code>: detailed development notes and intermediate documentation.</li>
+<li><code>appendices/</code>: supplementary material.</li>
+<li><code>Makefile</code>: convenience interface for building, testing, running experiments, and generating plots.</li>
+</ul>
+<p>The most important folders are <code>include</code>, <code>experiments</code>, and <code>scripts</code>. These contain our implementations, experiments and plotting scripts.</p>
+</section>
+<section id="setup-and-dependencies" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> Setup and Dependencies</h1>
+<p>The project depends on HDNUM, CPFloat, GMP, and a small set of Python packages for plotting. HDNUM is included as a Git submodule; CPFloat is built inside the HDNUM directory; GMP is provided by the system.</p>
+<section id="prerequisites" class="level2" data-number="12.1">
+<h2 data-number="12.1" class="anchored" data-anchor-id="prerequisites"><span class="header-section-number">12.1</span> Prerequisites</h2>
+<p>The following tools are required:</p>
+<ul>
+<li>a C++17-compatible compiler,</li>
+<li>CMake 3.20 or newer,</li>
+<li>Ninja,</li>
+<li>Git,</li>
+<li>GNU Make,</li>
+<li>GMP with C++ support (<code>gmp</code> and <code>gmpxx</code>),</li>
+<li>Python 3 for plotting.</li>
+</ul>
+<p>Additional Python packages are listed in the plotting setup below.</p>
+</section>
+<section id="clone-and-initialize-the-repository" class="level2" data-number="12.2">
+<h2 data-number="12.2" class="anchored" data-anchor-id="clone-and-initialize-the-repository"><span class="header-section-number">12.2</span> Clone and Initialize the Repository</h2>
+<p>Clone the repository together with its Git submodules:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone <span class="at">--recurse-submodules</span> <span class="op">&lt;</span>repository-url<span class="op">&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> <span class="op">&lt;</span>repository<span class="op">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>HDNUM is included as a submodule under:</p>
+<pre class="text"><code>code/external/hdnum/</code></pre>
+<p>If the repository was cloned without <code>--recurse-submodules</code>, initialize it afterwards with:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> submodule update <span class="at">--init</span> <span class="at">--recursive</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>CPFloat is not part of the HDNUM submodule and is set up separately in the next step.</p>
+</section>
+<section id="hdnum" class="level2" data-number="12.3">
+<h2 data-number="12.3" class="anchored" data-anchor-id="hdnum"><span class="header-section-number">12.3</span> HDNUM</h2>
+<p>HDNUM is a header-only C++ library and requires no separate build or installation.</p>
+<p>It is included in this repository as a Git submodule at:</p>
+<pre class="text"><code>code/external/hdnum/</code></pre>
+<p>After the submodule has been initialized, the required header is available as:</p>
+<pre class="text"><code>code/external/hdnum/hdnum.hh</code></pre>
+<p>The project CMake configuration adds this directory to the include path automatically. CPFloat support requires an additional setup inside the HDNUM directory, described next.</p>
+</section>
+<section id="cpfloat" class="level2" data-number="12.4">
+<h2 data-number="12.4" class="anchored" data-anchor-id="cpfloat"><span class="header-section-number">12.4</span> CPFloat</h2>
+<p>CPFloat provides the simulated low-precision formats used by the project. It must be cloned inside the HDNUM directory and built separately.</p>
+<p>From the repository root:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> code/external/hdnum</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/north-numerical-computing/cpfloat.git</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> cpfloat</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> lib</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The project expects the resulting files at:</p>
+<pre class="text"><code>code/external/hdnum/cpfloat/build/include/
+code/external/hdnum/cpfloat/build/lib/libcpfloat.a</code></pre>
+<p>These paths are used directly by the CMake configuration.</p>
+</section>
+<section id="cpfloat-1" class="level2" data-number="12.5">
+<h2 data-number="12.5" class="anchored" data-anchor-id="cpfloat-1"><span class="header-section-number">12.5</span> CPFloat</h2>
+<p>CPFloat provides the simulated low-precision formats used by the project. It must be cloned inside the HDNUM directory and built separately.</p>
+<p>From the repository root:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> code/external/hdnum</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/north-numerical-computing/cpfloat.git</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> cpfloat</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> lib</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The project expects the resulting files at:</p>
+<pre class="text"><code>code/external/hdnum/cpfloat/build/include/
+code/external/hdnum/cpfloat/build/lib/libcpfloat.a</code></pre>
+<p>These paths are used directly by the CMake configuration.</p>
+</section>
+<section id="gmp" class="level2" data-number="12.6">
+<h2 data-number="12.6" class="anchored" data-anchor-id="gmp"><span class="header-section-number">12.6</span> GMP</h2>
+<p>GMP provides the high-precision number types used by HDNUM. The project links against both <code>gmp</code> and <code>gmpxx</code>.</p>
+<p>On Debian/Ubuntu systems, install the development package with:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sudo</span> apt install libgmp-dev</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>GMP is installed system-wide; no repository-local build is required.</p>
+</section>
+<section id="python-dependencies" class="level2" data-number="12.7">
+<h2 data-number="12.7" class="anchored" data-anchor-id="python-dependencies"><span class="header-section-number">12.7</span> Python Dependencies</h2>
+<p>The plotting scripts require Python 3.10 or newer and the following packages:</p>
+<ul>
+<li>NumPy</li>
+<li>pandas</li>
+<li>Matplotlib</li>
+</ul>
+<p>They can be installed with:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="at">-m</span> pip install numpy pandas matplotlib</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Optionally, use a virtual environment:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="at">-m</span> venv .venv</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="bu">source</span> .venv/bin/activate</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> <span class="at">-m</span> pip install numpy pandas matplotlib</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The shared <code>mpir_plotting</code> package under <code>code/scripts/</code> requires no separate installation; it is imported directly by the plotting scripts.</p>
+</section>
+</section>
+<section id="building-the-project" class="level1" data-number="13">
+<h1 data-number="13"><span class="header-section-number">13</span> Building the Project</h1>
+<p>The C++ project is configured with CMake and built using the presets defined in <code>code/CMakePresets.json</code>.</p>
+<section id="release-build" class="level2" data-number="13.1">
+<h2 data-number="13.1" class="anchored" data-anchor-id="release-build"><span class="header-section-number">13.1</span> Release Build</h2>
+<p>From the repository root, configure and build the release preset with:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> code</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--preset</span> release</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--build</span> <span class="at">--preset</span> release</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ..</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The build files are written to:</p>
+<pre class="text"><code>build/fp-release/</code></pre>
+<p>and executables to:</p>
+<pre class="text"><code>build/fp-release/bin/</code></pre>
+<p>The repository-level <code>Makefile</code> provides the equivalent convenience command:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> build</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>which uses the release preset by default.</p>
+</section>
+<section id="debug-build" class="level2" data-number="13.2">
+<h2 data-number="13.2" class="anchored" data-anchor-id="debug-build"><span class="header-section-number">13.2</span> Debug Build</h2>
+<p>To configure and build the debug preset:</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> code</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--preset</span> debug</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--build</span> <span class="at">--preset</span> debug</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ..</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The build files are written to:</p>
+<pre class="text"><code>build/fp-debug/</code></pre>
+<p>and executables to:</p>
+<pre class="text"><code>build/fp-debug/bin/</code></pre>
+<p>The equivalent convenience command is:</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> PRESET=debug build</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="running-the-tests" class="level2" data-number="13.3">
+<h2 data-number="13.3" class="anchored" data-anchor-id="running-the-tests"><span class="header-section-number">13.3</span> Running the Tests</h2>
+<p>After building, run the test suite with CTest:</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> code</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ctest</span> <span class="at">--preset</span> release</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ..</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>For the debug build:</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> code</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="ex">ctest</span> <span class="at">--preset</span> debug</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ..</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The repository-level <code>Makefile</code> can build and run the tests directly:</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> tests</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>or, for debug:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> PRESET=debug tests</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>CTest reports failed tests with their output.</p>
+</section>
+</section>
+<section id="implementation-overview" class="level1" data-number="14">
+<h1 data-number="14"><span class="header-section-number">14</span> Implementation Overview</h1>
+<p>The core implementation is header-only and located in <code>code/include/</code>. The following sections summarize the purpose of the main algorithm and helper headers.</p>
+<section id="mixed_ir.hpp" class="level2" data-number="14.1">
+<h2 data-number="14.1" class="anchored" data-anchor-id="mixed_ir.hpp"><span class="header-section-number">14.1</span> <code>mixed_ir.hpp</code></h2>
+<p><code>mixed_ir.hpp</code> contains the core three-precision iterative-refinement algorithm for solving (Ax=b). The precision roles are represented by three template parameters:</p>
+<ul>
+<li><code>T_factor</code>: LU factorization and correction solves,</li>
+<li><code>T_work</code>: solution storage and updates,</li>
+<li><code>T_residual</code>: residual computation.</li>
+</ul>
+<p>The main interface is <code>mixed_ir&lt;T_factor, T_work, T_residual&gt;()</code>. It performs a full-pivoting LU factorization in factorization precision, computes an initial solution, and repeatedly computes a high-precision residual, solves for a low-precision correction, and updates the solution in working precision.</p>
+<p><code>MixedIROptions&lt;T_work&gt;</code> controls the iteration limit, relative-correction tolerance, divergence detection, residual scaling, and optional diagnostic recording. If no positive tolerance is specified, the unit roundoff of <code>T_work</code> is used.</p>
+<p><code>MixedIRResult&lt;T_work&gt;</code> stores the computed solution, termination status, iteration count, correction history, and optional iterates and residual-conversion diagnostics. The implementation also detects non-finite values and rapid divergence. Optional residual scaling reduces information loss when the residual is converted to a low factorization precision.</p>
+</section>
+<section id="hdnum_conversions.hpp" class="level2" data-number="14.2">
+<h2 data-number="14.2" class="anchored" data-anchor-id="hdnum_conversions.hpp"><span class="header-section-number">14.2</span> <code>hdnum_conversions.hpp</code></h2>
+<p><code>hdnum_conversions.hpp</code> provides conversions between the numerical types used by the project, including native C++ types, CPFloat types, and GMP-backed HDNUM types.</p>
+<p>The central function is <code>scalar_cast&lt;T_out&gt;()</code>. It uses a direct constructor when the source and destination types support one. For GMP-backed inputs without a direct conversion, it falls back to conversion through <code>double</code>; this fallback is therefore limited by the range and precision of <code>double</code>.</p>
+<p>The header also provides element-wise <code>convert()</code> functions for <code>hdnum::Vector</code> and <code>hdnum::DenseMatrix</code>. The destination container must already have the correct dimensions. Convenience functions <code>convert_vector&lt;T_out&gt;()</code> and <code>convert_matrix&lt;T_out&gt;()</code> allocate the destination container and return the converted result.</p>
+</section>
+<section id="unit_roundoff.hpp" class="level2" data-number="14.3">
+<h2 data-number="14.3" class="anchored" data-anchor-id="unit_roundoff.hpp"><span class="header-section-number">14.3</span> <code>unit_roundoff.hpp</code></h2>
+<p><code>unit_roundoff.hpp</code> provides compile-time unit-roundoff values for the numerical types used by the project.</p>
+<p>The <code>unit_roundoff_traits&lt;T&gt;</code> template handles native <code>FP32</code> and <code>FP64</code>, CPFloat types <code>CPFloat&lt;m,e&gt;</code>, and GMP-backed <code>FP&lt;m&gt;</code> types. For the parameterized formats, the unit roundoff is computed as <span class="math inline">\(u=2^{-m}\)</span>. Unsupported scalar types produce a compile-time error.</p>
+<p>The convenience function</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>default_unit_roundoff<span class="op">&lt;</span>T<span class="op">&gt;()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>returns the corresponding value. <code>mixed_ir.hpp</code> uses it as the default relative-correction tolerance when no explicit tolerance is supplied.</p>
+</section>
+<section id="test_matrices.hpp" class="level2" data-number="14.4">
+<h2 data-number="14.4" class="anchored" data-anchor-id="test_matrices.hpp"><span class="header-section-number">14.4</span> <code>test_matrices.hpp</code></h2>
+<p><code>test_matrices.hpp</code> provides reproducible test problems for the numerical experiments. It supports three matrix families: structured rotated SPD, dense random SPD, and dense random SVD matrices with prescribed condition numbers.</p>
+<p><code>TestProblemOptions</code> controls the right-hand-side construction and random seeds. The available right-hand-side modes are:</p>
+<ul>
+<li><code>ones_solution</code>: constructs <span class="math inline">\(x=(1,\ldots,1)^T\)</span> and forms <span class="math inline">\(b=Ax\)</span>,</li>
+<li><code>random_sign_solution</code>: constructs a reproducible vector with <span class="math inline">\(x_i\in{-1,1}\)</span> and forms <span class="math inline">\(b=Ax\)</span>,</li>
+<li><code>random_normal_rhs</code>: draws the entries of <span class="math inline">\(b\)</span> directly from a standard normal distribution.</li>
+</ul>
+<p>Generated problems are returned as <code>LinearSystem&lt;T_data, T_reference&gt;</code>, containing <code>A</code>, <code>b</code>, the reference solution <code>x_true</code>, and the requested condition number. The shared <code>complete_problem()</code> function constructs the right-hand side and computes the reference solution in <code>T_reference</code> from the stored system.</p>
+<p>The main generator functions are <code>make_rotated_spd_problem()</code>, <code>make_random_spd_problem()</code>, and <code>make_random_svd_problem()</code>.</p>
+</section>
+<section id="reference_solve.hpp" class="level2" data-number="14.5">
+<h2 data-number="14.5" class="anchored" data-anchor-id="reference_solve.hpp"><span class="header-section-number">14.5</span> <code>reference_solve.hpp</code></h2>
+<p><code>reference_solve.hpp</code> provides the direct solver used to compute reference solutions for the experiments.</p>
+<p>The main function,</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>high_precision_solve<span class="op">&lt;</span>T_reference<span class="op">,</span> T_data<span class="op">&gt;(</span>A<span class="op">,</span> b<span class="op">)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>converts <code>A</code> and <code>b</code> from <code>T_data</code> to <code>T_reference</code> and solves the system entirely in <code>T_reference</code>. It uses HDNUM’s full-pivoting LU factorization, permutation operations, and triangular solves.</p>
+<p>The input system is not modified. Increasing <code>T_reference</code> improves the accuracy of the solve, but cannot recover information already lost when <code>A</code> or <code>b</code> were stored in <code>T_data</code>.</p>
+<p>The function also checks that <code>A</code> is nonempty and square and that the dimensions of <code>A</code> and <code>b</code> are compatible.</p>
+</section>
+<section id="error_metrics.hpp" class="level2" data-number="14.6">
+<h2 data-number="14.6" class="anchored" data-anchor-id="error_metrics.hpp"><span class="header-section-number">14.6</span> <code>error_metrics.hpp</code></h2>
+<p><code>error_metrics.hpp</code> provides the infinity-norm error measures used by the experiments. All metric calculations are performed in an independently selected measurement precision <code>T_measure</code>, and the final scalar values are converted to <code>double</code> for output.</p>
+<p>The header provides vector and matrix infinity norms,</p>
+<p><span class="math display">\[
+|x|_\infty = \max_i |x_i|,
+\qquad
+|A|_\infty = \max_i \sum_j |a_{ij}|,
+\]</span></p>
+<p>together with the relative forward error</p>
+<p><span class="math display">\[
+\frac{|x-x_{\mathrm{ref}}|_\infty}
+{|x_{\mathrm{ref}}|_\infty},
+\]</span></p>
+<p>and the normwise backward error</p>
+<p><span class="math display">\[
+\frac{|b-Ax|_\infty}
+{|A|_\infty|x|_\infty+|b|_\infty}.
+\]</span></p>
+<p>The main functions are <code>vector_norm_inf()</code>, <code>matrix_norm_inf()</code>, <code>relative_forward_error_inf()</code>, and <code>normwise_backward_error_inf()</code>. Inputs may use different storage precisions; their components are converted to <code>T_measure</code> before the corresponding metric is evaluated.</p>
+</section>
+<section id="condition_grids.hpp" class="level2" data-number="14.7">
+<h2 data-number="14.7" class="anchored" data-anchor-id="condition_grids.hpp"><span class="header-section-number">14.7</span> <code>condition_grids.hpp</code></h2>
+<p><code>condition_grids.hpp</code> provides condition-number grids for the iterative-refinement experiments. The grids are defined relative to the approximate factorization boundary</p>
+<p><span class="math display">\[
+\kappa_* = \frac{1}{u_f},
+\]</span></p>
+<p>where <span class="math inline">\(u_f\)</span> is the unit roundoff of the factorization precision.</p>
+<p><code>representative_kappas&lt;T_factor&gt;()</code> returns a small set of values below, at, and above this boundary, together with the baseline <span class="math inline">\(\kappa=1\)</span>. The candidate values are</p>
+<p><span class="math display">\[
+1,; 0.01\kappa_*,; 0.1\kappa_*,; 0.5\kappa_*,;
+\kappa_*,; 2\kappa_*,; 10\kappa_*,; 100\kappa_*.
+\]</span></p>
+<p>Values below <span class="math inline">\(1\)</span> are omitted, and the result is sorted with duplicates removed.</p>
+<p><code>kappa_sweep&lt;T_factor&gt;()</code> generates a denser logarithmic sweep from a configurable minimum condition number to a configurable multiple of <span class="math inline">\(\kappa_*\)</span>. The number of points per decade can also be specified. The upper endpoint and <span class="math inline">\(\kappa_*\)</span> itself are inserted exactly when they lie in the requested range.</p>
+<p>Both utilities return condition numbers as <code>double</code> values and validate their inputs and representability.</p>
+</section>
+<section id="experiment_io.hpp" class="level2" data-number="14.8">
+<h2 data-number="14.8" class="anchored" data-anchor-id="experiment_io.hpp"><span class="header-section-number">14.8</span> <code>experiment_io.hpp</code></h2>
+<p><code>experiment_io.hpp</code> provides shared metadata and output utilities for the experimental drivers. It defines <code>ExperimentKind</code>, <code>MatrixFamily</code>, <code>PrecisionNames</code>, and <code>ExperimentDescription</code>, which describe an experiment independently of a particular run.</p>
+<p>The <code>to_string()</code> overloads provide stable textual identifiers for experiment kinds, matrix families, right-hand-side modes, and iterative-refinement termination statuses. These identifiers are used consistently in CSV files, directory names, and generated filenames.</p>
+<p><code>make_experiment_filename()</code> generates descriptive CSV filenames from the experiment configuration, while <code>make_output_directory()</code> maps each experiment kind to its corresponding directory under <code>results/raw/</code> and creates it when necessary.</p>
+<p><code>write_common_csv_header()</code> and <code>write_common_csv_fields()</code> provide the common CSV schema shared by the experiments. The recorded metadata includes the problem configuration, precision roles, algorithm options, requested condition number, termination status, iteration count, and final relative correction. Experiment-specific columns can be appended by the individual driver.</p>
+</section>
+</section>
+<section id="experiments" class="level1" data-number="15">
+<h1 data-number="15"><span class="header-section-number">15</span> Experiments</h1>
+<p>The experimental drivers are located in <code>code/experiments/</code>. Each driver studies a specific aspect of mixed-precision iterative refinement and writes its results as CSV files under <code>results/raw/</code>. The following sections summarize the purpose and structure of the five experiments.</p>
+<section id="convergence-histories" class="level2" data-number="15.1">
+<h2 data-number="15.1" class="anchored" data-anchor-id="convergence-histories"><span class="header-section-number">15.1</span> Convergence Histories</h2>
+<p><code>exp_convergence_histories.cc</code> records the behavior of iterative refinement across individual refinement steps. For each precision configuration, it solves random SPD systems with representative condition numbers below, near, and above the approximate factorization boundary</p>
+<p><span class="math display">\[
+\kappa_* = \frac{1}{u_f}.
+\]</span></p>
+<p>The driver uses <span class="math inline">\(n=100\)</span>, a random-normal right-hand side, at most 20 refinement steps, and residual scaling. It stores every available iterate and records the relative forward error, normwise backward error, and relative correction after each step.</p>
+<p>The experiment covers FP16, FP32, bfloat16, and FP8 factorization configurations together with an FP64 baseline. For FP16 and FP32, both FP64 and FP128 residual precisions are included. Each precision configuration is written to a separate CSV file under <code>results/raw/convergence/</code>.</p>
+</section>
+<section id="condition-number-sweeps" class="level2" data-number="15.2">
+<h2 data-number="15.2" class="anchored" data-anchor-id="condition-number-sweeps"><span class="header-section-number">15.2</span> Condition-Number Sweeps</h2>
+<p><code>exp_condition_sweeps.cc</code> studies how iterative refinement behaves as the condition number increases. For each factorization precision, it generates a logarithmic sweep from <span class="math inline">\(\kappa=1\)</span> to <span class="math inline">\(10\kappa_*\)</span>, with</p>
+<p><span class="math display">\[
+\kappa_*=\frac{1}{u_f},
+\]</span></p>
+<p>using ten points per decade and including <span class="math inline">\(\kappa_*\)</span> exactly.</p>
+<p>The experiment uses random SPD systems with <span class="math inline">\(n=100\)</span>, a random-normal right-hand side, at most 20 refinement steps, fixed seeds, divergence detection, and residual scaling. Only the requested condition number varies within each sweep.</p>
+<p>The tested configurations include FP32–FP64–FP64, FP32–FP64–FP128, FP16–FP64–FP64, FP16–FP64–FP128, bfloat16–FP64–FP128, and FP8–FP64–FP128, together with an FP64 same-precision baseline. Each condition number contributes one summary row containing the termination status, number of completed updates, final relative correction, and final relative forward error when a solution is available. Results are written under <code>results/raw/condition_sweeps/</code>.</p>
+</section>
+<section id="residual-precision" class="level2" data-number="15.3">
+<h2 data-number="15.3" class="anchored" data-anchor-id="residual-precision"><span class="header-section-number">15.3</span> Residual Precision</h2>
+<p><code>exp_residual_precision.cc</code> isolates the effect of residual precision. The factorization and working precisions are fixed at FP32 and FP64, while the residual precision is varied between FP64 and FP128. Both configurations use the same matrices, right-hand sides, condition-number grid, and algorithmic settings, so residual precision is the only changed variable.</p>
+<p>The experiment uses random SPD systems with <span class="math inline">\(n=100\)</span>, a random-normal right-hand side, residual scaling, and at most 20 refinement steps. The condition-number sweep extends from <span class="math inline">\(\kappa=1\)</span> to <span class="math inline">\(10\kappa_*\)</span> for FP32 factorization, with ten points per decade. Errors are evaluated in FP256.</p>
+<p>For each condition number, the driver records the termination status, number of completed updates, final relative correction, final relative forward error, and final normwise backward error. The FP64- and FP128-residual sweeps are written as separate CSV files under <code>results/raw/residual_precision/</code>.</p>
+</section>
+<section id="direct-solve-comparison" class="level2" data-number="15.4">
+<h2 data-number="15.4" class="anchored" data-anchor-id="direct-solve-comparison"><span class="header-section-number">15.4</span> Direct-Solve Comparison</h2>
+<p><code>exp_direct_solve_comparison.cc</code> compares FP32–FP64–FP128 iterative refinement with a direct FP64 LU solve. Both methods solve exactly the same generated systems and use the same FP256 reference solution.</p>
+<p>The experiment uses random SPD systems with <span class="math inline">\(n=100\)</span>, a random-normal right-hand side, and a condition-number sweep from <span class="math inline">\(\kappa=1\)</span> to <span class="math inline">\(10\kappa_*\)</span> for FP32 factorization,</p>
+<p><span class="math display">\[
+\kappa_*=\frac{1}{u_f}.
+\]</span></p>
+<p>The mixed method uses at most 20 refinement steps, divergence detection, and residual scaling. The direct baseline performs a single full-pivoting LU factorization and solve entirely in FP64.</p>
+<p>For each condition number, the driver records the final relative forward error and normwise backward error for both methods, together with their respective status information. Both variants are written to the same CSV file under <code>results/raw/direct_comparison/</code>.</p>
+</section>
+<section id="residual-scaling" class="level2" data-number="15.5">
+<h2 data-number="15.5" class="anchored" data-anchor-id="residual-scaling"><span class="header-section-number">15.5</span> Residual Scaling</h2>
+<p><code>exp_residual_scaling_fp16_fp64_fp128.cc</code> studies the effect of residual scaling when the FP128 residual is converted to FP16 for the correction solve. It compares two runs on exactly the same system: an <code>unscaled</code> variant and a <code>scaled</code> variant.</p>
+<p>The experiment uses an FP16–FP64–FP128 precision triple, FP256 measurement precision, a random SPD system with <span class="math inline">\(n=100\)</span> and <span class="math inline">\(\kappa=10\)</span>, a random-normal right-hand side, divergence detection, and at most 20 refinement steps. Both stored iterates and residual-conversion diagnostics are enabled.</p>
+<p>For each iteration, the diagnostic output records the residual infinity norm, smallest nonzero residual component, number of nonzero components, number of components rounded to zero during conversion, and relative correction. A separate error-history file records the relative forward and normwise backward errors for every available iterate.</p>
+<p>The diagnostic CSV is written under <code>results/raw/robustness/residual_scaling/</code>, while the error history is stored in its <code>error_histories/</code> subdirectory.</p>
+</section>
+</section>
+<section id="running-the-experiments" class="level1" data-number="16">
+<h1 data-number="16"><span class="header-section-number">16</span> Running the Experiments</h1>
+<p>The repository-level <code>Makefile</code> provides convenience targets for running the experimental drivers. The project is built automatically before an experiment is executed.</p>
+<p>All experiments can be run with:</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> experiments</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Individual experiments can be run with:</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> experiment-convergence-histories</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> experiment-condition-sweeps</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> experiment-residual-precision</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> experiment-direct-solve-comparison</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> experiment-residual-scaling</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The generated CSV files are written to the corresponding subdirectories under <code>results/raw/</code>.</p>
+<p>By default, the release build is used. A different CMake preset can be selected with <code>PRESET</code>, for example:</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> PRESET=debug experiment-convergence-histories</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="plotting-the-results" class="level1" data-number="17">
+<h1 data-number="17"><span class="header-section-number">17</span> Plotting the Results</h1>
+<p>The repository-level <code>Makefile</code> provides convenience targets for generating figures from the CSV files in <code>results/raw/</code>.</p>
+<p>All plots can be generated with:</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> plots</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Individual plotting tasks can be run with:</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> plot-convergence-histories</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> plot-condition-sweeps</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> plot-residual-precision</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> plot-direct-solve-comparison</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> plot-residual-scaling-diagnostics</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> plot-residual-scaling-errors</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The generated figures are written to the corresponding subdirectories under <code>results/plots/</code>.</p>
+<p>To regenerate both the experimental data and all plots in one step, use:</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> reproduce</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="results-directory" class="level1" data-number="18">
+<h1 data-number="18"><span class="header-section-number">18</span> Results Directory</h1>
+<p>Generated experimental data and figures are stored under the repository-level <code>results/</code> directory:</p>
+<pre class="text"><code>results/
+├── raw/
+└── plots/</code></pre>
+<p><code>results/raw/</code> contains the CSV files produced by the C++ experiment drivers. Its subdirectories correspond to the different experiment groups.</p>
+<p><code>results/plots/</code> contains the figures generated from these CSV files. The plotting scripts mirror the relevant <code>results/raw/</code> directory structure when constructing their output paths.</p>
+<p>The results directories are created automatically as needed by the C++ and Python utilities. They should therefore be treated as generated output rather than as part of the implementation itself.</p>
+</section>
+<section id="tutorial-implementing-a-new-experiment" class="level1" data-number="19">
+<h1 data-number="19"><span class="header-section-number">19</span> Tutorial: Implementing a New Experiment</h1>
+<p>This section demonstrates how to extend the experimental framework with a new experiment. As a worked example, we construct a dimension sweep that varies the system size while reusing the existing problem-generation, iterative-refinement, error-measurement, and output utilities.</p>
+<section id="experiment-goal" class="level2" data-number="19.1">
+<h2 data-number="19.1" class="anchored" data-anchor-id="experiment-goal"><span class="header-section-number">19.1</span> Experiment Goal</h2>
+<p>The goal of the example experiment is to study how iterative refinement behaves as the system dimension <span class="math inline">\(n\)</span> changes.</p>
+<p>All other settings are kept fixed:</p>
+<ul>
+<li>matrix family: random SPD,</li>
+<li>condition number: <span class="math inline">\(\kappa = 10^4\)</span>,</li>
+<li>right-hand side: random normal,</li>
+<li>precision triple: FP32–FP64–FP128,</li>
+<li>measurement precision: FP256,</li>
+<li>maximum refinement steps: 20,</li>
+<li>residual scaling: enabled.</li>
+</ul>
+<p>The experiment evaluates several dimensions, for example</p>
+<p><span class="math display">\[
+n \in {25,50,100,200}.
+\]</span></p>
+<p>For each dimension, the driver records the termination status, number of completed updates, final relative correction, relative forward error, and normwise backward error.</p>
+<p>The purpose is primarily to demonstrate how a new experiment can be assembled from the existing framework components while varying only one experimental parameter.</p>
+</section>
+<section id="creating-the-driver" class="level2" data-number="19.2">
+<h2 data-number="19.2" class="anchored" data-anchor-id="creating-the-driver"><span class="header-section-number">19.2</span> Creating the Driver</h2>
+<p>Create a new experimental driver under <code>code/experiments/</code>:</p>
+<pre class="text"><code>code/experiments/exp_dimension_sweep.cc</code></pre>
+<p>Experiment drivers follow the naming convention <code>exp_*.cc</code>. The CMake configuration discovers files matching this pattern automatically, so no additional CMake target is required.</p>
+<p>The driver uses the existing algorithm and experiment helpers:</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"error_metrics.hpp"</span></span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"experiment_io.hpp"</span></span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"mixed_ir.hpp"</span></span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"test_matrices.hpp"</span></span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span></span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Experiment configuration and dimension sweep are added below.</span></span>
+<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Keeping the experiment in a separate driver isolates its configuration and output logic while reusing the shared implementation in <code>code/include/</code>.</p>
+</section>
+<section id="configuring-the-experiment" class="level2" data-number="19.3">
+<h2 data-number="19.3" class="anchored" data-anchor-id="configuring-the-experiment"><span class="header-section-number">19.3</span> Configuring the Experiment</h2>
+<p>First define the fixed precision configuration, condition number, and dimensions:</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> T_factor   <span class="op">=</span> hdnum<span class="op">::</span>FP32<span class="op">;</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> T_work     <span class="op">=</span> hdnum<span class="op">::</span>FP64<span class="op">;</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> T_residual <span class="op">=</span> hdnum<span class="op">::</span>FP128<span class="op">;</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a><span class="kw">using</span> T_measure  <span class="op">=</span> hdnum<span class="op">::</span>FP256<span class="op">;</span></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a><span class="kw">constexpr</span> <span class="dt">double</span> requested_kappa <span class="op">=</span> <span class="fl">1.0e4</span><span class="op">;</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="bu">std::</span>vector<span class="op">&lt;</span><span class="bu">std::</span>size_t<span class="op">&gt;</span> dimensions<span class="op">{</span></span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>    <span class="dv">25</span><span class="op">,</span> <span class="dv">50</span><span class="op">,</span> <span class="dv">100</span><span class="op">,</span> <span class="dv">200</span></span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> mpir<span class="op">::</span>PrecisionNames precision_names<span class="op">{</span></span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"fp32"</span><span class="op">,</span></span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">"fp64"</span><span class="op">,</span></span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">"fp128"</span><span class="op">,</span></span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">"fp256"</span></span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The problem generator is configured to use a reproducible random-normal right-hand side:</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>TestProblemOptions problem_options<span class="op">;</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>problem_options<span class="op">.</span>rhs_mode <span class="op">=</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>RightHandSideMode<span class="op">::</span>random_normal_rhs<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The iterative-refinement options are configured in the same way as in the main experiments:</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>MixedIROptions<span class="op">&lt;</span>T_work<span class="op">&gt;</span> algorithm_options<span class="op">;</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>algorithm_options<span class="op">.</span>max_iterations <span class="op">=</span> <span class="dv">20</span><span class="op">;</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>algorithm_options<span class="op">.</span>store_iterates <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>algorithm_options<span class="op">.</span>detect_divergence <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>algorithm_options<span class="op">.</span>scale_residual <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>algorithm_options<span class="op">.</span>record_residual_diagnostics <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a><span class="kw">constexpr</span> <span class="bu">std::</span>string_view variant <span class="op">=</span> <span class="st">"scaled"</span><span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The random seeds retain their defaults, so the experiment is reproducible. Only the system dimension changes between runs. The existing experiment drivers use the same <code>TestProblemOptions</code>, <code>PrecisionNames</code>, and <code>MixedIROptions</code> structures to separate experimental configuration from the numerical implementation.</p>
+</section>
+<section id="generating-the-test-problems" class="level2" data-number="19.4">
+<h2 data-number="19.4" class="anchored" data-anchor-id="generating-the-test-problems"><span class="header-section-number">19.4</span> Generating the Test Problems</h2>
+<p>For each dimension, generate a random SPD system in working precision and compute its reference solution in measurement precision:</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> <span class="op">(</span><span class="at">const</span> <span class="bu">std::</span>size_t n <span class="op">:</span> dimensions<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">auto</span> problem <span class="op">=</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>make_random_spd_problem<span class="op">&lt;</span>T_work<span class="op">,</span> T_measure<span class="op">&gt;(</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>            n<span class="op">,</span></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>            requested_kappa<span class="op">,</span></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>            problem_options</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Iterative refinement and measurement are added below.</span></span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p><code>make_random_spd_problem()</code> constructs a matrix with the requested condition number and uses <code>problem_options</code> to generate the right-hand side. It returns a <code>LinearSystem&lt;T_work, T_measure&gt;</code> containing the matrix <code>problem.A</code>, right-hand side <code>problem.b</code>, reference solution <code>problem.x_true</code>, and requested condition number <code>problem.kappa</code>.</p>
+<p>The reference solution is computed automatically in <code>T_measure</code> by solving the stored system <span class="math inline">\(Ax=b\)</span>. No separate reference solve is required in the experiment driver.</p>
+<p>Because the generator settings and seeds remain fixed, the system dimension is the only experimental parameter changed by the loop.</p>
+</section>
+<section id="running-iterative-refinement" class="level2" data-number="19.5">
+<h2 data-number="19.5" class="anchored" data-anchor-id="running-iterative-refinement"><span class="header-section-number">19.5</span> Running Iterative Refinement</h2>
+</section>
+<section id="running-iterative-refinement-1" class="level2" data-number="19.6">
+<h2 data-number="19.6" class="anchored" data-anchor-id="running-iterative-refinement-1"><span class="header-section-number">19.6</span> Running Iterative-Refinement</h2>
+<p>With the problem and algorithm options defined, run the mixed-precision solver:</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="kw">auto</span> result <span class="op">=</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>mixed_ir<span class="op">&lt;</span>T_factor<span class="op">,</span> T_work<span class="op">,</span> T_residual<span class="op">&gt;(</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>        problem<span class="op">.</span>A<span class="op">,</span></span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>        problem<span class="op">.</span>b<span class="op">,</span></span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>        algorithm_options</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The template parameters determine the three arithmetic roles: <code>T_factor</code> is used for the LU factorization and correction solves, <code>T_work</code> for the iterates and updates, and <code>T_residual</code> for residual computation.</p>
+<p>The returned <code>MixedIRResult&lt;T_work&gt;</code> contains the final solution <code>result.x</code>, termination status, number of completed updates, and final relative correction. Since this experiment only measures the final result, storing the complete iterate history is unnecessary.</p>
+</section>
+<section id="measuring-the-result" class="level2" data-number="19.7">
+<h2 data-number="19.7" class="anchored" data-anchor-id="measuring-the-result"><span class="header-section-number">19.7</span> Measuring the Result</h2>
+<p>When a valid solution is available, compute the final forward and backward errors in <code>T_measure</code>:</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> forward_error <span class="op">=</span></span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>relative_forward_error_inf<span class="op">&lt;</span>T_measure<span class="op">&gt;(</span></span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>        result<span class="op">.</span>x<span class="op">,</span></span>
+<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>        problem<span class="op">.</span>x_true</span>
+<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="dt">double</span> backward_error <span class="op">=</span></span>
+<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>normwise_backward_error_inf<span class="op">&lt;</span>T_measure<span class="op">&gt;(</span></span>
+<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>        problem<span class="op">.</span>A<span class="op">,</span></span>
+<span id="cb42-10"><a href="#cb42-10" aria-hidden="true" tabindex="-1"></a>        problem<span class="op">.</span>b<span class="op">,</span></span>
+<span id="cb42-11"><a href="#cb42-11" aria-hidden="true" tabindex="-1"></a>        result<span class="op">.</span>x</span>
+<span id="cb42-12"><a href="#cb42-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The forward error compares the computed solution with the reference solution,</p>
+<p><span class="math display">\[
+\frac{|x-x_{\mathrm{ref}}|*\infty}
+{|x*{\mathrm{ref}}|_\infty},
+\]</span></p>
+<p>while the backward error measures the residual relative to the problem data,</p>
+<p><span class="math display">\[
+\frac{|b-Ax|*\infty}
+{|A|*\infty|x|*\infty+|b|*\infty}.
+\]</span></p>
+<p>Both metrics are evaluated internally in FP256 and returned as <code>double</code> values for experiment output.</p>
+<p>The error functions should only be called when <code>result.x</code> contains a solution of the expected dimension. An early failure may occur before an initial solution is constructed; in that case the status should still be recorded and the unavailable error fields left empty.</p>
+</section>
+<section id="writing-the-output" class="level2" data-number="19.8">
+<h2 data-number="19.8" class="anchored" data-anchor-id="writing-the-output"><span class="header-section-number">19.8</span> Writing the Output</h2>
+</section>
+<section id="writing-the-output-1" class="level2" data-number="19.9">
+<h2 data-number="19.9" class="anchored" data-anchor-id="writing-the-output-1"><span class="header-section-number">19.9</span> Writing the Output</h2>
+<p>The shared output utilities identify experiments through <code>ExperimentKind</code>. Since the dimension sweep is a new experiment category, first extend <code>experiment_io.hpp</code>.</p>
+<p>Add the new enumerator:</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="kw">enum</span> <span class="kw">class</span> ExperimentKind <span class="op">{</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>    convergence_history<span class="op">,</span></span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>    condition_sweep<span class="op">,</span></span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>    residual_precision<span class="op">,</span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>    direct_solve_comparison<span class="op">,</span></span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>    residual_scaling<span class="op">,</span></span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a>    range_failure<span class="op">,</span></span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a>    dimension_sweep</span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Add its textual identifier in <code>to_string()</code>:</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="cf">case</span> ExperimentKind<span class="op">::</span>dimension_sweep<span class="op">:</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="st">"dimension-sweep"</span><span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>and its output directory in <code>make_output_directory()</code>:</p>
+<div class="sourceCode" id="cb45"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="cf">case</span> ExperimentKind<span class="op">::</span>dimension_sweep<span class="op">:</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>    output_directory <span class="op">=</span></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>        raw_results_root <span class="op">/</span> <span class="st">"dimension_sweeps"</span><span class="op">;</span></span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">break</span><span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>No change to <code>make_experiment_filename()</code> or the common CSV-writing functions is required.</p>
+<p>Inside the dimension loop, describe the current dataset and construct its output path:</p>
+<div class="sourceCode" id="cb46"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> mpir<span class="op">::</span>ExperimentDescription experiment<span class="op">{</span></span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>ExperimentKind<span class="op">::</span>dimension_sweep<span class="op">,</span></span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>MatrixFamily<span class="op">::</span>random_spd<span class="op">,</span></span>
+<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>    n<span class="op">,</span></span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>    precision_names</span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a><span class="op">};</span></span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="kw">auto</span> output_directory <span class="op">=</span></span>
+<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>make_output_directory<span class="op">(</span></span>
+<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a>        MPIR_RESULTS_RAW_DIR<span class="op">,</span></span>
+<span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a>        experiment<span class="op">.</span>kind</span>
+<span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb46-13"><a href="#cb46-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a><span class="at">const</span> <span class="kw">auto</span> output_file <span class="op">=</span></span>
+<span id="cb46-15"><a href="#cb46-15" aria-hidden="true" tabindex="-1"></a>    output_directory <span class="op">/</span></span>
+<span id="cb46-16"><a href="#cb46-16" aria-hidden="true" tabindex="-1"></a>    mpir<span class="op">::</span>make_experiment_filename<span class="op">(</span></span>
+<span id="cb46-17"><a href="#cb46-17" aria-hidden="true" tabindex="-1"></a>        experiment<span class="op">,</span></span>
+<span id="cb46-18"><a href="#cb46-18" aria-hidden="true" tabindex="-1"></a>        problem_options</span>
+<span id="cb46-19"><a href="#cb46-19" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Each dimension receives its own CSV file because <code>dimension</code> is part of the common experiment metadata and generated filename.</p>
+<p>Open the file and write the common header together with the two experiment-specific error columns:</p>
+<div class="sourceCode" id="cb47"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="bu">std::</span>ofstream out<span class="op">(</span>output_file<span class="op">);</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(!</span>out<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">throw</span> <span class="bu">std::</span>runtime_error<span class="op">(</span></span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Could not open output file: "</span> <span class="op">+</span> output_file<span class="op">.</span>string<span class="op">()</span></span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">);</span></span>
+<span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb47-8"><a href="#cb47-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-9"><a href="#cb47-9" aria-hidden="true" tabindex="-1"></a>out <span class="op">&lt;&lt;</span> <span class="bu">std::</span>scientific</span>
+<span id="cb47-10"><a href="#cb47-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">&lt;&lt;</span> <span class="bu">std::</span>setprecision<span class="op">(</span></span>
+<span id="cb47-11"><a href="#cb47-11" aria-hidden="true" tabindex="-1"></a>           <span class="bu">std::</span>numeric_limits<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;::</span>max_digits10</span>
+<span id="cb47-12"><a href="#cb47-12" aria-hidden="true" tabindex="-1"></a>       <span class="op">);</span></span>
+<span id="cb47-13"><a href="#cb47-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb47-14"><a href="#cb47-14" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>write_common_csv_header<span class="op">(</span>out<span class="op">);</span></span>
+<span id="cb47-15"><a href="#cb47-15" aria-hidden="true" tabindex="-1"></a>out <span class="op">&lt;&lt;</span> <span class="st">",final_forward_error_inf,final_backward_error_inf</span><span class="sc">\n</span><span class="st">"</span><span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>After iterative refinement, write the common fields and append the measured errors:</p>
+<div class="sourceCode" id="cb48"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>mpir<span class="op">::</span>write_common_csv_fields<span class="op">(</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>    out<span class="op">,</span></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>    experiment<span class="op">,</span></span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>    problem_options<span class="op">,</span></span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>    algorithm_options<span class="op">,</span></span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>    requested_kappa<span class="op">,</span></span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>    variant<span class="op">,</span></span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a>    result</span>
+<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a><span class="op">);</span></span>
+<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>out <span class="op">&lt;&lt;</span> <span class="ch">','</span><span class="op">;</span></span>
+<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-13"><a href="#cb48-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="op">(</span>result<span class="op">.</span>x<span class="op">.</span>size<span class="op">()</span> <span class="op">==</span> n<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb48-14"><a href="#cb48-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> <span class="dt">double</span> forward_error <span class="op">=</span></span>
+<span id="cb48-15"><a href="#cb48-15" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>relative_forward_error_inf<span class="op">&lt;</span>T_measure<span class="op">&gt;(</span></span>
+<span id="cb48-16"><a href="#cb48-16" aria-hidden="true" tabindex="-1"></a>            result<span class="op">.</span>x<span class="op">,</span></span>
+<span id="cb48-17"><a href="#cb48-17" aria-hidden="true" tabindex="-1"></a>            problem<span class="op">.</span>x_true</span>
+<span id="cb48-18"><a href="#cb48-18" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb48-19"><a href="#cb48-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-20"><a href="#cb48-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">const</span> <span class="dt">double</span> backward_error <span class="op">=</span></span>
+<span id="cb48-21"><a href="#cb48-21" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>normwise_backward_error_inf<span class="op">&lt;</span>T_measure<span class="op">&gt;(</span></span>
+<span id="cb48-22"><a href="#cb48-22" aria-hidden="true" tabindex="-1"></a>            problem<span class="op">.</span>A<span class="op">,</span></span>
+<span id="cb48-23"><a href="#cb48-23" aria-hidden="true" tabindex="-1"></a>            problem<span class="op">.</span>b<span class="op">,</span></span>
+<span id="cb48-24"><a href="#cb48-24" aria-hidden="true" tabindex="-1"></a>            result<span class="op">.</span>x</span>
+<span id="cb48-25"><a href="#cb48-25" aria-hidden="true" tabindex="-1"></a>        <span class="op">);</span></span>
+<span id="cb48-26"><a href="#cb48-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-27"><a href="#cb48-27" aria-hidden="true" tabindex="-1"></a>    out <span class="op">&lt;&lt;</span> forward_error <span class="op">&lt;&lt;</span> <span class="ch">','</span> <span class="op">&lt;&lt;</span> backward_error<span class="op">;</span></span>
+<span id="cb48-28"><a href="#cb48-28" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb48-29"><a href="#cb48-29" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb48-30"><a href="#cb48-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">// Keep the status row while leaving unavailable errors empty.</span></span>
+<span id="cb48-31"><a href="#cb48-31" aria-hidden="true" tabindex="-1"></a>    out <span class="op">&lt;&lt;</span> <span class="ch">','</span><span class="op">;</span></span>
+<span id="cb48-32"><a href="#cb48-32" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span>
+<span id="cb48-33"><a href="#cb48-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-34"><a href="#cb48-34" aria-hidden="true" tabindex="-1"></a>out <span class="op">&lt;&lt;</span> <span class="ch">'</span><span class="sc">\n</span><span class="ch">'</span><span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The resulting files are written under:</p>
+<pre class="text"><code>results/raw/dimension_sweeps/</code></pre>
+<p>and contain the standard experiment metadata together with the final forward and backward errors.</p>
+</section>
+<section id="complete-example-driver" class="level2" data-number="19.10">
+<h2 data-number="19.10" class="anchored" data-anchor-id="complete-example-driver"><span class="header-section-number">19.10</span> Complete Example Driver</h2>
+<p>Combining the preceding steps gives the complete <code>exp_dimension_sweep.cc</code> driver below. It assumes that <code>ExperimentKind::dimension_sweep</code> and its output directory have already been added to <code>experiment_io.hpp</code> as described above.</p>
+<div class="sourceCode" id="cb50"><pre class="sourceCode cpp code-with-copy"><code class="sourceCode cpp"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;cstddef&gt;</span></span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;fstream&gt;</span></span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;iomanip&gt;</span></span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;iostream&gt;</span></span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;limits&gt;</span></span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;stdexcept&gt;</span></span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;string_view&gt;</span></span>
+<span id="cb50-8"><a href="#cb50-8" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">&lt;vector&gt;</span></span>
+<span id="cb50-9"><a href="#cb50-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-10"><a href="#cb50-10" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"error_metrics.hpp"</span></span>
+<span id="cb50-11"><a href="#cb50-11" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"experiment_io.hpp"</span></span>
+<span id="cb50-12"><a href="#cb50-12" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"hdnum.hh"</span></span>
+<span id="cb50-13"><a href="#cb50-13" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"mixed_ir.hpp"</span></span>
+<span id="cb50-14"><a href="#cb50-14" aria-hidden="true" tabindex="-1"></a><span class="pp">#include </span><span class="im">"test_matrices.hpp"</span></span>
+<span id="cb50-15"><a href="#cb50-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-16"><a href="#cb50-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-17"><a href="#cb50-17" aria-hidden="true" tabindex="-1"></a><span class="dt">int</span> main<span class="op">()</span></span>
+<span id="cb50-18"><a href="#cb50-18" aria-hidden="true" tabindex="-1"></a><span class="op">{</span></span>
+<span id="cb50-19"><a href="#cb50-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span> <span class="op">{</span></span>
+<span id="cb50-20"><a href="#cb50-20" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> T_factor   <span class="op">=</span> hdnum<span class="op">::</span>FP32<span class="op">;</span></span>
+<span id="cb50-21"><a href="#cb50-21" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> T_work     <span class="op">=</span> hdnum<span class="op">::</span>FP64<span class="op">;</span></span>
+<span id="cb50-22"><a href="#cb50-22" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> T_residual <span class="op">=</span> hdnum<span class="op">::</span>FP128<span class="op">;</span></span>
+<span id="cb50-23"><a href="#cb50-23" aria-hidden="true" tabindex="-1"></a>        <span class="kw">using</span> T_measure  <span class="op">=</span> hdnum<span class="op">::</span>FP256<span class="op">;</span></span>
+<span id="cb50-24"><a href="#cb50-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-25"><a href="#cb50-25" aria-hidden="true" tabindex="-1"></a>        <span class="kw">constexpr</span> <span class="dt">double</span> requested_kappa <span class="op">=</span> <span class="fl">1.0e4</span><span class="op">;</span></span>
+<span id="cb50-26"><a href="#cb50-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-27"><a href="#cb50-27" aria-hidden="true" tabindex="-1"></a>        <span class="at">const</span> <span class="bu">std::</span>vector<span class="op">&lt;</span><span class="bu">std::</span>size_t<span class="op">&gt;</span> dimensions<span class="op">{</span></span>
+<span id="cb50-28"><a href="#cb50-28" aria-hidden="true" tabindex="-1"></a>            <span class="dv">25</span><span class="op">,</span> <span class="dv">50</span><span class="op">,</span> <span class="dv">100</span><span class="op">,</span> <span class="dv">200</span></span>
+<span id="cb50-29"><a href="#cb50-29" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb50-30"><a href="#cb50-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-31"><a href="#cb50-31" aria-hidden="true" tabindex="-1"></a>        <span class="at">const</span> mpir<span class="op">::</span>PrecisionNames precision_names<span class="op">{</span></span>
+<span id="cb50-32"><a href="#cb50-32" aria-hidden="true" tabindex="-1"></a>            <span class="st">"fp32"</span><span class="op">,</span></span>
+<span id="cb50-33"><a href="#cb50-33" aria-hidden="true" tabindex="-1"></a>            <span class="st">"fp64"</span><span class="op">,</span></span>
+<span id="cb50-34"><a href="#cb50-34" aria-hidden="true" tabindex="-1"></a>            <span class="st">"fp128"</span><span class="op">,</span></span>
+<span id="cb50-35"><a href="#cb50-35" aria-hidden="true" tabindex="-1"></a>            <span class="st">"fp256"</span></span>
+<span id="cb50-36"><a href="#cb50-36" aria-hidden="true" tabindex="-1"></a>        <span class="op">};</span></span>
+<span id="cb50-37"><a href="#cb50-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-38"><a href="#cb50-38" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>TestProblemOptions problem_options<span class="op">;</span></span>
+<span id="cb50-39"><a href="#cb50-39" aria-hidden="true" tabindex="-1"></a>        problem_options<span class="op">.</span>rhs_mode <span class="op">=</span></span>
+<span id="cb50-40"><a href="#cb50-40" aria-hidden="true" tabindex="-1"></a>            mpir<span class="op">::</span>RightHandSideMode<span class="op">::</span>random_normal_rhs<span class="op">;</span></span>
+<span id="cb50-41"><a href="#cb50-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-42"><a href="#cb50-42" aria-hidden="true" tabindex="-1"></a>        mpir<span class="op">::</span>MixedIROptions<span class="op">&lt;</span>T_work<span class="op">&gt;</span> algorithm_options<span class="op">;</span></span>
+<span id="cb50-43"><a href="#cb50-43" aria-hidden="true" tabindex="-1"></a>        algorithm_options<span class="op">.</span>max_iterations <span class="op">=</span> <span class="dv">20</span><span class="op">;</span></span>
+<span id="cb50-44"><a href="#cb50-44" aria-hidden="true" tabindex="-1"></a>        algorithm_options<span class="op">.</span>store_iterates <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb50-45"><a href="#cb50-45" aria-hidden="true" tabindex="-1"></a>        algorithm_options<span class="op">.</span>detect_divergence <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb50-46"><a href="#cb50-46" aria-hidden="true" tabindex="-1"></a>        algorithm_options<span class="op">.</span>scale_residual <span class="op">=</span> <span class="kw">true</span><span class="op">;</span></span>
+<span id="cb50-47"><a href="#cb50-47" aria-hidden="true" tabindex="-1"></a>        algorithm_options<span class="op">.</span>record_residual_diagnostics <span class="op">=</span> <span class="kw">false</span><span class="op">;</span></span>
+<span id="cb50-48"><a href="#cb50-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-49"><a href="#cb50-49" aria-hidden="true" tabindex="-1"></a>        <span class="kw">constexpr</span> <span class="bu">std::</span>string_view variant <span class="op">=</span> <span class="st">"scaled"</span><span class="op">;</span></span>
+<span id="cb50-50"><a href="#cb50-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-51"><a href="#cb50-51" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> <span class="op">(</span><span class="at">const</span> <span class="bu">std::</span>size_t n <span class="op">:</span> dimensions<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb50-52"><a href="#cb50-52" aria-hidden="true" tabindex="-1"></a>            <span class="at">const</span> <span class="kw">auto</span> problem <span class="op">=</span></span>
+<span id="cb50-53"><a href="#cb50-53" aria-hidden="true" tabindex="-1"></a>                mpir<span class="op">::</span>make_random_spd_problem<span class="op">&lt;</span>T_work<span class="op">,</span> T_measure<span class="op">&gt;(</span></span>
+<span id="cb50-54"><a href="#cb50-54" aria-hidden="true" tabindex="-1"></a>                    n<span class="op">,</span></span>
+<span id="cb50-55"><a href="#cb50-55" aria-hidden="true" tabindex="-1"></a>                    requested_kappa<span class="op">,</span></span>
+<span id="cb50-56"><a href="#cb50-56" aria-hidden="true" tabindex="-1"></a>                    problem_options</span>
+<span id="cb50-57"><a href="#cb50-57" aria-hidden="true" tabindex="-1"></a>                <span class="op">);</span></span>
+<span id="cb50-58"><a href="#cb50-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-59"><a href="#cb50-59" aria-hidden="true" tabindex="-1"></a>            <span class="at">const</span> <span class="kw">auto</span> result <span class="op">=</span></span>
+<span id="cb50-60"><a href="#cb50-60" aria-hidden="true" tabindex="-1"></a>                mpir<span class="op">::</span>mixed_ir<span class="op">&lt;</span>T_factor<span class="op">,</span> T_work<span class="op">,</span> T_residual<span class="op">&gt;(</span></span>
+<span id="cb50-61"><a href="#cb50-61" aria-hidden="true" tabindex="-1"></a>                    problem<span class="op">.</span>A<span class="op">,</span></span>
+<span id="cb50-62"><a href="#cb50-62" aria-hidden="true" tabindex="-1"></a>                    problem<span class="op">.</span>b<span class="op">,</span></span>
+<span id="cb50-63"><a href="#cb50-63" aria-hidden="true" tabindex="-1"></a>                    algorithm_options</span>
+<span id="cb50-64"><a href="#cb50-64" aria-hidden="true" tabindex="-1"></a>                <span class="op">);</span></span>
+<span id="cb50-65"><a href="#cb50-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-66"><a href="#cb50-66" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>result<span class="op">.</span>rel_corrections<span class="op">.</span>size<span class="op">()</span> <span class="op">!=</span> result<span class="op">.</span>iterations<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb50-67"><a href="#cb50-67" aria-hidden="true" tabindex="-1"></a>                <span class="cf">throw</span> <span class="bu">std::</span>logic_error<span class="op">(</span></span>
+<span id="cb50-68"><a href="#cb50-68" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"Relative-correction count is inconsistent "</span></span>
+<span id="cb50-69"><a href="#cb50-69" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"with completed updates"</span></span>
+<span id="cb50-70"><a href="#cb50-70" aria-hidden="true" tabindex="-1"></a>                <span class="op">);</span></span>
+<span id="cb50-71"><a href="#cb50-71" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb50-72"><a href="#cb50-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-73"><a href="#cb50-73" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>result<span class="op">.</span>x<span class="op">.</span>size<span class="op">()</span> <span class="op">!=</span> <span class="dv">0</span> <span class="op">&amp;&amp;</span> result<span class="op">.</span>x<span class="op">.</span>size<span class="op">()</span> <span class="op">!=</span> n<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb50-74"><a href="#cb50-74" aria-hidden="true" tabindex="-1"></a>                <span class="cf">throw</span> <span class="bu">std::</span>logic_error<span class="op">(</span></span>
+<span id="cb50-75"><a href="#cb50-75" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"Returned solution has an unexpected dimension"</span></span>
+<span id="cb50-76"><a href="#cb50-76" aria-hidden="true" tabindex="-1"></a>                <span class="op">);</span></span>
+<span id="cb50-77"><a href="#cb50-77" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb50-78"><a href="#cb50-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-79"><a href="#cb50-79" aria-hidden="true" tabindex="-1"></a>            <span class="at">const</span> mpir<span class="op">::</span>ExperimentDescription experiment<span class="op">{</span></span>
+<span id="cb50-80"><a href="#cb50-80" aria-hidden="true" tabindex="-1"></a>                mpir<span class="op">::</span>ExperimentKind<span class="op">::</span>dimension_sweep<span class="op">,</span></span>
+<span id="cb50-81"><a href="#cb50-81" aria-hidden="true" tabindex="-1"></a>                mpir<span class="op">::</span>MatrixFamily<span class="op">::</span>random_spd<span class="op">,</span></span>
+<span id="cb50-82"><a href="#cb50-82" aria-hidden="true" tabindex="-1"></a>                n<span class="op">,</span></span>
+<span id="cb50-83"><a href="#cb50-83" aria-hidden="true" tabindex="-1"></a>                precision_names</span>
+<span id="cb50-84"><a href="#cb50-84" aria-hidden="true" tabindex="-1"></a>            <span class="op">};</span></span>
+<span id="cb50-85"><a href="#cb50-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-86"><a href="#cb50-86" aria-hidden="true" tabindex="-1"></a>            <span class="at">const</span> <span class="kw">auto</span> output_directory <span class="op">=</span></span>
+<span id="cb50-87"><a href="#cb50-87" aria-hidden="true" tabindex="-1"></a>                mpir<span class="op">::</span>make_output_directory<span class="op">(</span></span>
+<span id="cb50-88"><a href="#cb50-88" aria-hidden="true" tabindex="-1"></a>                    MPIR_RESULTS_RAW_DIR<span class="op">,</span></span>
+<span id="cb50-89"><a href="#cb50-89" aria-hidden="true" tabindex="-1"></a>                    experiment<span class="op">.</span>kind</span>
+<span id="cb50-90"><a href="#cb50-90" aria-hidden="true" tabindex="-1"></a>                <span class="op">);</span></span>
+<span id="cb50-91"><a href="#cb50-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-92"><a href="#cb50-92" aria-hidden="true" tabindex="-1"></a>            <span class="at">const</span> <span class="kw">auto</span> output_file <span class="op">=</span></span>
+<span id="cb50-93"><a href="#cb50-93" aria-hidden="true" tabindex="-1"></a>                output_directory <span class="op">/</span></span>
+<span id="cb50-94"><a href="#cb50-94" aria-hidden="true" tabindex="-1"></a>                mpir<span class="op">::</span>make_experiment_filename<span class="op">(</span></span>
+<span id="cb50-95"><a href="#cb50-95" aria-hidden="true" tabindex="-1"></a>                    experiment<span class="op">,</span></span>
+<span id="cb50-96"><a href="#cb50-96" aria-hidden="true" tabindex="-1"></a>                    problem_options</span>
+<span id="cb50-97"><a href="#cb50-97" aria-hidden="true" tabindex="-1"></a>                <span class="op">);</span></span>
+<span id="cb50-98"><a href="#cb50-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-99"><a href="#cb50-99" aria-hidden="true" tabindex="-1"></a>            <span class="bu">std::</span>ofstream out<span class="op">(</span>output_file<span class="op">);</span></span>
+<span id="cb50-100"><a href="#cb50-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-101"><a href="#cb50-101" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(!</span>out<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb50-102"><a href="#cb50-102" aria-hidden="true" tabindex="-1"></a>                <span class="cf">throw</span> <span class="bu">std::</span>runtime_error<span class="op">(</span></span>
+<span id="cb50-103"><a href="#cb50-103" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"Could not open output file: "</span></span>
+<span id="cb50-104"><a href="#cb50-104" aria-hidden="true" tabindex="-1"></a>                    <span class="op">+</span> output_file<span class="op">.</span>string<span class="op">()</span></span>
+<span id="cb50-105"><a href="#cb50-105" aria-hidden="true" tabindex="-1"></a>                <span class="op">);</span></span>
+<span id="cb50-106"><a href="#cb50-106" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb50-107"><a href="#cb50-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-108"><a href="#cb50-108" aria-hidden="true" tabindex="-1"></a>            out <span class="op">&lt;&lt;</span> <span class="bu">std::</span>scientific</span>
+<span id="cb50-109"><a href="#cb50-109" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> <span class="bu">std::</span>setprecision<span class="op">(</span></span>
+<span id="cb50-110"><a href="#cb50-110" aria-hidden="true" tabindex="-1"></a>                       <span class="bu">std::</span>numeric_limits<span class="op">&lt;</span><span class="dt">double</span><span class="op">&gt;::</span>max_digits10</span>
+<span id="cb50-111"><a href="#cb50-111" aria-hidden="true" tabindex="-1"></a>                   <span class="op">);</span></span>
+<span id="cb50-112"><a href="#cb50-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-113"><a href="#cb50-113" aria-hidden="true" tabindex="-1"></a>            mpir<span class="op">::</span>write_common_csv_header<span class="op">(</span>out<span class="op">);</span></span>
+<span id="cb50-114"><a href="#cb50-114" aria-hidden="true" tabindex="-1"></a>            out</span>
+<span id="cb50-115"><a href="#cb50-115" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> <span class="st">",final_forward_error_inf"</span></span>
+<span id="cb50-116"><a href="#cb50-116" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> <span class="st">",final_backward_error_inf</span><span class="sc">\n</span><span class="st">"</span><span class="op">;</span></span>
+<span id="cb50-117"><a href="#cb50-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-118"><a href="#cb50-118" aria-hidden="true" tabindex="-1"></a>            mpir<span class="op">::</span>write_common_csv_fields<span class="op">(</span></span>
+<span id="cb50-119"><a href="#cb50-119" aria-hidden="true" tabindex="-1"></a>                out<span class="op">,</span></span>
+<span id="cb50-120"><a href="#cb50-120" aria-hidden="true" tabindex="-1"></a>                experiment<span class="op">,</span></span>
+<span id="cb50-121"><a href="#cb50-121" aria-hidden="true" tabindex="-1"></a>                problem_options<span class="op">,</span></span>
+<span id="cb50-122"><a href="#cb50-122" aria-hidden="true" tabindex="-1"></a>                algorithm_options<span class="op">,</span></span>
+<span id="cb50-123"><a href="#cb50-123" aria-hidden="true" tabindex="-1"></a>                requested_kappa<span class="op">,</span></span>
+<span id="cb50-124"><a href="#cb50-124" aria-hidden="true" tabindex="-1"></a>                variant<span class="op">,</span></span>
+<span id="cb50-125"><a href="#cb50-125" aria-hidden="true" tabindex="-1"></a>                result</span>
+<span id="cb50-126"><a href="#cb50-126" aria-hidden="true" tabindex="-1"></a>            <span class="op">);</span></span>
+<span id="cb50-127"><a href="#cb50-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-128"><a href="#cb50-128" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(</span>result<span class="op">.</span>x<span class="op">.</span>size<span class="op">()</span> <span class="op">==</span> n<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb50-129"><a href="#cb50-129" aria-hidden="true" tabindex="-1"></a>                <span class="at">const</span> <span class="dt">double</span> forward_error <span class="op">=</span></span>
+<span id="cb50-130"><a href="#cb50-130" aria-hidden="true" tabindex="-1"></a>                    mpir<span class="op">::</span>relative_forward_error_inf<span class="op">&lt;</span>T_measure<span class="op">&gt;(</span></span>
+<span id="cb50-131"><a href="#cb50-131" aria-hidden="true" tabindex="-1"></a>                        result<span class="op">.</span>x<span class="op">,</span></span>
+<span id="cb50-132"><a href="#cb50-132" aria-hidden="true" tabindex="-1"></a>                        problem<span class="op">.</span>x_true</span>
+<span id="cb50-133"><a href="#cb50-133" aria-hidden="true" tabindex="-1"></a>                    <span class="op">);</span></span>
+<span id="cb50-134"><a href="#cb50-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-135"><a href="#cb50-135" aria-hidden="true" tabindex="-1"></a>                <span class="at">const</span> <span class="dt">double</span> backward_error <span class="op">=</span></span>
+<span id="cb50-136"><a href="#cb50-136" aria-hidden="true" tabindex="-1"></a>                    mpir<span class="op">::</span>normwise_backward_error_inf<span class="op">&lt;</span>T_measure<span class="op">&gt;(</span></span>
+<span id="cb50-137"><a href="#cb50-137" aria-hidden="true" tabindex="-1"></a>                        problem<span class="op">.</span>A<span class="op">,</span></span>
+<span id="cb50-138"><a href="#cb50-138" aria-hidden="true" tabindex="-1"></a>                        problem<span class="op">.</span>b<span class="op">,</span></span>
+<span id="cb50-139"><a href="#cb50-139" aria-hidden="true" tabindex="-1"></a>                        result<span class="op">.</span>x</span>
+<span id="cb50-140"><a href="#cb50-140" aria-hidden="true" tabindex="-1"></a>                    <span class="op">);</span></span>
+<span id="cb50-141"><a href="#cb50-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-142"><a href="#cb50-142" aria-hidden="true" tabindex="-1"></a>                out <span class="op">&lt;&lt;</span> <span class="ch">','</span></span>
+<span id="cb50-143"><a href="#cb50-143" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;&lt;</span> forward_error</span>
+<span id="cb50-144"><a href="#cb50-144" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;&lt;</span> <span class="ch">','</span></span>
+<span id="cb50-145"><a href="#cb50-145" aria-hidden="true" tabindex="-1"></a>                    <span class="op">&lt;&lt;</span> backward_error<span class="op">;</span></span>
+<span id="cb50-146"><a href="#cb50-146" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb50-147"><a href="#cb50-147" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span> <span class="op">{</span></span>
+<span id="cb50-148"><a href="#cb50-148" aria-hidden="true" tabindex="-1"></a>                <span class="co">// Preserve the status row when no solution is available.</span></span>
+<span id="cb50-149"><a href="#cb50-149" aria-hidden="true" tabindex="-1"></a>                out <span class="op">&lt;&lt;</span> <span class="st">",,"</span><span class="op">;</span></span>
+<span id="cb50-150"><a href="#cb50-150" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb50-151"><a href="#cb50-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-152"><a href="#cb50-152" aria-hidden="true" tabindex="-1"></a>            out <span class="op">&lt;&lt;</span> <span class="ch">'</span><span class="sc">\n</span><span class="ch">'</span><span class="op">;</span></span>
+<span id="cb50-153"><a href="#cb50-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-154"><a href="#cb50-154" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="op">(!</span>out<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb50-155"><a href="#cb50-155" aria-hidden="true" tabindex="-1"></a>                <span class="cf">throw</span> <span class="bu">std::</span>runtime_error<span class="op">(</span></span>
+<span id="cb50-156"><a href="#cb50-156" aria-hidden="true" tabindex="-1"></a>                    <span class="st">"Failed while writing output file: "</span></span>
+<span id="cb50-157"><a href="#cb50-157" aria-hidden="true" tabindex="-1"></a>                    <span class="op">+</span> output_file<span class="op">.</span>string<span class="op">()</span></span>
+<span id="cb50-158"><a href="#cb50-158" aria-hidden="true" tabindex="-1"></a>                <span class="op">);</span></span>
+<span id="cb50-159"><a href="#cb50-159" aria-hidden="true" tabindex="-1"></a>            <span class="op">}</span></span>
+<span id="cb50-160"><a href="#cb50-160" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-161"><a href="#cb50-161" aria-hidden="true" tabindex="-1"></a>            <span class="bu">std::</span>cout</span>
+<span id="cb50-162"><a href="#cb50-162" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> <span class="st">"n = "</span> <span class="op">&lt;&lt;</span> n</span>
+<span id="cb50-163"><a href="#cb50-163" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> <span class="st">", status = "</span> <span class="op">&lt;&lt;</span> mpir<span class="op">::</span>to_string<span class="op">(</span>result<span class="op">.</span>status<span class="op">)</span></span>
+<span id="cb50-164"><a href="#cb50-164" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> <span class="st">", iterations = "</span> <span class="op">&lt;&lt;</span> result<span class="op">.</span>iterations</span>
+<span id="cb50-165"><a href="#cb50-165" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> <span class="st">", final_rel_correction = "</span></span>
+<span id="cb50-166"><a href="#cb50-166" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> result<span class="op">.</span>final_rel_correction</span>
+<span id="cb50-167"><a href="#cb50-167" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> <span class="ch">'</span><span class="sc">\n</span><span class="ch">'</span><span class="op">;</span></span>
+<span id="cb50-168"><a href="#cb50-168" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-169"><a href="#cb50-169" aria-hidden="true" tabindex="-1"></a>            <span class="bu">std::</span>cout</span>
+<span id="cb50-170"><a href="#cb50-170" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> <span class="st">"Writing results to: "</span></span>
+<span id="cb50-171"><a href="#cb50-171" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> output_file</span>
+<span id="cb50-172"><a href="#cb50-172" aria-hidden="true" tabindex="-1"></a>                <span class="op">&lt;&lt;</span> <span class="ch">'</span><span class="sc">\n</span><span class="ch">'</span><span class="op">;</span></span>
+<span id="cb50-173"><a href="#cb50-173" aria-hidden="true" tabindex="-1"></a>        <span class="op">}</span></span>
+<span id="cb50-174"><a href="#cb50-174" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb50-175"><a href="#cb50-175" aria-hidden="true" tabindex="-1"></a>    <span class="cf">catch</span> <span class="op">(</span><span class="at">const</span> <span class="bu">std::</span>exception<span class="op">&amp;</span> error<span class="op">)</span> <span class="op">{</span></span>
+<span id="cb50-176"><a href="#cb50-176" aria-hidden="true" tabindex="-1"></a>        <span class="bu">std::</span>cerr <span class="op">&lt;&lt;</span> <span class="st">"Error: "</span> <span class="op">&lt;&lt;</span> error<span class="op">.</span>what<span class="op">()</span> <span class="op">&lt;&lt;</span> <span class="ch">'</span><span class="sc">\n</span><span class="ch">'</span><span class="op">;</span></span>
+<span id="cb50-177"><a href="#cb50-177" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="dv">1</span><span class="op">;</span></span>
+<span id="cb50-178"><a href="#cb50-178" aria-hidden="true" tabindex="-1"></a>    <span class="op">}</span></span>
+<span id="cb50-179"><a href="#cb50-179" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb50-180"><a href="#cb50-180" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span><span class="op">;</span></span>
+<span id="cb50-181"><a href="#cb50-181" aria-hidden="true" tabindex="-1"></a><span class="op">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The driver produces one CSV file for each dimension under <code>results/raw/dimension_sweeps/</code>. Each file contains the standard experiment metadata and one result row with the final forward and backward errors when a valid solution is available.</p>
+</section>
+<section id="building-and-running-the-experiment" class="level2" data-number="19.11">
+<h2 data-number="19.11" class="anchored" data-anchor-id="building-and-running-the-experiment"><span class="header-section-number">19.11</span> Building and Running the Experiment</h2>
+<p>Because the driver is named <code>exp_dimension_sweep.cc</code>, the existing CMake configuration discovers it automatically. No change to the CMake files is required.</p>
+<p>From the repository root, rebuild the project:</p>
+<div class="sourceCode" id="cb51"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> code</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--preset</span> release</span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cmake</span> <span class="at">--build</span> <span class="at">--preset</span> release</span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ..</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The new executable is generated as:</p>
+<pre class="text"><code>build/fp-release/bin/mp_exp_dimension_sweep</code></pre>
+<p>Run it from the repository root with:</p>
+<div class="sourceCode" id="cb53"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="ex">./build/fp-release/bin/mp_exp_dimension_sweep</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The generated CSV files are written to:</p>
+<pre class="text"><code>results/raw/dimension_sweeps/</code></pre>
+<section id="adding-a-makefile-target" class="level3">
+<h3 class="anchored" data-anchor-id="adding-a-makefile-target">Adding a Makefile target</h3>
+<p>The repository-level <code>Makefile</code> lists its experiment targets explicitly. To expose the new experiment through the same interface, add a target for the new executable:</p>
+<div class="sourceCode" id="cb55"><pre class="sourceCode makefile code-with-copy"><code class="sourceCode makefile"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="ot">.PHONY:</span><span class="dt"> experiment-dimension-sweep</span></span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a><span class="dv">experiment-dimension-sweep:</span><span class="dt"> build</span></span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a><span class="er">    </span><span class="ch">$(</span><span class="dt">BUILD_DIR</span><span class="ch">)</span>/bin/mp_exp_dimension_sweep</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The experiment can then be run with:</p>
+<div class="sourceCode" id="cb56"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> experiment-dimension-sweep</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>To include it when running the complete experiment suite, also add <code>experiment-dimension-sweep</code> to the dependencies of the existing <code>experiments</code> target.</p>
+<p>The debug version can be built and run through the same Makefile target with:</p>
+<div class="sourceCode" id="cb57"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> PRESET=debug experiment-dimension-sweep</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="optional-plotting-script" class="level2" data-number="19.12">
+<h2 data-number="19.12" class="anchored" data-anchor-id="optional-plotting-script"><span class="header-section-number">19.12</span> Optional Plotting Script</h2>
+<p>A plotting script is not required for the experiment itself, but it demonstrates how a new experiment can also reuse the shared Python plotting utilities.</p>
+<p>Create:</p>
+<pre class="text"><code>code/scripts/plot_dimension_sweep.py</code></pre>
+<p>The following example reads all dimension-sweep CSV files and plots the final forward and backward errors as functions of the system dimension:</p>
+<div class="sourceCode" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="co">#!/usr/bin/env python3</span></span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a><span class="co">"""Plot the dimension-sweep experiment."""</span></span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> __future__ <span class="im">import</span> annotations</span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> argparse <span class="im">import</span> ArgumentParser</span>
+<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib</span>
+<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a>matplotlib.use(<span class="st">"Agg"</span>)</span>
+<span id="cb59-12"><a href="#cb59-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-13"><a href="#cb59-13" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb59-14"><a href="#cb59-14" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb59-15"><a href="#cb59-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-16"><a href="#cb59-16" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mpir_plotting.csv_validation <span class="im">import</span> (</span>
+<span id="cb59-17"><a href="#cb59-17" aria-hidden="true" tabindex="-1"></a>    coerce_numeric_columns,</span>
+<span id="cb59-18"><a href="#cb59-18" aria-hidden="true" tabindex="-1"></a>    read_csv_checked,</span>
+<span id="cb59-19"><a href="#cb59-19" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb59-20"><a href="#cb59-20" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> mpir_plotting.paths <span class="im">import</span> (</span>
+<span id="cb59-21"><a href="#cb59-21" aria-hidden="true" tabindex="-1"></a>    discover_csv_files,</span>
+<span id="cb59-22"><a href="#cb59-22" aria-hidden="true" tabindex="-1"></a>    resolve_results_roots,</span>
+<span id="cb59-23"><a href="#cb59-23" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb59-24"><a href="#cb59-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-25"><a href="#cb59-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-26"><a href="#cb59-26" aria-hidden="true" tabindex="-1"></a>CSV_PATTERN <span class="op">=</span> <span class="st">"dimension-sweep__*.csv"</span></span>
+<span id="cb59-27"><a href="#cb59-27" aria-hidden="true" tabindex="-1"></a>DEFAULT_RAW_SUBDIRECTORY <span class="op">=</span> Path(<span class="st">"dimension_sweeps"</span>)</span>
+<span id="cb59-28"><a href="#cb59-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-29"><a href="#cb59-29" aria-hidden="true" tabindex="-1"></a>REQUIRED_COLUMNS <span class="op">=</span> {</span>
+<span id="cb59-30"><a href="#cb59-30" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dimension"</span>,</span>
+<span id="cb59-31"><a href="#cb59-31" aria-hidden="true" tabindex="-1"></a>    <span class="st">"final_forward_error_inf"</span>,</span>
+<span id="cb59-32"><a href="#cb59-32" aria-hidden="true" tabindex="-1"></a>    <span class="st">"final_backward_error_inf"</span>,</span>
+<span id="cb59-33"><a href="#cb59-33" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb59-34"><a href="#cb59-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-35"><a href="#cb59-35" aria-hidden="true" tabindex="-1"></a>NUMERIC_COLUMNS <span class="op">=</span> (</span>
+<span id="cb59-36"><a href="#cb59-36" aria-hidden="true" tabindex="-1"></a>    <span class="st">"dimension"</span>,</span>
+<span id="cb59-37"><a href="#cb59-37" aria-hidden="true" tabindex="-1"></a>    <span class="st">"final_forward_error_inf"</span>,</span>
+<span id="cb59-38"><a href="#cb59-38" aria-hidden="true" tabindex="-1"></a>    <span class="st">"final_backward_error_inf"</span>,</span>
+<span id="cb59-39"><a href="#cb59-39" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb59-40"><a href="#cb59-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-41"><a href="#cb59-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-42"><a href="#cb59-42" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_arguments():</span>
+<span id="cb59-43"><a href="#cb59-43" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Parse command-line arguments."""</span></span>
+<span id="cb59-44"><a href="#cb59-44" aria-hidden="true" tabindex="-1"></a>    parser <span class="op">=</span> ArgumentParser(</span>
+<span id="cb59-45"><a href="#cb59-45" aria-hidden="true" tabindex="-1"></a>        description<span class="op">=</span><span class="st">"Plot the dimension-sweep experiment."</span></span>
+<span id="cb59-46"><a href="#cb59-46" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-47"><a href="#cb59-47" aria-hidden="true" tabindex="-1"></a>    parser.add_argument(</span>
+<span id="cb59-48"><a href="#cb59-48" aria-hidden="true" tabindex="-1"></a>        <span class="st">"inputs"</span>,</span>
+<span id="cb59-49"><a href="#cb59-49" aria-hidden="true" tabindex="-1"></a>        nargs<span class="op">=</span><span class="st">"*"</span>,</span>
+<span id="cb59-50"><a href="#cb59-50" aria-hidden="true" tabindex="-1"></a>        <span class="bu">type</span><span class="op">=</span>Path,</span>
+<span id="cb59-51"><a href="#cb59-51" aria-hidden="true" tabindex="-1"></a>        <span class="bu">help</span><span class="op">=</span><span class="st">"Optional CSV files or directories."</span>,</span>
+<span id="cb59-52"><a href="#cb59-52" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-53"><a href="#cb59-53" aria-hidden="true" tabindex="-1"></a>    parser.add_argument(<span class="st">"--raw-root"</span>, <span class="bu">type</span><span class="op">=</span>Path, default<span class="op">=</span><span class="va">None</span>)</span>
+<span id="cb59-54"><a href="#cb59-54" aria-hidden="true" tabindex="-1"></a>    parser.add_argument(<span class="st">"--plots-root"</span>, <span class="bu">type</span><span class="op">=</span>Path, default<span class="op">=</span><span class="va">None</span>)</span>
+<span id="cb59-55"><a href="#cb59-55" aria-hidden="true" tabindex="-1"></a>    parser.add_argument(</span>
+<span id="cb59-56"><a href="#cb59-56" aria-hidden="true" tabindex="-1"></a>        <span class="st">"--format"</span>,</span>
+<span id="cb59-57"><a href="#cb59-57" aria-hidden="true" tabindex="-1"></a>        choices<span class="op">=</span>(<span class="st">"png"</span>, <span class="st">"pdf"</span>, <span class="st">"svg"</span>),</span>
+<span id="cb59-58"><a href="#cb59-58" aria-hidden="true" tabindex="-1"></a>        default<span class="op">=</span><span class="st">"png"</span>,</span>
+<span id="cb59-59"><a href="#cb59-59" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-60"><a href="#cb59-60" aria-hidden="true" tabindex="-1"></a>    parser.add_argument(<span class="st">"--dpi"</span>, <span class="bu">type</span><span class="op">=</span><span class="bu">int</span>, default<span class="op">=</span><span class="dv">200</span>)</span>
+<span id="cb59-61"><a href="#cb59-61" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> parser.parse_args()</span>
+<span id="cb59-62"><a href="#cb59-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-63"><a href="#cb59-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-64"><a href="#cb59-64" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> main() <span class="op">-&gt;</span> <span class="bu">int</span>:</span>
+<span id="cb59-65"><a href="#cb59-65" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Load all dimension-sweep results and generate the figure."""</span></span>
+<span id="cb59-66"><a href="#cb59-66" aria-hidden="true" tabindex="-1"></a>    args <span class="op">=</span> parse_arguments()</span>
+<span id="cb59-67"><a href="#cb59-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-68"><a href="#cb59-68" aria-hidden="true" tabindex="-1"></a>    raw_root, plots_root <span class="op">=</span> resolve_results_roots(</span>
+<span id="cb59-69"><a href="#cb59-69" aria-hidden="true" tabindex="-1"></a>        args.raw_root,</span>
+<span id="cb59-70"><a href="#cb59-70" aria-hidden="true" tabindex="-1"></a>        args.plots_root,</span>
+<span id="cb59-71"><a href="#cb59-71" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-72"><a href="#cb59-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-73"><a href="#cb59-73" aria-hidden="true" tabindex="-1"></a>    csv_files <span class="op">=</span> discover_csv_files(</span>
+<span id="cb59-74"><a href="#cb59-74" aria-hidden="true" tabindex="-1"></a>        args.inputs,</span>
+<span id="cb59-75"><a href="#cb59-75" aria-hidden="true" tabindex="-1"></a>        raw_root,</span>
+<span id="cb59-76"><a href="#cb59-76" aria-hidden="true" tabindex="-1"></a>        DEFAULT_RAW_SUBDIRECTORY,</span>
+<span id="cb59-77"><a href="#cb59-77" aria-hidden="true" tabindex="-1"></a>        CSV_PATTERN,</span>
+<span id="cb59-78"><a href="#cb59-78" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-79"><a href="#cb59-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-80"><a href="#cb59-80" aria-hidden="true" tabindex="-1"></a>    rows <span class="op">=</span> []</span>
+<span id="cb59-81"><a href="#cb59-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-82"><a href="#cb59-82" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> csv_path <span class="kw">in</span> csv_files:</span>
+<span id="cb59-83"><a href="#cb59-83" aria-hidden="true" tabindex="-1"></a>        dataframe <span class="op">=</span> read_csv_checked(</span>
+<span id="cb59-84"><a href="#cb59-84" aria-hidden="true" tabindex="-1"></a>            csv_path,</span>
+<span id="cb59-85"><a href="#cb59-85" aria-hidden="true" tabindex="-1"></a>            REQUIRED_COLUMNS,</span>
+<span id="cb59-86"><a href="#cb59-86" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb59-87"><a href="#cb59-87" aria-hidden="true" tabindex="-1"></a>        coerce_numeric_columns(</span>
+<span id="cb59-88"><a href="#cb59-88" aria-hidden="true" tabindex="-1"></a>            dataframe,</span>
+<span id="cb59-89"><a href="#cb59-89" aria-hidden="true" tabindex="-1"></a>            NUMERIC_COLUMNS,</span>
+<span id="cb59-90"><a href="#cb59-90" aria-hidden="true" tabindex="-1"></a>            csv_path,</span>
+<span id="cb59-91"><a href="#cb59-91" aria-hidden="true" tabindex="-1"></a>            require_complete<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb59-92"><a href="#cb59-92" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb59-93"><a href="#cb59-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-94"><a href="#cb59-94" aria-hidden="true" tabindex="-1"></a>        rows.append(dataframe.iloc[<span class="dv">0</span>])</span>
+<span id="cb59-95"><a href="#cb59-95" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-96"><a href="#cb59-96" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> (</span>
+<span id="cb59-97"><a href="#cb59-97" aria-hidden="true" tabindex="-1"></a>        pd.DataFrame(rows)</span>
+<span id="cb59-98"><a href="#cb59-98" aria-hidden="true" tabindex="-1"></a>        .sort_values(<span class="st">"dimension"</span>)</span>
+<span id="cb59-99"><a href="#cb59-99" aria-hidden="true" tabindex="-1"></a>        .reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb59-100"><a href="#cb59-100" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-101"><a href="#cb59-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-102"><a href="#cb59-102" aria-hidden="true" tabindex="-1"></a>    figure, (forward_axis, backward_axis) <span class="op">=</span> plt.subplots(</span>
+<span id="cb59-103"><a href="#cb59-103" aria-hidden="true" tabindex="-1"></a>        <span class="dv">2</span>,</span>
+<span id="cb59-104"><a href="#cb59-104" aria-hidden="true" tabindex="-1"></a>        <span class="dv">1</span>,</span>
+<span id="cb59-105"><a href="#cb59-105" aria-hidden="true" tabindex="-1"></a>        figsize<span class="op">=</span>(<span class="fl">8.0</span>, <span class="fl">6.5</span>),</span>
+<span id="cb59-106"><a href="#cb59-106" aria-hidden="true" tabindex="-1"></a>        sharex<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb59-107"><a href="#cb59-107" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-108"><a href="#cb59-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-109"><a href="#cb59-109" aria-hidden="true" tabindex="-1"></a>    forward_axis.plot(</span>
+<span id="cb59-110"><a href="#cb59-110" aria-hidden="true" tabindex="-1"></a>        results[<span class="st">"dimension"</span>],</span>
+<span id="cb59-111"><a href="#cb59-111" aria-hidden="true" tabindex="-1"></a>        results[<span class="st">"final_forward_error_inf"</span>],</span>
+<span id="cb59-112"><a href="#cb59-112" aria-hidden="true" tabindex="-1"></a>        marker<span class="op">=</span><span class="st">"o"</span>,</span>
+<span id="cb59-113"><a href="#cb59-113" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-114"><a href="#cb59-114" aria-hidden="true" tabindex="-1"></a>    forward_axis.set_yscale(<span class="st">"log"</span>)</span>
+<span id="cb59-115"><a href="#cb59-115" aria-hidden="true" tabindex="-1"></a>    forward_axis.set_ylabel(<span class="st">"Relative forward error"</span>)</span>
+<span id="cb59-116"><a href="#cb59-116" aria-hidden="true" tabindex="-1"></a>    forward_axis.set_title(<span class="st">"(a) Final relative forward error"</span>)</span>
+<span id="cb59-117"><a href="#cb59-117" aria-hidden="true" tabindex="-1"></a>    forward_axis.grid(<span class="va">True</span>, which<span class="op">=</span><span class="st">"both"</span>)</span>
+<span id="cb59-118"><a href="#cb59-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-119"><a href="#cb59-119" aria-hidden="true" tabindex="-1"></a>    backward_axis.plot(</span>
+<span id="cb59-120"><a href="#cb59-120" aria-hidden="true" tabindex="-1"></a>        results[<span class="st">"dimension"</span>],</span>
+<span id="cb59-121"><a href="#cb59-121" aria-hidden="true" tabindex="-1"></a>        results[<span class="st">"final_backward_error_inf"</span>],</span>
+<span id="cb59-122"><a href="#cb59-122" aria-hidden="true" tabindex="-1"></a>        marker<span class="op">=</span><span class="st">"o"</span>,</span>
+<span id="cb59-123"><a href="#cb59-123" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-124"><a href="#cb59-124" aria-hidden="true" tabindex="-1"></a>    backward_axis.set_yscale(<span class="st">"log"</span>)</span>
+<span id="cb59-125"><a href="#cb59-125" aria-hidden="true" tabindex="-1"></a>    backward_axis.set_xlabel(<span class="st">"System dimension n"</span>)</span>
+<span id="cb59-126"><a href="#cb59-126" aria-hidden="true" tabindex="-1"></a>    backward_axis.set_ylabel(<span class="st">"Relative backward error"</span>)</span>
+<span id="cb59-127"><a href="#cb59-127" aria-hidden="true" tabindex="-1"></a>    backward_axis.set_title(<span class="st">"(b) Final normwise backward error"</span>)</span>
+<span id="cb59-128"><a href="#cb59-128" aria-hidden="true" tabindex="-1"></a>    backward_axis.grid(<span class="va">True</span>, which<span class="op">=</span><span class="st">"both"</span>)</span>
+<span id="cb59-129"><a href="#cb59-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-130"><a href="#cb59-130" aria-hidden="true" tabindex="-1"></a>    figure.suptitle(<span class="st">"Dimension sweep: FP32–FP64–FP128"</span>)</span>
+<span id="cb59-131"><a href="#cb59-131" aria-hidden="true" tabindex="-1"></a>    figure.tight_layout()</span>
+<span id="cb59-132"><a href="#cb59-132" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-133"><a href="#cb59-133" aria-hidden="true" tabindex="-1"></a>    output_directory <span class="op">=</span> plots_root <span class="op">/</span> DEFAULT_RAW_SUBDIRECTORY</span>
+<span id="cb59-134"><a href="#cb59-134" aria-hidden="true" tabindex="-1"></a>    output_directory.mkdir(parents<span class="op">=</span><span class="va">True</span>, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb59-135"><a href="#cb59-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-136"><a href="#cb59-136" aria-hidden="true" tabindex="-1"></a>    output_path <span class="op">=</span> (</span>
+<span id="cb59-137"><a href="#cb59-137" aria-hidden="true" tabindex="-1"></a>        output_directory</span>
+<span id="cb59-138"><a href="#cb59-138" aria-hidden="true" tabindex="-1"></a>        <span class="op">/</span> <span class="ss">f"dimension-sweep.</span><span class="sc">{</span>args<span class="sc">.</span><span class="bu">format</span><span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb59-139"><a href="#cb59-139" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb59-140"><a href="#cb59-140" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-141"><a href="#cb59-141" aria-hidden="true" tabindex="-1"></a>    save_options <span class="op">=</span> {<span class="st">"bbox_inches"</span>: <span class="st">"tight"</span>}</span>
+<span id="cb59-142"><a href="#cb59-142" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> args.<span class="bu">format</span> <span class="op">==</span> <span class="st">"png"</span>:</span>
+<span id="cb59-143"><a href="#cb59-143" aria-hidden="true" tabindex="-1"></a>        save_options[<span class="st">"dpi"</span>] <span class="op">=</span> args.dpi</span>
+<span id="cb59-144"><a href="#cb59-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-145"><a href="#cb59-145" aria-hidden="true" tabindex="-1"></a>    figure.savefig(output_path, <span class="op">**</span>save_options)</span>
+<span id="cb59-146"><a href="#cb59-146" aria-hidden="true" tabindex="-1"></a>    plt.close(figure)</span>
+<span id="cb59-147"><a href="#cb59-147" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-148"><a href="#cb59-148" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Wrote </span><span class="sc">{</span>output_path<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb59-149"><a href="#cb59-149" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">0</span></span>
+<span id="cb59-150"><a href="#cb59-150" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-151"><a href="#cb59-151" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb59-152"><a href="#cb59-152" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">"__main__"</span>:</span>
+<span id="cb59-153"><a href="#cb59-153" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">SystemExit</span>(main())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The script follows the same general structure as the existing plotting programs: it uses the shared CSV validation and path utilities, reads generated data from <code>results/raw/</code>, and writes figures under <code>results/plots/</code>. Run it from the repository root with:</p>
+<div class="sourceCode" id="cb60"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python3</span> code/scripts/plot_dimension_sweep.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The generated figure is written to:</p>
+<pre class="text"><code>results/plots/dimension_sweeps/dimension-sweep.png</code></pre>
+<p>Optionally, add a corresponding Makefile target:</p>
+<div class="sourceCode" id="cb62"><pre class="sourceCode makefile code-with-copy"><code class="sourceCode makefile"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="ot">.PHONY:</span><span class="dt"> plot-dimension-sweep</span></span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a><span class="dv">plot-dimension-sweep:</span></span>
+<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a><span class="er">    </span><span class="ch">$(</span><span class="dt">PYTHON</span><span class="ch">)</span> code/scripts/plot_dimension_sweep.py \</span>
+<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>        <span class="ch">-</span><span class="fu">-raw-root </span><span class="st">"</span><span class="ch">$(</span><span class="dt">RAW_RESULTS_DIR</span><span class="ch">)</span><span class="st">"</span><span class="fu"> </span><span class="ch">\</span></span>
+<span id="cb62-6"><a href="#cb62-6" aria-hidden="true" tabindex="-1"></a><span class="fu">        --plots-root </span><span class="st">"</span><span class="ch">$(</span><span class="dt">PLOT_RESULTS_DIR</span><span class="ch">)</span><span class="st">"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>It can then be run with:</p>
+<div class="sourceCode" id="cb63"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> plot-dimension-sweep</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The target may also be added to <code>plots</code>, and the new experiment and plotting targets can be included in <code>reproduce</code> if the dimension sweep should become part of the standard reproducibility workflow.</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../report/index.html" class="pagination-link" aria-label="Mixed-Precision Iterative Refinement">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../appendices/gdb.html" class="pagination-link" aria-label="GDB usage Notes">
+        <span class="nav-page-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">GDB usage Notes</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+    <script type="text/javascript">
+    (function(d) {
+      d.querySelectorAll(".pseudocode-container").forEach(function(el) {
+        let pseudocodeOptions = {
+          indentSize: el.dataset.indentSize,
+          commentDelimiter: " " + el.dataset.commentDelimiter + " ",
+          lineNumber: el.dataset.lineNumber.toLowerCase() === "true",
+          lineNumberPunc: el.dataset.lineNumberPunc,
+          noEnd: el.dataset.noEnd.toLowerCase() === "true",
+          scopeLines: el.dataset.indentLines.toLowerCase() === "true",
+          titlePrefix: el.dataset.captionPrefix,
+        };
+        pseudocode.renderElement(el.querySelector(".pseudocode"), pseudocodeOptions);
+      });
+    })(document);
+    (function(d) {
+      d.querySelectorAll(".pseudocode-container").forEach(function(el) {
+        let captionSpan = el.querySelector(".ps-root > .ps-algorithm > .ps-line > .ps-keyword")
+        if (captionSpan !== null) {
+          let captionPrefix = el.dataset.captionPrefix + " ";
+          let captionNumber = "";
+          if (el.dataset.pseudocodeNumber) {
+            captionNumber = el.dataset.pseudocodeNumber + " ";
+            if (el.dataset.chapterLevel) {
+              captionNumber = el.dataset.chapterLevel + "." + captionNumber;
+            }
+          }
+          captionSpan.innerHTML = captionPrefix + captionNumber;
+        }
+      });
+    })(document);
+    </script>
+  
+
+
+
+
+</body></html>

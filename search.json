@@ -509,7 +509,7 @@
     "href": "report/index.html#precision-roles-and-theoretical-expectations",
     "title": "8  Mixed-Precision Iterative Refinement",
     "section": "10.2 Precision roles and theoretical expectations",
-    "text": "10.2 Precision roles and theoretical expectations\nThe three precisions control different aspects of iterative refinement. The factorization precision \\(u_f\\) determines the quality of the LU factors and primarily limits convergence. The working precision \\(u\\) is used for the iterates and updates and sets the target accuracy. The residual precision \\(u_r\\) determines how accurately the residual is computed and influences the attainable forward error.\nFor a stable low-precision factorization, convergence is expected when\n\\[\n\\kappa(A)u_f \\ll 1.\n\\]\nThus, \\(u_f^{-1}\\) defines an approximate condition-number scale, denoted by\n\\[\n\\kappa_* = u_f^{-1}.\n\\]\nThis is not a strict boundary: the actual convergence rate also depends on LU growth, factorization quality, componentwise conditioning, and norm-dependent constants. Higham and Mary (2022, sec. 7.1)\nUnder suitable convergence conditions, refinement produces a normwise backward error of order \\(u\\). The limiting relative forward error satisfies approximately\n\\[\n\\frac{\\lVert \\widehat{x}-x\\rVert_\\infty}\n{\\lVert x\\rVert_\\infty}\n\\lesssim\nu+4pu_r\\operatorname{cond}(A,x),\n\\]\nwhere \\(p\\) is the maximum number of nonzeros in a row of \\([A\\ b]\\) Carson and Higham (2018, Corollary 3.3). If \\(u_r=u\\), the condition-dependent term generally limits the attainable forward accuracy. If \\(u_r\\) is sufficiently smaller than \\(u\\), this term becomes negligible and forward errors of order \\(u\\) can be attained.",
+    "text": "10.2 Precision roles and theoretical expectations\nThe three precisions control different aspects of iterative refinement. The factorization precision \\(u_f\\) determines the quality of the LU factors and primarily limits convergence. The working precision \\(u\\) is used for the iterates and updates and sets the target accuracy. The residual precision \\(u_r\\) determines how accurately the residual is computed and influences the attainable forward error.\nFor a stable low-precision factorization, convergence is expected when\n\\[\n\\kappa(A)u_f \\ll 1.\n\\]\nThus, \\(u_f^{-1}\\) defines an approximate condition-number scale, denoted by\n\\[\n\\kappa_* = u_f^{-1}.\n\\]\nThis is not a strict boundary: the actual convergence rate also depends on LU growth, factorization quality, componentwise conditioning, and norm-dependent constants. Higham and Mary (2022).\nUnder suitable convergence conditions, refinement produces a normwise backward error of order \\(u\\). The limiting relative forward error satisfies approximately\n\\[\n\\frac{\\lVert \\widehat{x}-x\\rVert_\\infty}\n{\\lVert x\\rVert_\\infty}\n\\lesssim\nu+4pu_r\\operatorname{cond}(A,x),\n\\]\nIf \\(u_r=u\\), the condition-dependent term generally limits the attainable forward accuracy. If \\(u_r\\) is sufficiently smaller than \\(u\\), this term becomes negligible and forward errors of order \\(u\\) can be attained. Carson and Higham (2018, Corollary 3.3).",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
@@ -586,7 +586,7 @@
     "href": "report/index.html#convergence-histories",
     "title": "8  Mixed-Precision Iterative Refinement",
     "section": "13.1 Convergence histories",
-    "text": "13.1 Convergence histories\nIn this experimental group \\(u_f\\), \\(u_r\\) and \\(\\kappa(A)\\) are varied; \\(u\\) and other common settings remain fixed. For each configuration, the forward error, backward error, and relative correction are recorded after every refinement step. Relative corrections are omitted from the final plots. These histories show the convergence rate, attained accuracy, and termination status.\nFor each factorization precision, the driver defines the reference condition number\n\\[\n\\kappa_* = u_f^{-1}\n\\]\nand tests \\(\\kappa_2(A)=1\\) together with representative values below, near, and above \\(\\kappa_*\\). Condition numbers are chosen as multiples of \\(\\kappa_*\\) to provide a common relative scale across factorization formats. The condition \\(\\kappa_2(A)u_f&lt;1\\) serves as an approximate theoretical reference.\nCurve labels include termination status. C, M, D, and F denote convergence, the iteration limit, detected divergence, and non-finite factorization input, respectively.\nFour precision configurations are presented: FP16-FP64-FP64, FP16-FP64-FP128, FP32-FP64-FP64, and FP32-FP64-FP128. They form a \\(2 \\times 2\\) precision design with two factorization precisions and two residual precisions. This selection enables matched comparisons of how \\(u_r\\) affects the convergence history and attainable forward error at fixed factorization precision. It also shows how the convergence scale changes with \\(u_f\\). The omitted FP8 and bfloat16 configurations examine alternative low-precision factorization formats and are summarized after the main comparison.\nThe convergence results are shown in Figure 13.1.\n\n\n\n\n\n\n\n\n\n\n\n(a)\n\n\n\n\n\n\n\n\n\n\n\n\n\n(b)\n\n\n\n\n\n\n\n\n\n\n\n\n\n(c)\n\n\n\n\n\n\n\nFigure 13.1: \n\n\n\n\nInterpretation\nAcross all four displayed triples, convergence slows as the condition number increases. Runs well below \\(\\kappa_*\\) converge rapidly; runs near \\(\\kappa_*\\) require more iterations, while runs sufficiently far above it reach the iteration limit or diverge. The transition occurs at different multiples of \\(\\kappa_*\\), consistent with \\(\\kappa_*=u_f^{-1}\\) being an approximate reference rather than a fixed convergence boundary.\nThe \\(2\\times2\\) design separates the roles of the two precisions: \\(u_f\\) primarily determines the convergence rate and practical convergence region, whereas \\(u_r\\) primarily determines the attainable forward accuracy. The following subsections examine these effects and summarize the omitted FP8 and bfloat16 configurations.\n\nEffect of residual precision\nAt each factorization precision, the FP64- and FP128-residual histories are initially nearly identical and separate only at the FP64 accuracy floor. Thus, \\(u_r\\) primarily controls attainable accuracy, not the initial convergence rate.\nWith FP64 residuals, \\(u_r=u\\), and the forward error reaches a condition-dependent plateau. For FP16 factorization, runs from \\(0.01\\kappa_*\\) through \\(\\kappa_*\\) stagnate between \\(10^{-15}\\) and \\(10^{-14}\\) and reach the iteration limit. For FP32, the larger absolute condition numbers produce clearer plateaus, rising from approximately \\(10^{-12}\\) at \\(0.01\\kappa_*\\) to \\(10^{-10}\\) at \\(2\\kappa_*\\). The backward errors still approach working-precision accuracy. This agrees with the expected forward-error limit \\(O(\\operatorname{cond}(A,x)u)\\).\nFP128 residuals reduce these plateaus. For FP16, runs through \\(0.5\\kappa_*\\) converge with forward errors of order \\(10^{-16}\\); at \\(\\kappa_*\\), the error reaches approximately \\(8\\times10^{-16}\\) without satisfying the stopping criterion within 20 iterations. For FP32, all runs through \\(2\\kappa_*\\) converge with errors between \\(4\\times10^{-17}\\) and \\(7\\times10^{-17}\\). Backward errors are also lower, and more runs converge.\nOnce factorization limits convergence, both residual precisions produce nearly identical histories: from \\(2\\kappa_*\\) upward for FP16 and \\(10\\kappa_*\\) upward for FP32. Higher residual precision therefore improves stable runs but cannot prevent factorization-induced instability. Since HDNUM FP128 does not nominally satisfy \\(u_r=u^2\\), these results demonstrate the benefit of \\(u_r&lt;u\\), but not the sufficient theoretical case \\(u_r=u^2\\).\n\n\nFactorization precision and convergence scale\nAt fixed residual precision, increasing factorization precision shifts convergence to larger absolute condition numbers. The reference values are\n\\[\n\\kappa_*^{\\mathrm{FP16}}=2^{11}=2{,}048,\n\\qquad\n\\kappa_*^{\\mathrm{FP32}}=2^{24}=16{,}777{,}216,\n\\]\ngiving FP32 an \\(8{,}192\\) times larger convergence scale. At comparable \\(\\kappa/\\kappa_*\\), both formats converge rapidly below \\(\\kappa_*\\), more slowly near it, and slowly or not at all sufficiently far above it. With FP128 residuals, FP16 converges through \\(0.5\\kappa_*\\) and FP32 through \\(2\\kappa_*\\). This is consistent with \\(\\kappa_*\\) being an approximate reference rather than a fixed boundary.\nBecause each format uses its own normalized condition-number grid, the comparison involves different matrices and absolute condition numbers. It therefore shows convergence relative to each format’s scale, not the effect of changing \\(u_f\\) for the same system.\n\n\nAlternative low-precision factorization formats\nThe bfloat16 and FP8 configurations were omitted to preserve the complete \\(2\\times2\\) FP16/FP32 design. They examine distinct low-precision formats and do not form a controlled pair.\nBfloat16 has lower significand precision than FP16 but a larger exponent range. It converges through \\(0.1\\kappa_*\\) but not from \\(0.5\\kappa_*\\) upward; divergence is detected at \\(10\\kappa_*\\). On the normalized grid, it converges more slowly than FP16. Its larger range provides no visible advantage here because residual scaling prevents underflow and no factorization-input range failure occurs.\nFP8 is an extreme stress case. It converges at \\(\\kappa=1\\) and \\(0.1\\kappa_*\\) in 10 and 17 steps, respectively, but reaches the iteration limit from \\(0.5\\kappa_*\\) through \\(10\\kappa_*\\). At \\(100\\kappa_*\\), conversion to FP8 produces non-finite input and factorization stops before refinement. These results expose the limitations of very low factorization precision but are secondary to the isolated \\(u_f\\) and \\(u_r\\) comparisons.",
+    "text": "13.1 Convergence histories\nIn this experimental group \\(u_f\\), \\(u_r\\) and \\(\\kappa(A)\\) are varied; \\(u\\) and other common settings remain fixed. For each configuration, the forward error, backward error, and relative correction are recorded after every refinement step. Relative corrections are omitted from the final plots. These histories show the convergence rate, attained accuracy, and termination status.\nFor each factorization precision, the driver defines the reference condition number\n\\[\n\\kappa_* = u_f^{-1}\n\\]\nand tests \\(\\kappa_2(A)=1\\) together with representative values below, near, and above \\(\\kappa_*\\). Condition numbers are chosen as multiples of \\(\\kappa_*\\) to provide a common relative scale across factorization formats. The condition \\(\\kappa_2(A)u_f&lt;1\\) serves as an approximate theoretical reference.\nCurve labels include termination status. C, M, D, and F denote convergence, the iteration limit, detected divergence, and non-finite factorization input, respectively.\nFour precision configurations are presented: FP16-FP64-FP64, FP16-FP64-FP128, FP32-FP64-FP64, and FP32-FP64-FP128. They form a \\(2 \\times 2\\) precision design with two factorization precisions and two residual precisions. This selection enables matched comparisons of how \\(u_r\\) affects the convergence history and attainable forward error at fixed factorization precision. It also shows how the convergence scale changes with \\(u_f\\). The omitted FP8 and bfloat16 configurations examine alternative low-precision factorization formats and are summarized after the main comparison.\nThe convergence results are shown in Figure 13.1.\n\n\n\n\n\n\n\n\n\n\n\n(a)\n\n\n\n\n\n\n\n\n\n\n\n\n\n(b)\n\n\n\n\n\n\n\n\n\n\n\n\n\n(c)\n\n\n\n\n\n\n\nFigure 13.1: \n\n\n\n\nInterpretation\nAcross all four displayed triples, convergence slows as the condition number increases. Runs well below \\(\\kappa_*\\) converge rapidly; runs near \\(\\kappa_*\\) require more iterations, while runs sufficiently far above it reach the iteration limit or diverge. The transition occurs at different multiples of \\(\\kappa_*\\), consistent with \\(\\kappa_*=u_f^{-1}\\) being an approximate reference rather than a fixed convergence boundary.\nThe \\(2\\times2\\) design separates the roles of the two precisions: \\(u_f\\) primarily determines the convergence rate and practical convergence region, whereas \\(u_r\\) primarily determines the attainable forward accuracy. The following subsections examine these effects and summarize the omitted FP8 and bfloat16 configurations.\n\nEffect of residual precision\nAt each factorization precision, the FP64- and FP128-residual histories are initially nearly identical and separate only at the FP64 accuracy floor. Thus, \\(u_r\\) primarily controls attainable accuracy, not the initial convergence rate.\nWith FP64 residuals, \\(u_r=u\\), and the forward error reaches a condition-dependent plateau. For FP16 factorization, runs from \\(0.01\\kappa_*\\) through \\(\\kappa_*\\) stagnate between \\(10^{-15}\\) and \\(10^{-14}\\) and reach the iteration limit. For FP32, the larger absolute condition numbers produce clearer plateaus, rising from approximately \\(10^{-12}\\) at \\(0.01\\kappa_*\\) to \\(10^{-10}\\) at \\(2\\kappa_*\\). The backward errors still approach working-precision accuracy. This agrees with the expected forward-error limit \\(O(\\operatorname{cond}(A,x)u)\\).\nFP128 residuals reduce these plateaus. For FP16, runs through \\(0.5\\kappa_*\\) converge with forward errors of order \\(10^{-16}\\); at \\(\\kappa_*\\), the error reaches approximately \\(8\\times10^{-16}\\) without satisfying the stopping criterion within 20 iterations. For FP32, all runs through \\(2\\kappa_*\\) converge with errors between \\(4\\times10^{-17}\\) and \\(7\\times10^{-17}\\). Backward errors are also lower, and more runs converge.\nOnce factorization limits convergence, both residual precisions produce nearly identical histories: from \\(2\\kappa_*\\) upward for FP16 and \\(10\\kappa_*\\) upward for FP32. Higher residual precision therefore improves stable runs but cannot prevent factorization-induced instability. Since HDNUM FP128 does not nominally satisfy \\(u_r=u^2\\), these results demonstrate the benefit of \\(u_r&lt;u\\), but not the sufficient theoretical case \\(u_r=u^2\\).\n\n\nFactorization precision and convergence scale\nAt fixed residual precision, increasing factorization precision shifts convergence to larger absolute condition numbers. The reference values are\n\\[\n\\kappa_*^{\\mathrm{FP16}}=2^{11}=2{,}048,\n\\qquad\n\\kappa_*^{\\mathrm{FP32}}=2^{24}=16{,}777{,}216,\n\\]\nAt comparable \\(\\kappa/\\kappa_*\\), both formats converge rapidly below \\(\\kappa_*\\), more slowly near it, and slowly or not at all sufficiently far above it. With FP128 residuals, FP16 converges through \\(0.5\\kappa_*\\) and FP32 through \\(2\\kappa_*\\). This is consistent with \\(\\kappa_*\\) being an approximate reference rather than a fixed boundary.\n\n\nAlternative low-precision factorization formats\nThe bfloat16 and FP8 configurations were omitted to preserve the complete \\(2\\times2\\) FP16/FP32 design. They examine distinct low-precision formats and do not form a controlled pair.\nBfloat16 has lower significand precision than FP16 but a larger exponent range. It converges through \\(0.1\\kappa_*\\) but not from \\(0.5\\kappa_*\\) upward; divergence is detected at \\(10\\kappa_*\\). On the normalized grid, it converges more slowly than FP16. Its larger range provides no significant advantage here because residual scaling prevents underflow for FP16.\nFP8 is an extreme stress case. It converges at \\(\\kappa=1\\) and \\(0.1\\kappa_*\\) in 10 and 17 steps, respectively, but reaches the iteration limit from \\(0.5\\kappa_*\\) through \\(10\\kappa_*\\). At \\(100\\kappa_*\\), conversion to FP8 produces non-finite input and factorization stops before refinement. These results expose the limitations of very low factorization precision but are secondary to the isolated \\(u_f\\) and \\(u_r\\) comparisons.",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
@@ -597,7 +597,7 @@
     "href": "report/index.html#condition-number-sweep",
     "title": "8  Mixed-Precision Iterative Refinement",
     "section": "13.2 Condition-number sweep",
-    "text": "13.2 Condition-number sweep\nThis experiment uses a dense logarithmic sweep to map final accuracy and iteration count over a broad condition-number range. For each factorization format, \\(\\kappa_2(A)\\) ranges from \\(1\\) to approximately \\(10\\kappa_*\\), where \\(\\kappa_*=u_f^{-1}\\). The working and residual precisions remain fixed at FP64 and FP128. The upper panels show the final relative forward error; the lower panels show completed refinement updates. Dashed lines mark \\(\\kappa_*\\), dotted lines mark \\(u\\) and the 20-update limit, and marker shapes indicate termination status.\nThree configurations are shown: bfloat16-FP64-FP128, FP16-FP64-FP128, and FP32-FP64-FP128. Fixing \\(u\\) and \\(u_r\\) isolates the effect of factorization precision. The FP8 configuration is omitted as an extreme stress case and summarized below. The FP64-residual configurations are also omitted because their main effect was examined in the preceding experiment group.\nThe results are shown in Figure 13.2.\n\n\n\n\n\n\n\n\n\n\n\n(a)\n\n\n\n\n\n\n\n\n\n\n\n\n\n(b)\n\n\n\n\n\n\n\nFigure 13.2: \n\n\n\n\nInterpretation\nAcross the three sweeps, increasing \\(\\kappa_2(A)\\) generally increases the required updates. The status totals are \\(20\\) converged, \\(15\\) maximum-iteration, and \\(2\\) diverged runs for bfloat16; \\(33\\) converged, \\(11\\) maximum-iteration, \\(1\\) diverged, and \\(1\\) non-finite run for FP16; and \\(78\\) converged and \\(7\\) maximum-iteration runs for FP32. Since the grids contain different numbers of points, these totals describe each sweep but are not directly comparable success rates. Converged runs retain forward errors near working precision until the practical convergence limit is approached.\n\nConditioning and practical convergence region\nWithin each format, well-conditioned systems converge in few updates, while the update count rises toward the transition region. The first maximum-iteration runs occur at approximately \\(0.39\\kappa_*\\) for bfloat16, \\(0.97\\kappa_*\\) for FP16, and \\(2.37\\kappa_*\\) for FP32. The largest converged values are \\(0.31\\kappa_*\\), \\(0.77\\kappa_*\\), and \\(2.99\\kappa_*\\), respectively. Thus, higher factorization precision expands the practical convergence region on both absolute and normalized scales in these tests.\nThis trend is consistent with the theoretical convergence factor being of order \\(u_f\\kappa(A)\\), but \\(\\kappa_*=u_f^{-1}\\) is only an approximate scale. LU growth, factorization quality, componentwise conditioning, and norm-dependent constants also affect convergence. The normalized transition therefore need not occur at \\(\\kappa/\\kappa_*=1\\) or remain fixed across formats.\n\n\nFinal forward accuracy\nConverged runs generally attain forward errors of order \\(u\\). Increasing \\(\\kappa_2(A)\\) mainly raises the update count; final accuracy remains near working precision while refinement succeeds. The FP128 residual therefore avoids the condition-dependent floor observed with FP64 residuals.\nNear the transition, some runs retain small errors but reach the 20-update limit because termination depends on the relative correction, not the forward error. Beyond this region, errors increase or become irregular. Final error must therefore be interpreted together with termination status.\n\n\nOmitted configurations\nFP8–FP64–FP128 is omitted as an extreme stress case: only 3 of 25 runs converge, up to approximately \\(0.10\\kappa_*\\). The FP16–FP64–FP64 and FP32–FP64–FP64 sweeps mainly reproduce the condition-dependent accuracy floor observed in the preceding experiment group. Only three runs in each sweep converge; most reach the 20-update limit because the correction criterion remains unsatisfied. The residual-precision experiment examines this effect directly.",
+    "text": "13.2 Condition-number sweep\nThis experiment uses a dense logarithmic sweep to map final accuracy and iteration count over a broad condition-number range. For each factorization format, \\(\\kappa_2(A)\\) ranges from \\(1\\) to approximately \\(10\\kappa_*\\), where \\(\\kappa_*=u_f^{-1}\\). The working and residual precisions remain fixed at FP64 and FP128. The upper panels show the final relative forward error; the lower panels show completed refinement updates. Dashed lines mark \\(\\kappa_*\\), dotted lines mark \\(u\\) and the 20-update limit, and marker shapes indicate termination status.\nThree configurations are shown: bfloat16-FP64-FP128, FP16-FP64-FP128, and FP32-FP64-FP128. Fixing \\(u\\) and \\(u_r\\) isolates the effect of factorization precision. The FP8 configuration is omitted as an extreme stress case and summarized below. The FP64-residual configurations are also omitted because their main effect was examined in the preceding experiment group.\nThe results are shown in Figure 13.2.\n\n\n\n\n\n\n\n\n\n\n\n(a)\n\n\n\n\n\n\n\n\n\n\n\n\n\n(b)\n\n\n\n\n\n\n\nFigure 13.2: \n\n\n\n\nInterpretation\nAcross the three sweeps, increasing \\(\\kappa_2(A)\\) generally increases the required updates. The status totals are \\(20\\) converged, \\(15\\) maximum-iteration, and \\(2\\) diverged runs for bfloat16; \\(33\\) converged, \\(11\\) maximum-iteration, \\(1\\) diverged, and \\(1\\) non-finite run for FP16; and \\(78\\) converged and \\(7\\) maximum-iteration runs for FP32. Since the grids contain different numbers of points, these totals describe each sweep but are not directly comparable success rates. Converged runs retain forward errors near working precision until the practical convergence limit is approached.\n\nConditioning and practical convergence region\nWithin each format, well-conditioned systems converge in few updates, while the update count rises toward the transition region. The first maximum-iteration runs occur at approximately \\(0.39\\kappa_*\\) for bfloat16, \\(0.97\\kappa_*\\) for FP16, and \\(2.37\\kappa_*\\) for FP32. The largest converged values are \\(0.31\\kappa_*\\), \\(0.77\\kappa_*\\), and \\(2.99\\kappa_*\\), respectively. Thus, higher factorization precision expands the practical convergence region on both absolute and normalized scales in these tests.\nThis trend is consistent with the theoretical convergence factor being of order \\(u_f\\kappa(A)\\), but \\(\\kappa_*=u_f^{-1}\\) is only an approximate scale. LU growth, factorization quality, componentwise conditioning, and norm-dependent constants also affect convergence. The normalized transition therefore need not occur at \\(\\kappa/\\kappa_*=1\\) or remain fixed across formats.\n\n\nFinal forward accuracy\nConverged runs generally attain forward errors of order \\(u\\). Increasing \\(\\kappa_2(A)\\) mainly raises the update count; final accuracy remains near working precision while refinement succeeds. The FP128 residual therefore avoids the condition-dependent floor observed with FP64 residuals.\nNear the transition, some runs retain small errors but reach the 20-update limit because termination depends on the relative correction, not the forward error. Beyond this region, errors increase or become irregular.\n\n\nOmitted configurations\nFP8–FP64–FP128 is omitted as an extreme stress case: only 3 of 25 runs converge, up to approximately \\(0.10\\kappa_*\\). The FP16–FP64–FP64 and FP32–FP64–FP64 sweeps mainly reproduce the condition-dependent accuracy floor observed in the preceding experiment group. Only three runs in each sweep converge; most reach the 20-update limit because the correction criterion remains unsatisfied. The residual-precision experiment examines this effect directly.",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
@@ -608,7 +608,7 @@
     "href": "report/index.html#residual-precision-comparison",
     "title": "8  Mixed-Precision Iterative Refinement",
     "section": "13.3 Residual-precision comparison",
-    "text": "13.3 Residual-precision comparison\nThis experiment isolates the effect of residual precision. The factorization and working precisions are fixed at FP32 and FP64, while the residual precision is varied between FP64 and FP128. Both configurations use the same matrices, right-hand sides, condition-number grid, and algorithmic settings. Residual scaling is enabled, and errors are evaluated in FP256.\nThe upper panel shows the final normwise backward error; the lower panel shows the final relative forward error. The dashed line marks \\(\\kappa_*=u_f^{-1}\\), while the dotted lines mark \\(u\\) and the reference \\(\\kappa_2(A)u\\). Marker shapes indicate termination status.\nThe results are shown in Figure 13.3.\n\n\n\n\n\n\nFigure 13.3\n\n\n\n\nInterpretation\nAcross the stable range, both configurations attain backward errors of order \\(u\\). Their forward errors separate as \\(\\kappa_2(A)\\) increases: with FP64 residuals, the error grows approximately in proportion to \\(\\kappa_2(A)\\), whereas with FP128 residuals it remains near working precision. Beyond the factorization convergence region, both variants become irregular.\n\nBackward error\nOver the stable range \\(10^2\\leq\\kappa_2(A)\\leq10^7\\), both backward-error curves are nearly independent of conditioning. FP64 residuals give errors between \\(1.2\\times10^{-17}\\) and \\(4.2\\times10^{-17}\\), while FP128 residuals give approximately \\(1.9\\times10^{-18}\\) to \\(6.7\\times10^{-18}\\). Both remain of order \\(u\\).\nFP128 residuals lower the observed values but do not change their theoretical order. This agrees with Carson and Higham (2018, Corollary 4.2), which predicts a limiting normwise backward error of order \\(u\\), essentially independent of \\(u_r\\). Values below \\(u\\) do not contradict this result, since the estimate specifies an order rather than a lower bound.\n\n\nForward error and residual precision\nOver the stable range \\(10^2\\leq\\kappa_2(A)\\leq10^7\\), FP64 residuals produce forward errors from approximately \\(1.5\\times10^{-15}\\) to \\(4.3\\times10^{-11}\\). Their log–log slope is \\(0.90\\), close to the predicted linear dependence on conditioning. With FP128 residuals, the error remains between approximately \\(3.8\\times10^{-17}\\) and \\(8.1\\times10^{-17}\\), with no systematic dependence on \\(\\kappa_2(A)\\) and near working precision.\nThis agrees with the limiting bound\n\\[\n\\frac{\\lVert \\widehat{x}-x\\rVert_\\infty}{\\lVert x\\rVert_\\infty}\n\\lesssim\nu+4pu_r\\operatorname{cond}(A,x)\n\\]\nof Carson and Higham (2018, Corollary 3.3). When \\(u_r=u\\), the condition-dependent term gives an error of order \\(\\operatorname{cond}(A,x)u\\). With sufficiently accurate residuals, this term becomes negligible and the limiting error is of order \\(u\\). Since \\(\\kappa_2(A)\\) is used as a proxy for \\(\\operatorname{cond}(A,x)\\), the plotted \\(\\kappa_2(A)u\\) line represents the expected scaling rather than an exact bound.\nOnly 3 of the 85 FP64-residual runs satisfy the stopping criterion; the remaining 82 reach the update limit. This mainly reflects the condition-dependent correction floor remaining above the \\(u\\)-based tolerance, even after the forward error reaches its expected level. With FP128 residuals, 78 runs converge and 7 reach the update limit. Beyond the FP32 factorization convergence region, however, both variants become irregular. Higher residual precision improves attainable accuracy but cannot compensate for an insufficiently accurate factorization.",
+    "text": "13.3 Residual-precision comparison\nThis experiment isolates the effect of residual precision. The factorization and working precisions are fixed at FP32 and FP64, while the residual precision is varied between FP64 and FP128. Both configurations use the same matrices, right-hand sides, condition-number grid, and algorithmic settings. Residual scaling is enabled, and errors are evaluated in FP256.\nThe upper panel shows the final normwise backward error; the lower panel shows the final relative forward error. The dashed line marks \\(\\kappa_*=u_f^{-1}\\), while the dotted lines mark \\(u\\) and the reference \\(\\kappa_2(A)u\\). Marker shapes indicate termination status.\nThe results are shown in Figure 13.3.\n\n\n\n\n\n\nFigure 13.3\n\n\n\n\nInterpretation\nAcross the stable range, both configurations attain backward errors of order \\(u\\). Their forward errors separate as \\(\\kappa_2(A)\\) increases: with FP64 residuals, the error grows approximately in proportion to \\(\\kappa_2(A)\\), whereas with FP128 residuals it remains near working precision. Beyond the factorization convergence region, both variants become irregular.\n\nBackward error\nOver the stable range \\(10^2\\leq\\kappa_2(A)\\leq10^7\\), both backward-error curves are nearly independent of conditioning. FP64 residuals give errors between \\(1.2\\times10^{-17}\\) and \\(4.2\\times10^{-17}\\), while FP128 residuals give approximately \\(1.9\\times10^{-18}\\) to \\(6.7\\times10^{-18}\\). Both remain of order \\(u\\).\nFP128 residuals lower the observed values but do not change their theoretical order. This agrees with Carson and Higham (2018, Corollary 4.2), which predicts a limiting normwise backward error of order \\(u\\), essentially independent of \\(u_r\\). Values below \\(u\\) do not contradict this result, since the estimate specifies an order rather than a lower bound.\n\n\nForward error and residual precision\nOver the stable range \\(10^2\\leq\\kappa_2(A)\\leq10^7\\), FP64 residuals produce forward errors from approximately \\(1.5\\times10^{-15}\\) to \\(4.3\\times10^{-11}\\). Their log–log slope is \\(0.90\\), close to the predicted linear dependence on conditioning. With FP128 residuals, the error remains between approximately \\(3.8\\times10^{-17}\\) and \\(8.1\\times10^{-17}\\), with no systematic dependence on \\(\\kappa_2(A)\\) and near working precision.\nThis agrees with the limiting bound\n\\[\n\\frac{\\lVert \\widehat{x}-x\\rVert_\\infty}{\\lVert x\\rVert_\\infty}\n\\lesssim\nu+4pu_r\\operatorname{cond}(A,x)\n\\]\nof Carson and Higham (2018, Corollary 3.3). When \\(u_r=u\\), the condition-dependent term gives an error of order \\(\\operatorname{cond}(A,x)u\\). With sufficiently accurate residuals, this term becomes negligible and the limiting error is of order \\(u\\).\nOnly 3 of the 85 FP64-residual runs satisfy the stopping criterion; the remaining 82 reach the update limit. This mainly reflects the condition-dependent correction floor remaining above the \\(u\\)-based tolerance, even after the forward error reaches its expected level. With FP128 residuals, 78 runs converge and 7 reach the update limit. Beyond the FP32 factorization convergence region, however, both variants become irregular. Higher residual precision improves attainable accuracy but cannot compensate for an insufficiently accurate factorization.",
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
@@ -645,6 +645,402 @@
     "crumbs": [
       "Report",
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html",
+    "href": "manual/index.html",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "",
+    "text": "10 Overview\nThis repository contains the implementation and experimental framework for three-precision LU-based iterative refinement.\nThe project uses HDNUM for numerical linear algebra, CPFloat for simulated low-precision arithmetic, and GMP for high-precision arithmetic.\nThis guide describes the repository structure, setup and build process, implementation components, experiments, plotting workflow, and how to extend the framework with a new experiment.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#prerequisites",
+    "href": "manual/index.html#prerequisites",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "12.1 Prerequisites",
+    "text": "12.1 Prerequisites\nThe following tools are required:\n\na C++17-compatible compiler,\nCMake 3.20 or newer,\nNinja,\nGit,\nGNU Make,\nGMP with C++ support (gmp and gmpxx),\nPython 3 for plotting.\n\nAdditional Python packages are listed in the plotting setup below.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#clone-and-initialize-the-repository",
+    "href": "manual/index.html#clone-and-initialize-the-repository",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "12.2 Clone and Initialize the Repository",
+    "text": "12.2 Clone and Initialize the Repository\nClone the repository together with its Git submodules:\ngit clone --recurse-submodules &lt;repository-url&gt;\ncd &lt;repository&gt;\nHDNUM is included as a submodule under:\ncode/external/hdnum/\nIf the repository was cloned without --recurse-submodules, initialize it afterwards with:\ngit submodule update --init --recursive\nCPFloat is not part of the HDNUM submodule and is set up separately in the next step.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#hdnum",
+    "href": "manual/index.html#hdnum",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "12.3 HDNUM",
+    "text": "12.3 HDNUM\nHDNUM is a header-only C++ library and requires no separate build or installation.\nIt is included in this repository as a Git submodule at:\ncode/external/hdnum/\nAfter the submodule has been initialized, the required header is available as:\ncode/external/hdnum/hdnum.hh\nThe project CMake configuration adds this directory to the include path automatically. CPFloat support requires an additional setup inside the HDNUM directory, described next.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#cpfloat",
+    "href": "manual/index.html#cpfloat",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "12.4 CPFloat",
+    "text": "12.4 CPFloat\nCPFloat provides the simulated low-precision formats used by the project. It must be cloned inside the HDNUM directory and built separately.\nFrom the repository root:\ncd code/external/hdnum\ngit clone https://github.com/north-numerical-computing/cpfloat.git\ncd cpfloat\nmake lib\nThe project expects the resulting files at:\ncode/external/hdnum/cpfloat/build/include/\ncode/external/hdnum/cpfloat/build/lib/libcpfloat.a\nThese paths are used directly by the CMake configuration.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#cpfloat-1",
+    "href": "manual/index.html#cpfloat-1",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "12.5 CPFloat",
+    "text": "12.5 CPFloat\nCPFloat provides the simulated low-precision formats used by the project. It must be cloned inside the HDNUM directory and built separately.\nFrom the repository root:\ncd code/external/hdnum\ngit clone https://github.com/north-numerical-computing/cpfloat.git\ncd cpfloat\nmake lib\nThe project expects the resulting files at:\ncode/external/hdnum/cpfloat/build/include/\ncode/external/hdnum/cpfloat/build/lib/libcpfloat.a\nThese paths are used directly by the CMake configuration.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#gmp",
+    "href": "manual/index.html#gmp",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "12.6 GMP",
+    "text": "12.6 GMP\nGMP provides the high-precision number types used by HDNUM. The project links against both gmp and gmpxx.\nOn Debian/Ubuntu systems, install the development package with:\nsudo apt install libgmp-dev\nGMP is installed system-wide; no repository-local build is required.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#python-dependencies",
+    "href": "manual/index.html#python-dependencies",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "12.7 Python Dependencies",
+    "text": "12.7 Python Dependencies\nThe plotting scripts require Python 3.10 or newer and the following packages:\n\nNumPy\npandas\nMatplotlib\n\nThey can be installed with:\npython3 -m pip install numpy pandas matplotlib\nOptionally, use a virtual environment:\npython3 -m venv .venv\nsource .venv/bin/activate\npython3 -m pip install numpy pandas matplotlib\nThe shared mpir_plotting package under code/scripts/ requires no separate installation; it is imported directly by the plotting scripts.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#release-build",
+    "href": "manual/index.html#release-build",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "13.1 Release Build",
+    "text": "13.1 Release Build\nFrom the repository root, configure and build the release preset with:\ncd code\ncmake --preset release\ncmake --build --preset release\ncd ..\nThe build files are written to:\nbuild/fp-release/\nand executables to:\nbuild/fp-release/bin/\nThe repository-level Makefile provides the equivalent convenience command:\nmake build\nwhich uses the release preset by default.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#debug-build",
+    "href": "manual/index.html#debug-build",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "13.2 Debug Build",
+    "text": "13.2 Debug Build\nTo configure and build the debug preset:\ncd code\ncmake --preset debug\ncmake --build --preset debug\ncd ..\nThe build files are written to:\nbuild/fp-debug/\nand executables to:\nbuild/fp-debug/bin/\nThe equivalent convenience command is:\nmake PRESET=debug build",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#running-the-tests",
+    "href": "manual/index.html#running-the-tests",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "13.3 Running the Tests",
+    "text": "13.3 Running the Tests\nAfter building, run the test suite with CTest:\ncd code\nctest --preset release\ncd ..\nFor the debug build:\ncd code\nctest --preset debug\ncd ..\nThe repository-level Makefile can build and run the tests directly:\nmake tests\nor, for debug:\nmake PRESET=debug tests\nCTest reports failed tests with their output.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#mixed_ir.hpp",
+    "href": "manual/index.html#mixed_ir.hpp",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "14.1 mixed_ir.hpp",
+    "text": "14.1 mixed_ir.hpp\nmixed_ir.hpp contains the core three-precision iterative-refinement algorithm for solving (Ax=b). The precision roles are represented by three template parameters:\n\nT_factor: LU factorization and correction solves,\nT_work: solution storage and updates,\nT_residual: residual computation.\n\nThe main interface is mixed_ir&lt;T_factor, T_work, T_residual&gt;(). It performs a full-pivoting LU factorization in factorization precision, computes an initial solution, and repeatedly computes a high-precision residual, solves for a low-precision correction, and updates the solution in working precision.\nMixedIROptions&lt;T_work&gt; controls the iteration limit, relative-correction tolerance, divergence detection, residual scaling, and optional diagnostic recording. If no positive tolerance is specified, the unit roundoff of T_work is used.\nMixedIRResult&lt;T_work&gt; stores the computed solution, termination status, iteration count, correction history, and optional iterates and residual-conversion diagnostics. The implementation also detects non-finite values and rapid divergence. Optional residual scaling reduces information loss when the residual is converted to a low factorization precision.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#hdnum_conversions.hpp",
+    "href": "manual/index.html#hdnum_conversions.hpp",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "14.2 hdnum_conversions.hpp",
+    "text": "14.2 hdnum_conversions.hpp\nhdnum_conversions.hpp provides conversions between the numerical types used by the project, including native C++ types, CPFloat types, and GMP-backed HDNUM types.\nThe central function is scalar_cast&lt;T_out&gt;(). It uses a direct constructor when the source and destination types support one. For GMP-backed inputs without a direct conversion, it falls back to conversion through double; this fallback is therefore limited by the range and precision of double.\nThe header also provides element-wise convert() functions for hdnum::Vector and hdnum::DenseMatrix. The destination container must already have the correct dimensions. Convenience functions convert_vector&lt;T_out&gt;() and convert_matrix&lt;T_out&gt;() allocate the destination container and return the converted result.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#unit_roundoff.hpp",
+    "href": "manual/index.html#unit_roundoff.hpp",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "14.3 unit_roundoff.hpp",
+    "text": "14.3 unit_roundoff.hpp\nunit_roundoff.hpp provides compile-time unit-roundoff values for the numerical types used by the project.\nThe unit_roundoff_traits&lt;T&gt; template handles native FP32 and FP64, CPFloat types CPFloat&lt;m,e&gt;, and GMP-backed FP&lt;m&gt; types. For the parameterized formats, the unit roundoff is computed as \\(u=2^{-m}\\). Unsupported scalar types produce a compile-time error.\nThe convenience function\ndefault_unit_roundoff&lt;T&gt;()\nreturns the corresponding value. mixed_ir.hpp uses it as the default relative-correction tolerance when no explicit tolerance is supplied.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#test_matrices.hpp",
+    "href": "manual/index.html#test_matrices.hpp",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "14.4 test_matrices.hpp",
+    "text": "14.4 test_matrices.hpp\ntest_matrices.hpp provides reproducible test problems for the numerical experiments. It supports three matrix families: structured rotated SPD, dense random SPD, and dense random SVD matrices with prescribed condition numbers.\nTestProblemOptions controls the right-hand-side construction and random seeds. The available right-hand-side modes are:\n\nones_solution: constructs \\(x=(1,\\ldots,1)^T\\) and forms \\(b=Ax\\),\nrandom_sign_solution: constructs a reproducible vector with \\(x_i\\in{-1,1}\\) and forms \\(b=Ax\\),\nrandom_normal_rhs: draws the entries of \\(b\\) directly from a standard normal distribution.\n\nGenerated problems are returned as LinearSystem&lt;T_data, T_reference&gt;, containing A, b, the reference solution x_true, and the requested condition number. The shared complete_problem() function constructs the right-hand side and computes the reference solution in T_reference from the stored system.\nThe main generator functions are make_rotated_spd_problem(), make_random_spd_problem(), and make_random_svd_problem().",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#reference_solve.hpp",
+    "href": "manual/index.html#reference_solve.hpp",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "14.5 reference_solve.hpp",
+    "text": "14.5 reference_solve.hpp\nreference_solve.hpp provides the direct solver used to compute reference solutions for the experiments.\nThe main function,\nhigh_precision_solve&lt;T_reference, T_data&gt;(A, b)\nconverts A and b from T_data to T_reference and solves the system entirely in T_reference. It uses HDNUM’s full-pivoting LU factorization, permutation operations, and triangular solves.\nThe input system is not modified. Increasing T_reference improves the accuracy of the solve, but cannot recover information already lost when A or b were stored in T_data.\nThe function also checks that A is nonempty and square and that the dimensions of A and b are compatible.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#error_metrics.hpp",
+    "href": "manual/index.html#error_metrics.hpp",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "14.6 error_metrics.hpp",
+    "text": "14.6 error_metrics.hpp\nerror_metrics.hpp provides the infinity-norm error measures used by the experiments. All metric calculations are performed in an independently selected measurement precision T_measure, and the final scalar values are converted to double for output.\nThe header provides vector and matrix infinity norms,\n\\[\n|x|_\\infty = \\max_i |x_i|,\n\\qquad\n|A|_\\infty = \\max_i \\sum_j |a_{ij}|,\n\\]\ntogether with the relative forward error\n\\[\n\\frac{|x-x_{\\mathrm{ref}}|_\\infty}\n{|x_{\\mathrm{ref}}|_\\infty},\n\\]\nand the normwise backward error\n\\[\n\\frac{|b-Ax|_\\infty}\n{|A|_\\infty|x|_\\infty+|b|_\\infty}.\n\\]\nThe main functions are vector_norm_inf(), matrix_norm_inf(), relative_forward_error_inf(), and normwise_backward_error_inf(). Inputs may use different storage precisions; their components are converted to T_measure before the corresponding metric is evaluated.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#condition_grids.hpp",
+    "href": "manual/index.html#condition_grids.hpp",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "14.7 condition_grids.hpp",
+    "text": "14.7 condition_grids.hpp\ncondition_grids.hpp provides condition-number grids for the iterative-refinement experiments. The grids are defined relative to the approximate factorization boundary\n\\[\n\\kappa_* = \\frac{1}{u_f},\n\\]\nwhere \\(u_f\\) is the unit roundoff of the factorization precision.\nrepresentative_kappas&lt;T_factor&gt;() returns a small set of values below, at, and above this boundary, together with the baseline \\(\\kappa=1\\). The candidate values are\n\\[\n1,; 0.01\\kappa_*,; 0.1\\kappa_*,; 0.5\\kappa_*,;\n\\kappa_*,; 2\\kappa_*,; 10\\kappa_*,; 100\\kappa_*.\n\\]\nValues below \\(1\\) are omitted, and the result is sorted with duplicates removed.\nkappa_sweep&lt;T_factor&gt;() generates a denser logarithmic sweep from a configurable minimum condition number to a configurable multiple of \\(\\kappa_*\\). The number of points per decade can also be specified. The upper endpoint and \\(\\kappa_*\\) itself are inserted exactly when they lie in the requested range.\nBoth utilities return condition numbers as double values and validate their inputs and representability.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#experiment_io.hpp",
+    "href": "manual/index.html#experiment_io.hpp",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "14.8 experiment_io.hpp",
+    "text": "14.8 experiment_io.hpp\nexperiment_io.hpp provides shared metadata and output utilities for the experimental drivers. It defines ExperimentKind, MatrixFamily, PrecisionNames, and ExperimentDescription, which describe an experiment independently of a particular run.\nThe to_string() overloads provide stable textual identifiers for experiment kinds, matrix families, right-hand-side modes, and iterative-refinement termination statuses. These identifiers are used consistently in CSV files, directory names, and generated filenames.\nmake_experiment_filename() generates descriptive CSV filenames from the experiment configuration, while make_output_directory() maps each experiment kind to its corresponding directory under results/raw/ and creates it when necessary.\nwrite_common_csv_header() and write_common_csv_fields() provide the common CSV schema shared by the experiments. The recorded metadata includes the problem configuration, precision roles, algorithm options, requested condition number, termination status, iteration count, and final relative correction. Experiment-specific columns can be appended by the individual driver.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#convergence-histories",
+    "href": "manual/index.html#convergence-histories",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "15.1 Convergence Histories",
+    "text": "15.1 Convergence Histories\nexp_convergence_histories.cc records the behavior of iterative refinement across individual refinement steps. For each precision configuration, it solves random SPD systems with representative condition numbers below, near, and above the approximate factorization boundary\n\\[\n\\kappa_* = \\frac{1}{u_f}.\n\\]\nThe driver uses \\(n=100\\), a random-normal right-hand side, at most 20 refinement steps, and residual scaling. It stores every available iterate and records the relative forward error, normwise backward error, and relative correction after each step.\nThe experiment covers FP16, FP32, bfloat16, and FP8 factorization configurations together with an FP64 baseline. For FP16 and FP32, both FP64 and FP128 residual precisions are included. Each precision configuration is written to a separate CSV file under results/raw/convergence/.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#condition-number-sweeps",
+    "href": "manual/index.html#condition-number-sweeps",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "15.2 Condition-Number Sweeps",
+    "text": "15.2 Condition-Number Sweeps\nexp_condition_sweeps.cc studies how iterative refinement behaves as the condition number increases. For each factorization precision, it generates a logarithmic sweep from \\(\\kappa=1\\) to \\(10\\kappa_*\\), with\n\\[\n\\kappa_*=\\frac{1}{u_f},\n\\]\nusing ten points per decade and including \\(\\kappa_*\\) exactly.\nThe experiment uses random SPD systems with \\(n=100\\), a random-normal right-hand side, at most 20 refinement steps, fixed seeds, divergence detection, and residual scaling. Only the requested condition number varies within each sweep.\nThe tested configurations include FP32–FP64–FP64, FP32–FP64–FP128, FP16–FP64–FP64, FP16–FP64–FP128, bfloat16–FP64–FP128, and FP8–FP64–FP128, together with an FP64 same-precision baseline. Each condition number contributes one summary row containing the termination status, number of completed updates, final relative correction, and final relative forward error when a solution is available. Results are written under results/raw/condition_sweeps/.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#residual-precision",
+    "href": "manual/index.html#residual-precision",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "15.3 Residual Precision",
+    "text": "15.3 Residual Precision\nexp_residual_precision.cc isolates the effect of residual precision. The factorization and working precisions are fixed at FP32 and FP64, while the residual precision is varied between FP64 and FP128. Both configurations use the same matrices, right-hand sides, condition-number grid, and algorithmic settings, so residual precision is the only changed variable.\nThe experiment uses random SPD systems with \\(n=100\\), a random-normal right-hand side, residual scaling, and at most 20 refinement steps. The condition-number sweep extends from \\(\\kappa=1\\) to \\(10\\kappa_*\\) for FP32 factorization, with ten points per decade. Errors are evaluated in FP256.\nFor each condition number, the driver records the termination status, number of completed updates, final relative correction, final relative forward error, and final normwise backward error. The FP64- and FP128-residual sweeps are written as separate CSV files under results/raw/residual_precision/.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#direct-solve-comparison",
+    "href": "manual/index.html#direct-solve-comparison",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "15.4 Direct-Solve Comparison",
+    "text": "15.4 Direct-Solve Comparison\nexp_direct_solve_comparison.cc compares FP32–FP64–FP128 iterative refinement with a direct FP64 LU solve. Both methods solve exactly the same generated systems and use the same FP256 reference solution.\nThe experiment uses random SPD systems with \\(n=100\\), a random-normal right-hand side, and a condition-number sweep from \\(\\kappa=1\\) to \\(10\\kappa_*\\) for FP32 factorization,\n\\[\n\\kappa_*=\\frac{1}{u_f}.\n\\]\nThe mixed method uses at most 20 refinement steps, divergence detection, and residual scaling. The direct baseline performs a single full-pivoting LU factorization and solve entirely in FP64.\nFor each condition number, the driver records the final relative forward error and normwise backward error for both methods, together with their respective status information. Both variants are written to the same CSV file under results/raw/direct_comparison/.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#residual-scaling",
+    "href": "manual/index.html#residual-scaling",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "15.5 Residual Scaling",
+    "text": "15.5 Residual Scaling\nexp_residual_scaling_fp16_fp64_fp128.cc studies the effect of residual scaling when the FP128 residual is converted to FP16 for the correction solve. It compares two runs on exactly the same system: an unscaled variant and a scaled variant.\nThe experiment uses an FP16–FP64–FP128 precision triple, FP256 measurement precision, a random SPD system with \\(n=100\\) and \\(\\kappa=10\\), a random-normal right-hand side, divergence detection, and at most 20 refinement steps. Both stored iterates and residual-conversion diagnostics are enabled.\nFor each iteration, the diagnostic output records the residual infinity norm, smallest nonzero residual component, number of nonzero components, number of components rounded to zero during conversion, and relative correction. A separate error-history file records the relative forward and normwise backward errors for every available iterate.\nThe diagnostic CSV is written under results/raw/robustness/residual_scaling/, while the error history is stored in its error_histories/ subdirectory.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#experiment-goal",
+    "href": "manual/index.html#experiment-goal",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.1 Experiment Goal",
+    "text": "19.1 Experiment Goal\nThe goal of the example experiment is to study how iterative refinement behaves as the system dimension \\(n\\) changes.\nAll other settings are kept fixed:\n\nmatrix family: random SPD,\ncondition number: \\(\\kappa = 10^4\\),\nright-hand side: random normal,\nprecision triple: FP32–FP64–FP128,\nmeasurement precision: FP256,\nmaximum refinement steps: 20,\nresidual scaling: enabled.\n\nThe experiment evaluates several dimensions, for example\n\\[\nn \\in {25,50,100,200}.\n\\]\nFor each dimension, the driver records the termination status, number of completed updates, final relative correction, relative forward error, and normwise backward error.\nThe purpose is primarily to demonstrate how a new experiment can be assembled from the existing framework components while varying only one experimental parameter.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#creating-the-driver",
+    "href": "manual/index.html#creating-the-driver",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.2 Creating the Driver",
+    "text": "19.2 Creating the Driver\nCreate a new experimental driver under code/experiments/:\ncode/experiments/exp_dimension_sweep.cc\nExperiment drivers follow the naming convention exp_*.cc. The CMake configuration discovers files matching this pattern automatically, so no additional CMake target is required.\nThe driver uses the existing algorithm and experiment helpers:\n#include \"error_metrics.hpp\"\n#include \"experiment_io.hpp\"\n#include \"mixed_ir.hpp\"\n#include \"test_matrices.hpp\"\n\nint main()\n{\n    // Experiment configuration and dimension sweep are added below.\n    return 0;\n}\nKeeping the experiment in a separate driver isolates its configuration and output logic while reusing the shared implementation in code/include/.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#configuring-the-experiment",
+    "href": "manual/index.html#configuring-the-experiment",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.3 Configuring the Experiment",
+    "text": "19.3 Configuring the Experiment\nFirst define the fixed precision configuration, condition number, and dimensions:\nusing T_factor   = hdnum::FP32;\nusing T_work     = hdnum::FP64;\nusing T_residual = hdnum::FP128;\nusing T_measure  = hdnum::FP256;\n\nconstexpr double requested_kappa = 1.0e4;\n\nconst std::vector&lt;std::size_t&gt; dimensions{\n    25, 50, 100, 200\n};\n\nconst mpir::PrecisionNames precision_names{\n    \"fp32\",\n    \"fp64\",\n    \"fp128\",\n    \"fp256\"\n};\nThe problem generator is configured to use a reproducible random-normal right-hand side:\nmpir::TestProblemOptions problem_options;\nproblem_options.rhs_mode =\n    mpir::RightHandSideMode::random_normal_rhs;\nThe iterative-refinement options are configured in the same way as in the main experiments:\nmpir::MixedIROptions&lt;T_work&gt; algorithm_options;\nalgorithm_options.max_iterations = 20;\nalgorithm_options.store_iterates = false;\nalgorithm_options.detect_divergence = true;\nalgorithm_options.scale_residual = true;\nalgorithm_options.record_residual_diagnostics = false;\n\nconstexpr std::string_view variant = \"scaled\";\nThe random seeds retain their defaults, so the experiment is reproducible. Only the system dimension changes between runs. The existing experiment drivers use the same TestProblemOptions, PrecisionNames, and MixedIROptions structures to separate experimental configuration from the numerical implementation.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#generating-the-test-problems",
+    "href": "manual/index.html#generating-the-test-problems",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.4 Generating the Test Problems",
+    "text": "19.4 Generating the Test Problems\nFor each dimension, generate a random SPD system in working precision and compute its reference solution in measurement precision:\nfor (const std::size_t n : dimensions) {\n    auto problem =\n        mpir::make_random_spd_problem&lt;T_work, T_measure&gt;(\n            n,\n            requested_kappa,\n            problem_options\n        );\n\n    // Iterative refinement and measurement are added below.\n}\nmake_random_spd_problem() constructs a matrix with the requested condition number and uses problem_options to generate the right-hand side. It returns a LinearSystem&lt;T_work, T_measure&gt; containing the matrix problem.A, right-hand side problem.b, reference solution problem.x_true, and requested condition number problem.kappa.\nThe reference solution is computed automatically in T_measure by solving the stored system \\(Ax=b\\). No separate reference solve is required in the experiment driver.\nBecause the generator settings and seeds remain fixed, the system dimension is the only experimental parameter changed by the loop.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#running-iterative-refinement",
+    "href": "manual/index.html#running-iterative-refinement",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.5 Running Iterative Refinement",
+    "text": "19.5 Running Iterative Refinement",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#running-iterative-refinement-1",
+    "href": "manual/index.html#running-iterative-refinement-1",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.6 Running Iterative-Refinement",
+    "text": "19.6 Running Iterative-Refinement\nWith the problem and algorithm options defined, run the mixed-precision solver:\nconst auto result =\n    mpir::mixed_ir&lt;T_factor, T_work, T_residual&gt;(\n        problem.A,\n        problem.b,\n        algorithm_options\n    );\nThe template parameters determine the three arithmetic roles: T_factor is used for the LU factorization and correction solves, T_work for the iterates and updates, and T_residual for residual computation.\nThe returned MixedIRResult&lt;T_work&gt; contains the final solution result.x, termination status, number of completed updates, and final relative correction. Since this experiment only measures the final result, storing the complete iterate history is unnecessary.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#measuring-the-result",
+    "href": "manual/index.html#measuring-the-result",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.7 Measuring the Result",
+    "text": "19.7 Measuring the Result\nWhen a valid solution is available, compute the final forward and backward errors in T_measure:\nconst double forward_error =\n    mpir::relative_forward_error_inf&lt;T_measure&gt;(\n        result.x,\n        problem.x_true\n    );\n\nconst double backward_error =\n    mpir::normwise_backward_error_inf&lt;T_measure&gt;(\n        problem.A,\n        problem.b,\n        result.x\n    );\nThe forward error compares the computed solution with the reference solution,\n\\[\n\\frac{|x-x_{\\mathrm{ref}}|*\\infty}\n{|x*{\\mathrm{ref}}|_\\infty},\n\\]\nwhile the backward error measures the residual relative to the problem data,\n\\[\n\\frac{|b-Ax|*\\infty}\n{|A|*\\infty|x|*\\infty+|b|*\\infty}.\n\\]\nBoth metrics are evaluated internally in FP256 and returned as double values for experiment output.\nThe error functions should only be called when result.x contains a solution of the expected dimension. An early failure may occur before an initial solution is constructed; in that case the status should still be recorded and the unavailable error fields left empty.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#writing-the-output",
+    "href": "manual/index.html#writing-the-output",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.8 Writing the Output",
+    "text": "19.8 Writing the Output",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#writing-the-output-1",
+    "href": "manual/index.html#writing-the-output-1",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.9 Writing the Output",
+    "text": "19.9 Writing the Output\nThe shared output utilities identify experiments through ExperimentKind. Since the dimension sweep is a new experiment category, first extend experiment_io.hpp.\nAdd the new enumerator:\nenum class ExperimentKind {\n    convergence_history,\n    condition_sweep,\n    residual_precision,\n    direct_solve_comparison,\n    residual_scaling,\n    range_failure,\n    dimension_sweep\n};\nAdd its textual identifier in to_string():\ncase ExperimentKind::dimension_sweep:\n    return \"dimension-sweep\";\nand its output directory in make_output_directory():\ncase ExperimentKind::dimension_sweep:\n    output_directory =\n        raw_results_root / \"dimension_sweeps\";\n    break;\nNo change to make_experiment_filename() or the common CSV-writing functions is required.\nInside the dimension loop, describe the current dataset and construct its output path:\nconst mpir::ExperimentDescription experiment{\n    mpir::ExperimentKind::dimension_sweep,\n    mpir::MatrixFamily::random_spd,\n    n,\n    precision_names\n};\n\nconst auto output_directory =\n    mpir::make_output_directory(\n        MPIR_RESULTS_RAW_DIR,\n        experiment.kind\n    );\n\nconst auto output_file =\n    output_directory /\n    mpir::make_experiment_filename(\n        experiment,\n        problem_options\n    );\nEach dimension receives its own CSV file because dimension is part of the common experiment metadata and generated filename.\nOpen the file and write the common header together with the two experiment-specific error columns:\nstd::ofstream out(output_file);\n\nif (!out) {\n    throw std::runtime_error(\n        \"Could not open output file: \" + output_file.string()\n    );\n}\n\nout &lt;&lt; std::scientific\n    &lt;&lt; std::setprecision(\n           std::numeric_limits&lt;double&gt;::max_digits10\n       );\n\nmpir::write_common_csv_header(out);\nout &lt;&lt; \",final_forward_error_inf,final_backward_error_inf\\n\";\nAfter iterative refinement, write the common fields and append the measured errors:\nmpir::write_common_csv_fields(\n    out,\n    experiment,\n    problem_options,\n    algorithm_options,\n    requested_kappa,\n    variant,\n    result\n);\n\nout &lt;&lt; ',';\n\nif (result.x.size() == n) {\n    const double forward_error =\n        mpir::relative_forward_error_inf&lt;T_measure&gt;(\n            result.x,\n            problem.x_true\n        );\n\n    const double backward_error =\n        mpir::normwise_backward_error_inf&lt;T_measure&gt;(\n            problem.A,\n            problem.b,\n            result.x\n        );\n\n    out &lt;&lt; forward_error &lt;&lt; ',' &lt;&lt; backward_error;\n}\nelse {\n    // Keep the status row while leaving unavailable errors empty.\n    out &lt;&lt; ',';\n}\n\nout &lt;&lt; '\\n';\nThe resulting files are written under:\nresults/raw/dimension_sweeps/\nand contain the standard experiment metadata together with the final forward and backward errors.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#complete-example-driver",
+    "href": "manual/index.html#complete-example-driver",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.10 Complete Example Driver",
+    "text": "19.10 Complete Example Driver\nCombining the preceding steps gives the complete exp_dimension_sweep.cc driver below. It assumes that ExperimentKind::dimension_sweep and its output directory have already been added to experiment_io.hpp as described above.\n#include &lt;cstddef&gt;\n#include &lt;fstream&gt;\n#include &lt;iomanip&gt;\n#include &lt;iostream&gt;\n#include &lt;limits&gt;\n#include &lt;stdexcept&gt;\n#include &lt;string_view&gt;\n#include &lt;vector&gt;\n\n#include \"error_metrics.hpp\"\n#include \"experiment_io.hpp\"\n#include \"hdnum.hh\"\n#include \"mixed_ir.hpp\"\n#include \"test_matrices.hpp\"\n\n\nint main()\n{\n    try {\n        using T_factor   = hdnum::FP32;\n        using T_work     = hdnum::FP64;\n        using T_residual = hdnum::FP128;\n        using T_measure  = hdnum::FP256;\n\n        constexpr double requested_kappa = 1.0e4;\n\n        const std::vector&lt;std::size_t&gt; dimensions{\n            25, 50, 100, 200\n        };\n\n        const mpir::PrecisionNames precision_names{\n            \"fp32\",\n            \"fp64\",\n            \"fp128\",\n            \"fp256\"\n        };\n\n        mpir::TestProblemOptions problem_options;\n        problem_options.rhs_mode =\n            mpir::RightHandSideMode::random_normal_rhs;\n\n        mpir::MixedIROptions&lt;T_work&gt; algorithm_options;\n        algorithm_options.max_iterations = 20;\n        algorithm_options.store_iterates = false;\n        algorithm_options.detect_divergence = true;\n        algorithm_options.scale_residual = true;\n        algorithm_options.record_residual_diagnostics = false;\n\n        constexpr std::string_view variant = \"scaled\";\n\n        for (const std::size_t n : dimensions) {\n            const auto problem =\n                mpir::make_random_spd_problem&lt;T_work, T_measure&gt;(\n                    n,\n                    requested_kappa,\n                    problem_options\n                );\n\n            const auto result =\n                mpir::mixed_ir&lt;T_factor, T_work, T_residual&gt;(\n                    problem.A,\n                    problem.b,\n                    algorithm_options\n                );\n\n            if (result.rel_corrections.size() != result.iterations) {\n                throw std::logic_error(\n                    \"Relative-correction count is inconsistent \"\n                    \"with completed updates\"\n                );\n            }\n\n            if (result.x.size() != 0 && result.x.size() != n) {\n                throw std::logic_error(\n                    \"Returned solution has an unexpected dimension\"\n                );\n            }\n\n            const mpir::ExperimentDescription experiment{\n                mpir::ExperimentKind::dimension_sweep,\n                mpir::MatrixFamily::random_spd,\n                n,\n                precision_names\n            };\n\n            const auto output_directory =\n                mpir::make_output_directory(\n                    MPIR_RESULTS_RAW_DIR,\n                    experiment.kind\n                );\n\n            const auto output_file =\n                output_directory /\n                mpir::make_experiment_filename(\n                    experiment,\n                    problem_options\n                );\n\n            std::ofstream out(output_file);\n\n            if (!out) {\n                throw std::runtime_error(\n                    \"Could not open output file: \"\n                    + output_file.string()\n                );\n            }\n\n            out &lt;&lt; std::scientific\n                &lt;&lt; std::setprecision(\n                       std::numeric_limits&lt;double&gt;::max_digits10\n                   );\n\n            mpir::write_common_csv_header(out);\n            out\n                &lt;&lt; \",final_forward_error_inf\"\n                &lt;&lt; \",final_backward_error_inf\\n\";\n\n            mpir::write_common_csv_fields(\n                out,\n                experiment,\n                problem_options,\n                algorithm_options,\n                requested_kappa,\n                variant,\n                result\n            );\n\n            if (result.x.size() == n) {\n                const double forward_error =\n                    mpir::relative_forward_error_inf&lt;T_measure&gt;(\n                        result.x,\n                        problem.x_true\n                    );\n\n                const double backward_error =\n                    mpir::normwise_backward_error_inf&lt;T_measure&gt;(\n                        problem.A,\n                        problem.b,\n                        result.x\n                    );\n\n                out &lt;&lt; ','\n                    &lt;&lt; forward_error\n                    &lt;&lt; ','\n                    &lt;&lt; backward_error;\n            }\n            else {\n                // Preserve the status row when no solution is available.\n                out &lt;&lt; \",,\";\n            }\n\n            out &lt;&lt; '\\n';\n\n            if (!out) {\n                throw std::runtime_error(\n                    \"Failed while writing output file: \"\n                    + output_file.string()\n                );\n            }\n\n            std::cout\n                &lt;&lt; \"n = \" &lt;&lt; n\n                &lt;&lt; \", status = \" &lt;&lt; mpir::to_string(result.status)\n                &lt;&lt; \", iterations = \" &lt;&lt; result.iterations\n                &lt;&lt; \", final_rel_correction = \"\n                &lt;&lt; result.final_rel_correction\n                &lt;&lt; '\\n';\n\n            std::cout\n                &lt;&lt; \"Writing results to: \"\n                &lt;&lt; output_file\n                &lt;&lt; '\\n';\n        }\n    }\n    catch (const std::exception& error) {\n        std::cerr &lt;&lt; \"Error: \" &lt;&lt; error.what() &lt;&lt; '\\n';\n        return 1;\n    }\n\n    return 0;\n}\nThe driver produces one CSV file for each dimension under results/raw/dimension_sweeps/. Each file contains the standard experiment metadata and one result row with the final forward and backward errors when a valid solution is available.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#building-and-running-the-experiment",
+    "href": "manual/index.html#building-and-running-the-experiment",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.11 Building and Running the Experiment",
+    "text": "19.11 Building and Running the Experiment\nBecause the driver is named exp_dimension_sweep.cc, the existing CMake configuration discovers it automatically. No change to the CMake files is required.\nFrom the repository root, rebuild the project:\ncd code\ncmake --preset release\ncmake --build --preset release\ncd ..\nThe new executable is generated as:\nbuild/fp-release/bin/mp_exp_dimension_sweep\nRun it from the repository root with:\n./build/fp-release/bin/mp_exp_dimension_sweep\nThe generated CSV files are written to:\nresults/raw/dimension_sweeps/\n\nAdding a Makefile target\nThe repository-level Makefile lists its experiment targets explicitly. To expose the new experiment through the same interface, add a target for the new executable:\n.PHONY: experiment-dimension-sweep\n\nexperiment-dimension-sweep: build\n    $(BUILD_DIR)/bin/mp_exp_dimension_sweep\nThe experiment can then be run with:\nmake experiment-dimension-sweep\nTo include it when running the complete experiment suite, also add experiment-dimension-sweep to the dependencies of the existing experiments target.\nThe debug version can be built and run through the same Makefile target with:\nmake PRESET=debug experiment-dimension-sweep",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
+    ]
+  },
+  {
+    "objectID": "manual/index.html#optional-plotting-script",
+    "href": "manual/index.html#optional-plotting-script",
+    "title": "9  Mixed-Precision Iterative Refinement: Project Guide",
+    "section": "19.12 Optional Plotting Script",
+    "text": "19.12 Optional Plotting Script\nA plotting script is not required for the experiment itself, but it demonstrates how a new experiment can also reuse the shared Python plotting utilities.\nCreate:\ncode/scripts/plot_dimension_sweep.py\nThe following example reads all dimension-sweep CSV files and plots the final forward and backward errors as functions of the system dimension:\n#!/usr/bin/env python3\n\"\"\"Plot the dimension-sweep experiment.\"\"\"\n\nfrom __future__ import annotations\n\nfrom argparse import ArgumentParser\nfrom pathlib import Path\n\nimport matplotlib\n\nmatplotlib.use(\"Agg\")\n\nimport matplotlib.pyplot as plt\nimport pandas as pd\n\nfrom mpir_plotting.csv_validation import (\n    coerce_numeric_columns,\n    read_csv_checked,\n)\nfrom mpir_plotting.paths import (\n    discover_csv_files,\n    resolve_results_roots,\n)\n\n\nCSV_PATTERN = \"dimension-sweep__*.csv\"\nDEFAULT_RAW_SUBDIRECTORY = Path(\"dimension_sweeps\")\n\nREQUIRED_COLUMNS = {\n    \"dimension\",\n    \"final_forward_error_inf\",\n    \"final_backward_error_inf\",\n}\n\nNUMERIC_COLUMNS = (\n    \"dimension\",\n    \"final_forward_error_inf\",\n    \"final_backward_error_inf\",\n)\n\n\ndef parse_arguments():\n    \"\"\"Parse command-line arguments.\"\"\"\n    parser = ArgumentParser(\n        description=\"Plot the dimension-sweep experiment.\"\n    )\n    parser.add_argument(\n        \"inputs\",\n        nargs=\"*\",\n        type=Path,\n        help=\"Optional CSV files or directories.\",\n    )\n    parser.add_argument(\"--raw-root\", type=Path, default=None)\n    parser.add_argument(\"--plots-root\", type=Path, default=None)\n    parser.add_argument(\n        \"--format\",\n        choices=(\"png\", \"pdf\", \"svg\"),\n        default=\"png\",\n    )\n    parser.add_argument(\"--dpi\", type=int, default=200)\n    return parser.parse_args()\n\n\ndef main() -&gt; int:\n    \"\"\"Load all dimension-sweep results and generate the figure.\"\"\"\n    args = parse_arguments()\n\n    raw_root, plots_root = resolve_results_roots(\n        args.raw_root,\n        args.plots_root,\n    )\n\n    csv_files = discover_csv_files(\n        args.inputs,\n        raw_root,\n        DEFAULT_RAW_SUBDIRECTORY,\n        CSV_PATTERN,\n    )\n\n    rows = []\n\n    for csv_path in csv_files:\n        dataframe = read_csv_checked(\n            csv_path,\n            REQUIRED_COLUMNS,\n        )\n        coerce_numeric_columns(\n            dataframe,\n            NUMERIC_COLUMNS,\n            csv_path,\n            require_complete=True,\n        )\n\n        rows.append(dataframe.iloc[0])\n\n    results = (\n        pd.DataFrame(rows)\n        .sort_values(\"dimension\")\n        .reset_index(drop=True)\n    )\n\n    figure, (forward_axis, backward_axis) = plt.subplots(\n        2,\n        1,\n        figsize=(8.0, 6.5),\n        sharex=True,\n    )\n\n    forward_axis.plot(\n        results[\"dimension\"],\n        results[\"final_forward_error_inf\"],\n        marker=\"o\",\n    )\n    forward_axis.set_yscale(\"log\")\n    forward_axis.set_ylabel(\"Relative forward error\")\n    forward_axis.set_title(\"(a) Final relative forward error\")\n    forward_axis.grid(True, which=\"both\")\n\n    backward_axis.plot(\n        results[\"dimension\"],\n        results[\"final_backward_error_inf\"],\n        marker=\"o\",\n    )\n    backward_axis.set_yscale(\"log\")\n    backward_axis.set_xlabel(\"System dimension n\")\n    backward_axis.set_ylabel(\"Relative backward error\")\n    backward_axis.set_title(\"(b) Final normwise backward error\")\n    backward_axis.grid(True, which=\"both\")\n\n    figure.suptitle(\"Dimension sweep: FP32–FP64–FP128\")\n    figure.tight_layout()\n\n    output_directory = plots_root / DEFAULT_RAW_SUBDIRECTORY\n    output_directory.mkdir(parents=True, exist_ok=True)\n\n    output_path = (\n        output_directory\n        / f\"dimension-sweep.{args.format}\"\n    )\n\n    save_options = {\"bbox_inches\": \"tight\"}\n    if args.format == \"png\":\n        save_options[\"dpi\"] = args.dpi\n\n    figure.savefig(output_path, **save_options)\n    plt.close(figure)\n\n    print(f\"Wrote {output_path}\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    raise SystemExit(main())\nThe script follows the same general structure as the existing plotting programs: it uses the shared CSV validation and path utilities, reads generated data from results/raw/, and writes figures under results/plots/. Run it from the repository root with:\npython3 code/scripts/plot_dimension_sweep.py\nThe generated figure is written to:\nresults/plots/dimension_sweeps/dimension-sweep.png\nOptionally, add a corresponding Makefile target:\n.PHONY: plot-dimension-sweep\n\nplot-dimension-sweep:\n    $(PYTHON) code/scripts/plot_dimension_sweep.py \\\n        --raw-root \"$(RAW_RESULTS_DIR)\" \\\n        --plots-root \"$(PLOT_RESULTS_DIR)\"\nIt can then be run with:\nmake plot-dimension-sweep\nThe target may also be added to plots, and the new experiment and plotting targets can be included in reproduce if the dimension sweep should become part of the standard reproducibility workflow.",
+    "crumbs": [
+      "Project Guide",
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Mixed-Precision Iterative Refinement: Project Guide</span>"
     ]
   },
   {

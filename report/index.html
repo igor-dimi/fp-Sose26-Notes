@@ -51,7 +51,7 @@ div.csl-indent {
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
-<link href="../appendices/gdb.html" rel="next">
+<link href="../manual/index.html" rel="next">
 <link href="../working_notes/framework.html" rel="prev">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -281,12 +281,29 @@ window.Quarto = {
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">Appendices</span></a>
+ <span class="menu-text">Project Guide</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
       </div>
       <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../manual/index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Project Guide</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../appendices/gdb.html" class="sidebar-item-text sidebar-link">
@@ -387,7 +404,7 @@ window.Quarto = {
 <section id="algorithm" class="level2" data-number="10.1">
 <h2 data-number="10.1" class="anchored" data-anchor-id="algorithm"><span class="header-section-number">10.1</span> Algorithm</h2>
 <p>The implemented method is LU-based three-precision iterative refinement <span class="citation" data-cites="highamMixedPrecisionAlgorithms2022">(<a href="#ref-highamMixedPrecisionAlgorithms2022" role="doc-biblioref">Higham and Mary 2022</a>)</span>:</p>
-<div id="algo-mixed-ir" class="pseudocode-container quarto-float" data-line-number="true" data-indent-lines="false" data-pseudocode-number="1" data-comment-delimiter="//" data-caption-prefix="Algorithm" data-indent-size="1.2em" data-no-end="false" data-line-number-punc=":">
+<div id="algo-mixed-ir" class="pseudocode-container quarto-float" data-no-end="false" data-indent-lines="false" data-pseudocode-number="1" data-comment-delimiter="//" data-caption-prefix="Algorithm" data-line-number-punc=":" data-line-number="true" data-indent-size="1.2em">
 <div class="pseudocode">
 \begin{algorithm} \caption{Three-precision iterative refinement} \begin{algorithmic} \Require Nonsingular system $Ax=b$ \State Round $A$ and $b$ to precision $u_f$ \State Compute $PAQ=LU$ in precision $u_f$ \State Solve for $x_0$ using the factors in precision $u_f$ \State Store $x_0$ in precision $u$ \For{$i=0,1,\ldots,i_{\max}-1$} \State Compute $r_i=b-Ax_i$ in precision $u_r$ \State Round $r_i$ to precision $u_f$ \State Solve for $d_i$ using the factors in precision $u_f$ \State Store $d_i$ in precision $u$ \State $x_{i+1} \gets x_i+d_i$ in precision $u$ \If{$\lVert d_i\rVert_2/\lVert x_i\rVert_2 &lt; u$} \State \Return $x_{i+1}$ \EndIf \EndFor \State \Return $x_{i_{\max}}$ \end{algorithmic} \end{algorithm}
 </div>
@@ -405,7 +422,7 @@ window.Quarto = {
 <p><span class="math display">\[
 \kappa_* = u_f^{-1}.
 \]</span></p>
-<p>This is not a strict boundary: the actual convergence rate also depends on LU growth, factorization quality, componentwise conditioning, and norm-dependent constants. <span class="citation" data-cites="highamMixedPrecisionAlgorithms2022">Higham and Mary (<a href="#ref-highamMixedPrecisionAlgorithms2022" role="doc-biblioref">2022, sec. 7.1</a>)</span></p>
+<p>This is not a strict boundary: the actual convergence rate also depends on LU growth, factorization quality, componentwise conditioning, and norm-dependent constants. <span class="citation" data-cites="highamMixedPrecisionAlgorithms2022">Higham and Mary (<a href="#ref-highamMixedPrecisionAlgorithms2022" role="doc-biblioref">2022</a>)</span>.</p>
 <p>Under suitable convergence conditions, refinement produces a normwise backward error of order <span class="math inline">\(u\)</span>. The limiting relative forward error satisfies approximately</p>
 <p><span class="math display">\[
 \frac{\lVert \widehat{x}-x\rVert_\infty}
@@ -413,7 +430,7 @@ window.Quarto = {
 \lesssim
 u+4pu_r\operatorname{cond}(A,x),
 \]</span></p>
-<p>where <span class="math inline">\(p\)</span> is the maximum number of nonzeros in a row of <span class="math inline">\([A\ b]\)</span> <span class="citation" data-cites="carsonAcceleratingSolutionLinear2018">Carson and Higham (<a href="#ref-carsonAcceleratingSolutionLinear2018" role="doc-biblioref">2018</a>, Corollary 3.3)</span>. If <span class="math inline">\(u_r=u\)</span>, the condition-dependent term generally limits the attainable forward accuracy. If <span class="math inline">\(u_r\)</span> is sufficiently smaller than <span class="math inline">\(u\)</span>, this term becomes negligible and forward errors of order <span class="math inline">\(u\)</span> can be attained.</p>
+<p>If <span class="math inline">\(u_r=u\)</span>, the condition-dependent term generally limits the attainable forward accuracy. If <span class="math inline">\(u_r\)</span> is sufficiently smaller than <span class="math inline">\(u\)</span>, this term becomes negligible and forward errors of order <span class="math inline">\(u\)</span> can be attained. <span class="citation" data-cites="carsonAcceleratingSolutionLinear2018">Carson and Higham (<a href="#ref-carsonAcceleratingSolutionLinear2018" role="doc-biblioref">2018</a>, Corollary 3.3)</span>.</p>
 </section>
 </section>
 <section id="experimental-setup" class="level1" data-number="11">
@@ -743,13 +760,12 @@ Figure&nbsp;13.1: <img src="../results/plots/convergence/convergence-history__ra
 \qquad
 \kappa_*^{\mathrm{FP32}}=2^{24}=16{,}777{,}216,
 \]</span></p>
-<p>giving FP32 an <span class="math inline">\(8{,}192\)</span> times larger convergence scale. At comparable <span class="math inline">\(\kappa/\kappa_*\)</span>, both formats converge rapidly below <span class="math inline">\(\kappa_*\)</span>, more slowly near it, and slowly or not at all sufficiently far above it. With FP128 residuals, FP16 converges through <span class="math inline">\(0.5\kappa_*\)</span> and FP32 through <span class="math inline">\(2\kappa_*\)</span>. This is consistent with <span class="math inline">\(\kappa_*\)</span> being an approximate reference rather than a fixed boundary.</p>
-<p>Because each format uses its own normalized condition-number grid, the comparison involves different matrices and absolute condition numbers. It therefore shows convergence relative to each format’s scale, not the effect of changing <span class="math inline">\(u_f\)</span> for the same system.</p>
+<p>At comparable <span class="math inline">\(\kappa/\kappa_*\)</span>, both formats converge rapidly below <span class="math inline">\(\kappa_*\)</span>, more slowly near it, and slowly or not at all sufficiently far above it. With FP128 residuals, FP16 converges through <span class="math inline">\(0.5\kappa_*\)</span> and FP32 through <span class="math inline">\(2\kappa_*\)</span>. This is consistent with <span class="math inline">\(\kappa_*\)</span> being an approximate reference rather than a fixed boundary.</p>
 </section>
 <section id="alternative-low-precision-factorization-formats" class="level4">
 <h4 class="anchored" data-anchor-id="alternative-low-precision-factorization-formats"><em>Alternative low-precision factorization formats</em></h4>
 <p>The bfloat16 and FP8 configurations were omitted to preserve the complete <span class="math inline">\(2\times2\)</span> FP16/FP32 design. They examine distinct low-precision formats and do not form a controlled pair.</p>
-<p>Bfloat16 has lower significand precision than FP16 but a larger exponent range. It converges through <span class="math inline">\(0.1\kappa_*\)</span> but not from <span class="math inline">\(0.5\kappa_*\)</span> upward; divergence is detected at <span class="math inline">\(10\kappa_*\)</span>. On the normalized grid, it converges more slowly than FP16. Its larger range provides no visible advantage here because residual scaling prevents underflow and no factorization-input range failure occurs.</p>
+<p>Bfloat16 has lower significand precision than FP16 but a larger exponent range. It converges through <span class="math inline">\(0.1\kappa_*\)</span> but not from <span class="math inline">\(0.5\kappa_*\)</span> upward; divergence is detected at <span class="math inline">\(10\kappa_*\)</span>. On the normalized grid, it converges more slowly than FP16. Its larger range provides no significant advantage here because residual scaling prevents underflow for FP16.</p>
 <p>FP8 is an extreme stress case. It converges at <span class="math inline">\(\kappa=1\)</span> and <span class="math inline">\(0.1\kappa_*\)</span> in 10 and 17 steps, respectively, but reaches the iteration limit from <span class="math inline">\(0.5\kappa_*\)</span> through <span class="math inline">\(10\kappa_*\)</span>. At <span class="math inline">\(100\kappa_*\)</span>, conversion to FP8 produces non-finite input and factorization stops before refinement. These results expose the limitations of very low factorization precision but are secondary to the isolated <span class="math inline">\(u_f\)</span> and <span class="math inline">\(u_r\)</span> comparisons.</p>
 </section>
 </section>
@@ -807,7 +823,7 @@ Figure&nbsp;13.2: <img src="../results/plots/condition_sweeps/condition-sweep__r
 <section id="final-forward-accuracy" class="level4">
 <h4 class="anchored" data-anchor-id="final-forward-accuracy"><em>Final forward accuracy</em></h4>
 <p>Converged runs generally attain forward errors of order <span class="math inline">\(u\)</span>. Increasing <span class="math inline">\(\kappa_2(A)\)</span> mainly raises the update count; final accuracy remains near working precision while refinement succeeds. The FP128 residual therefore avoids the condition-dependent floor observed with FP64 residuals.</p>
-<p>Near the transition, some runs retain small errors but reach the 20-update limit because termination depends on the relative correction, not the forward error. Beyond this region, errors increase or become irregular. Final error must therefore be interpreted together with termination status.</p>
+<p>Near the transition, some runs retain small errors but reach the 20-update limit because termination depends on the relative correction, not the forward error. Beyond this region, errors increase or become irregular.</p>
 </section>
 <section id="omitted-configurations" class="level4">
 <h4 class="anchored" data-anchor-id="omitted-configurations"><em>Omitted configurations</em></h4>
@@ -847,7 +863,7 @@ Figure&nbsp;13.3
 \lesssim
 u+4pu_r\operatorname{cond}(A,x)
 \]</span></p>
-<p>of <span class="citation" data-cites="carsonAcceleratingSolutionLinear2018">Carson and Higham (<a href="#ref-carsonAcceleratingSolutionLinear2018" role="doc-biblioref">2018</a>, Corollary 3.3)</span>. When <span class="math inline">\(u_r=u\)</span>, the condition-dependent term gives an error of order <span class="math inline">\(\operatorname{cond}(A,x)u\)</span>. With sufficiently accurate residuals, this term becomes negligible and the limiting error is of order <span class="math inline">\(u\)</span>. Since <span class="math inline">\(\kappa_2(A)\)</span> is used as a proxy for <span class="math inline">\(\operatorname{cond}(A,x)\)</span>, the plotted <span class="math inline">\(\kappa_2(A)u\)</span> line represents the expected scaling rather than an exact bound.</p>
+<p>of <span class="citation" data-cites="carsonAcceleratingSolutionLinear2018">Carson and Higham (<a href="#ref-carsonAcceleratingSolutionLinear2018" role="doc-biblioref">2018</a>, Corollary 3.3)</span>. When <span class="math inline">\(u_r=u\)</span>, the condition-dependent term gives an error of order <span class="math inline">\(\operatorname{cond}(A,x)u\)</span>. With sufficiently accurate residuals, this term becomes negligible and the limiting error is of order <span class="math inline">\(u\)</span>.</p>
 <p>Only 3 of the 85 FP64-residual runs satisfy the stopping criterion; the remaining 82 reach the update limit. This mainly reflects the condition-dependent correction floor remaining above the <span class="math inline">\(u\)</span>-based tolerance, even after the forward error reaches its expected level. With FP128 residuals, 78 runs converge and 7 reach the update limit. Beyond the FP32 factorization convergence region, however, both variants become irregular. Higher residual precision improves attainable accuracy but cannot compensate for an insufficiently accurate factorization.</p>
 </section>
 </section>
@@ -1360,8 +1376,8 @@ Higham, Nicholas J., and Theo Mary. 2022. <span>“Mixed Precision Algorithms in
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../appendices/gdb.html" class="pagination-link" aria-label="GDB usage Notes">
-        <span class="nav-page-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">GDB usage Notes</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../manual/index.html" class="pagination-link" aria-label="Mixed-Precision Iterative Refinement: Project Guide">
+        <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Mixed-Precision Iterative Refinement: Project Guide</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
