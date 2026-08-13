@@ -1,6 +1,8 @@
 ---
 title: "Mixed-Precision Iterative Refinement: Project Guide"
 author: "Igor Dimitrov"
+date: today
+date-format: "D MMMM YYYY"
 ---
 
 # Overview
